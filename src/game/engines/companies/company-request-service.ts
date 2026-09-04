@@ -1,6 +1,7 @@
 import type {
   Company,
   CompanyMeetingChoice,
+  CompanyNews,
   CompanyRequest,
   CompanyRequestKind,
   GameState,
@@ -347,6 +348,137 @@ export interface MeetingOutcome {
   message: string;
   /** Custo efetivamente debitado do caixa, R$ bilhões. */
   cost: number;
+  /** O que a decisão fez com a empresa, em números. */
+  impact?: string[];
+}
+
+/**
+ * Fotografia da empresa antes da decisão.
+ *
+ * Existe para a consequência ser mostrada como diferença — "investimento de R$
+ * 20,9 para R$ 18,6 bi" — em vez de virar um texto genérico. O jogador precisa
+ * ver que a resposta dele mexeu em alguma coisa concreta.
+ */
+interface CompanySnapshot {
+  relation: number;
+  stance: number;
+  investment: number;
+  employeesBase: number;
+  stockPrice: number;
+  crisisRisk: number;
+  production: number;
+  taxRelief: number;
+  chargeRelief: number;
+}
+
+function snapshotCompany(company: Company): CompanySnapshot {
+  return {
+    relation: company.politics.governmentRelation,
+    stance: company.executive.stance,
+    investment: company.financials.annualInvestment,
+    employeesBase: company.employeesBase,
+    stockPrice: company.market.stockPrice,
+    crisisRisk: company.crisisRisk,
+    production: company.productionLevel,
+    taxRelief: company.taxRelief,
+    chargeRelief: company.chargeRelief,
+  };
+}
+
+/** Traduz a diferença entre antes e depois nas linhas que a tela mostra. */
+function describeChanges(before: CompanySnapshot, company: Company): string[] {
+  const lines: string[] = [];
+
+  const jobs = company.employeesBase - before.employeesBase;
+  if (Math.abs(jobs) >= 150) {
+    lines.push(
+      jobs > 0
+        ? `Quadro planejado: +${jobs.toLocaleString('pt-BR')} vagas`
+        : `Quadro planejado: −${Math.abs(jobs).toLocaleString('pt-BR')} postos`,
+    );
+  }
+
+  const investment = company.financials.annualInvestment - before.investment;
+  if (Math.abs(investment) >= 30) {
+    lines.push(
+      `Investimento anual: R$ ${(before.investment / 1000).toFixed(1)} → ${(
+        company.financials.annualInvestment / 1000
+      ).toFixed(1)} bi`,
+    );
+  }
+
+  const relief =
+    company.taxRelief - before.taxRelief + (company.chargeRelief - before.chargeRelief);
+  if (Math.abs(relief) >= 0.5) {
+    lines.push(
+      `Carga sobre a empresa: ${relief > 0 ? '−' : '+'}${Math.abs(relief).toFixed(1)} p.p.`,
+    );
+  }
+
+  const relation = company.politics.governmentRelation - before.relation;
+  if (Math.abs(relation) >= 1) {
+    lines.push(
+      `Relação com o governo: ${before.relation.toFixed(0)} → ${company.politics.governmentRelation.toFixed(0)}`,
+    );
+  }
+
+  const stance = company.executive.stance - before.stance;
+  if (Math.abs(stance) >= 2) {
+    lines.push(
+      `${company.executive.name}: ${before.stance.toFixed(0)} → ${company.executive.stance.toFixed(
+        0,
+      )} de disposição`,
+    );
+  }
+
+  const stock = company.market.stockPrice - before.stockPrice;
+  if (company.ownership.listed && Math.abs(stock) >= 0.01 && before.stockPrice > 0) {
+    lines.push(`Ação: ${((stock / before.stockPrice) * 100).toFixed(1).replace('-', '−')}%`);
+  }
+
+  const risk = company.crisisRisk - before.crisisRisk;
+  if (Math.abs(risk) >= 1) {
+    lines.push(
+      `Risco de crise: ${before.crisisRisk.toFixed(0)} → ${company.crisisRisk.toFixed(0)}`,
+    );
+  }
+
+  const production = company.productionLevel - before.production;
+  if (Math.abs(production) >= 0.5) {
+    lines.push(`Nível de produção: ${production > 0 ? '+' : '−'}${Math.abs(production).toFixed(1)}`);
+  }
+
+  return lines;
+}
+
+/** Registra a decisão no noticiário empresarial. O país lê o que foi decidido. */
+function publishDecisionNews(
+  state: GameState,
+  company: Company,
+  kind: CompanyNews['kind'],
+  headline: string,
+  body: string,
+  valence: number,
+  rng: Rng,
+): void {
+  state.companies.news = [
+    {
+      id: makeId('cnews', rng),
+      month: state.month,
+      companyId: company.id,
+      companyName: company.name,
+      kind,
+      headline,
+      body,
+      valence: round(valence, 1),
+    },
+    ...state.companies.news,
+  ].slice(0, 40);
+}
+
+/** Quanto pesa a urgência do pedido no tamanho da reação. */
+function urgencyWeight(request: CompanyRequest): number {
+  return request.urgency === 'alta' ? 1.35 : request.urgency === 'media' ? 1 : 0.75;
 }
 
 /**
@@ -356,6 +488,11 @@ export interface MeetingOutcome {
  * orçamento e caro na relação. Negociar entrega metade e cobra metade.
  * Contraproposta troca benefício por compromisso — e pode ser recusada, porque
  * a empresa também negocia.
+ *
+ * Nenhuma das quatro respostas é neutra: todas mexem em investimento, quadro de
+ * funcionários, produção, risco de crise e no preço da ação, e é por isso que a
+ * decisão precisa ser tomada uma vez só. Depois de decidida, a demanda sai da
+ * mesa — o efeito já entrou no balanço da empresa.
  */
 export function resolveCompanyRequest(
   state: GameState,
@@ -383,27 +520,42 @@ export function resolveCompanyRequest(
     };
   }
 
+  const before = snapshotCompany(company);
+  const weight = urgencyWeight(request);
+
+  // ------------------------------------------------------------- Recusa
   if (choice === 'recusar') {
     request.status = 'recusada';
     request.resolution = 'O governo disse não.';
-    company.politics.governmentRelation = round(
-      clamp(company.politics.governmentRelation - request.relationLoss, -100, 100),
-      1,
+
+    const layoffs = applyRefusal(state, company, request, weight);
+    request.impact = describeChanges(before, company);
+
+    publishDecisionNews(
+      state,
+      company,
+      layoffs > 0 ? 'demissoes' : 'ameaca',
+      layoffs > 0
+        ? `${company.name} anuncia corte de ${layoffs.toLocaleString('pt-BR')} postos após negativa do governo`
+        : `${company.name} congela investimento depois de sair do Planalto sem acordo`,
+      `A direção pediu ${request.title.toLowerCase()} e ouviu não. ${
+        layoffs > 0
+          ? 'O plano de corte foi comunicado no mesmo dia.'
+          : 'O plano de investimento foi revisto para baixo.'
+      }`,
+      layoffs > 0 ? -2.4 : -1.4,
+      rng,
     );
-    // Empresa contrariada com lobby forte não some: passa a trabalhar contra no
-    // Congresso e a segurar investimento.
-    company.financials.annualInvestment = round(company.financials.annualInvestment * 0.94, 1);
-    if (company.politics.lobbyPower > 70) {
-      state.congress.goodwill = round(clamp100(state.congress.goodwill - 1.6), 1);
-    }
-    if (company.ownership.listed) shockMarket(state, { companyIds: [company.id], magnitude: -2.5 });
 
     return {
       ok: true,
       cost: 0,
-      message: `Pedido de ${company.name} recusado. A relação caiu para ${company.politics.governmentRelation.toFixed(
-        0,
-      )} e o plano de investimento encolheu.`,
+      impact: request.impact,
+      message:
+        `Pedido de ${company.name} recusado. Relação em ${company.politics.governmentRelation.toFixed(0)}` +
+        (layoffs > 0
+          ? `, e a empresa já colocou ${layoffs.toLocaleString('pt-BR')} postos no plano de corte.`
+          : ', com o plano de investimento revisto para baixo.'),
     };
   }
 
@@ -421,9 +573,15 @@ export function resolveCompanyRequest(
         clamp(company.politics.governmentRelation - request.relationLoss * 0.5, -100, 100),
         1,
       );
+      company.executive.stance = round(clamp(company.executive.stance - 5, -100, 100), 1);
+      company.financials.annualInvestment = round(company.financials.annualInvestment * 0.97, 1);
+      if (company.ownership.listed) shockMarket(state, { companyIds: [company.id], magnitude: -1.5 });
+
+      request.impact = describeChanges(before, company);
       return {
         ok: true,
         cost: 0,
+        impact: request.impact,
         message: `${company.name} recusou a contrapartida. Ninguém gastou nada e ninguém saiu satisfeito.`,
       };
     }
@@ -439,15 +597,11 @@ export function resolveCompanyRequest(
         : 'Atendido com contrapartida de investimento e emprego.';
 
   applyRequestBenefit(state, company, request, share, choice);
+  const hires = applyServedEffects(state, company, request, share, weight);
 
   state.economy.treasuryCash = round(state.economy.treasuryCash - cost, 2);
   state.economy.primaryBalance = round(state.economy.primaryBalance - cost, 2);
   state.companies.ledger.subsidiesPaid = round(state.companies.ledger.subsidiesPaid + cost, 2);
-
-  company.politics.governmentRelation = round(
-    clamp(company.politics.governmentRelation + request.relationGain * share, -100, 100),
-    1,
-  );
 
   // Quem paga a conta reclama. Sempre há quem pague.
   for (const groupId of request.angeredGroups) {
@@ -456,21 +610,138 @@ export function resolveCompanyRequest(
   nudgeGroup(state.socialGroups, 'empresariado', 1.2 * share);
   nudgeApproval(state, -0.25 * share);
 
-  if (company.ownership.listed) {
-    shockMarket(state, { companyIds: [company.id], magnitude: 4 * share });
-  }
+  request.impact = describeChanges(before, company);
+
+  publishDecisionNews(
+    state,
+    company,
+    hires > 0 ? 'investimento' : 'parceria',
+    hires > 0
+      ? `${company.name} anuncia ${hires.toLocaleString('pt-BR')} contratações após acordo com o Planalto`
+      : `${company.name} fecha acordo com o governo sobre ${request.title.toLowerCase()}`,
+    `${request.resolution} O custo para o Tesouro é de R$ ${cost.toFixed(1)} bi neste mês.`,
+    hires > 0 ? 1.8 : 1,
+    rng,
+  );
 
   return {
     ok: true,
     cost,
-    message: `${company.name}: ${request.resolution} Custo fiscal de R$ ${cost.toFixed(
-      1,
-    )} bi. ${
-      choice === 'contraproposta'
-        ? 'A empresa assumiu compromisso de investimento e de emprego.'
-        : 'A conta aparece no primário deste mês.'
-    }`,
+    impact: request.impact,
+    message: `${company.name}: ${request.resolution} Custo fiscal de R$ ${cost.toFixed(1)} bi.${
+      hires > 0 ? ` A empresa colocou ${hires.toLocaleString('pt-BR')} vagas no plano.` : ''
+    }${choice === 'contraproposta' ? ' A contrapartida de investimento e emprego ficou registrada.' : ''}`,
   };
+}
+
+/**
+ * O que a recusa faz com a empresa.
+ *
+ * Dizer não não é neutro: a empresa refaz o orçamento na mesma semana. Corta
+ * investimento, segura contratação — e demite quando já estava apertada. Quanto
+ * mais urgente era o pedido, maior o corte.
+ *
+ * Devolve quantos postos entraram no plano de corte, para a notícia e para a
+ * mensagem contarem a mesma coisa.
+ */
+function applyRefusal(
+  state: GameState,
+  company: Company,
+  request: CompanyRequest,
+  weight: number,
+): number {
+  company.politics.governmentRelation = round(
+    clamp(company.politics.governmentRelation - request.relationLoss * weight, -100, 100),
+    1,
+  );
+  // Quem levou o não foi a pessoa que estava na sala, e ela leva para o lado
+  // pessoal antes de levar para a planilha.
+  company.executive.stance = round(
+    clamp(company.executive.stance - (request.relationLoss * 0.9 + 6), -100, 100),
+    1,
+  );
+
+  company.financials.annualInvestment = round(
+    company.financials.annualInvestment * (1 - 0.1 * weight),
+    1,
+  );
+  company.expansionCapacity = round(clamp100(company.expansionCapacity - 6 * weight), 1);
+  company.jobCreationCapacity = round(clamp100(company.jobCreationCapacity - 5 * weight), 1);
+  company.productionLevel = round(clamp(company.productionLevel - 2 * weight, 20, 220), 1);
+  company.crisisRisk = round(clamp100(company.crisisRisk + 7 * weight), 1);
+
+  // Empresa com margem apertada não absorve o não: ela corta gente. Empresa
+  // saudável apenas adia contratação, e o quadro fica onde está.
+  const pressed = company.inCrisis || company.financials.netMargin < 2 || request.urgency === 'alta';
+  let layoffs = 0;
+  if (pressed) {
+    layoffs = Math.round(
+      company.employeesBase * 0.015 * weight * (0.4 + company.sensitivity.labor),
+    );
+    company.employeesBase = Math.max(500, company.employeesBase - layoffs);
+  }
+
+  // Empresa contrariada com lobby forte não some: passa a trabalhar contra no
+  // Congresso, e lobby que perdeu uma vez volta mais forte na próxima.
+  company.politics.lobbyPower = round(clamp100(company.politics.lobbyPower + 3), 1);
+  if (company.politics.lobbyPower > 70) {
+    state.congress.goodwill = round(clamp100(state.congress.goodwill - 1.6), 1);
+  }
+  nudgeGroup(state.socialGroups, 'empresariado', -0.9 * weight);
+  if (layoffs > 0) nudgeGroup(state.socialGroups, 'trabalhadores', -0.6);
+
+  if (company.ownership.listed) {
+    shockMarket(state, { companyIds: [company.id], magnitude: -(3 + 2 * weight) });
+  }
+
+  return layoffs;
+}
+
+/**
+ * O que o atendimento faz com a empresa, além do benefício específico do
+ * pedido: mais investimento, mais contratação, menos risco e uma direção
+ * disposta a continuar conversando.
+ *
+ * Devolve quantas vagas entraram no plano.
+ */
+function applyServedEffects(
+  state: GameState,
+  company: Company,
+  request: CompanyRequest,
+  share: number,
+  weight: number,
+): number {
+  company.politics.governmentRelation = round(
+    clamp(company.politics.governmentRelation + request.relationGain * share, -100, 100),
+    1,
+  );
+  company.executive.stance = round(
+    clamp(company.executive.stance + request.relationGain * 0.8 * share + 4 * share, -100, 100),
+    1,
+  );
+
+  company.financials.annualInvestment = round(
+    company.financials.annualInvestment * (1 + 0.08 * share),
+    1,
+  );
+  company.expansionCapacity = round(clamp100(company.expansionCapacity + 5 * share), 1);
+  company.jobCreationCapacity = round(clamp100(company.jobCreationCapacity + 4 * share), 1);
+  company.productionLevel = round(clamp(company.productionLevel + 2.5 * share, 20, 220), 1);
+  company.crisisRisk = round(clamp100(company.crisisRisk - (company.inCrisis ? 14 : 9) * share), 1);
+
+  const hires = Math.round(
+    company.employeesBase * 0.012 * share * (0.5 + company.sensitivity.labor),
+  );
+  company.employeesBase += hires;
+
+  // Lobby que funcionou é lobby que se paga: a empresa aprende que a porta abre.
+  company.politics.lobbyPower = round(clamp100(company.politics.lobbyPower + 1.5 * share), 1);
+
+  if (company.ownership.listed) {
+    shockMarket(state, { companyIds: [company.id], magnitude: (4 + 2 * weight) * share });
+  }
+
+  return hires;
 }
 
 /** Traduz o tipo da demanda no efeito concreto sobre a empresa. */
@@ -483,14 +754,14 @@ function applyRequestBenefit(
 ): void {
   switch (request.kind) {
     case 'reducao_imposto':
-      company.taxRelief = round(clamp(company.taxRelief + 3 * share, -25, 30), 2);
+      company.taxRelief = round(clamp(company.taxRelief + 4 * share, -25, 30), 2);
       break;
     case 'reducao_encargos':
-      company.chargeRelief = round(clamp(company.chargeRelief + 4 * share, -20, 30), 2);
+      company.chargeRelief = round(clamp(company.chargeRelief + 5 * share, -20, 30), 2);
       break;
     case 'subsidio':
     case 'orcamento':
-      company.subsidyReceived = round(company.subsidyReceived + request.fiscalCost * 1000 * share * 0.6, 1);
+      company.subsidyReceived = round(company.subsidyReceived + request.fiscalCost * 1000 * share * 0.8, 1);
       break;
     case 'financiamento':
       company.financials.cash = round(company.financials.cash + request.fiscalCost * 1000 * share, 1);
@@ -502,7 +773,7 @@ function applyRequestBenefit(
       break;
     case 'protecao_comercial':
       state.companies.levers.importTariff = round(
-        clamp(state.companies.levers.importTariff + 2 * share, 0, 80),
+        clamp(state.companies.levers.importTariff + 3 * share, 0, 80),
         2,
       );
       break;
@@ -513,7 +784,7 @@ function applyRequestBenefit(
       break;
     case 'mudanca_regulatoria':
       state.companies.levers.regulatoryBurden = round(
-        clamp100(state.companies.levers.regulatoryBurden - 4 * share),
+        clamp100(state.companies.levers.regulatoryBurden - 5 * share),
         1,
       );
       break;
@@ -536,7 +807,7 @@ function applyRequestBenefit(
     case 'autorizacao_investimento':
     case 'parceria_publico_privada':
       company.expansionCapacity = round(clamp100(company.expansionCapacity + 10 * share), 1);
-      company.financials.annualInvestment = round(company.financials.annualInvestment * (1 + 0.12 * share), 1);
+      company.financials.annualInvestment = round(company.financials.annualInvestment * (1 + 0.15 * share), 1);
       company.jobCreationCapacity = round(clamp100(company.jobCreationCapacity + 6 * share), 1);
       break;
     default:

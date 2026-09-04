@@ -246,7 +246,7 @@ export function CompanyMeetingModal({
 
           {resolved.length > 0 && (
             <div className="mt-3 rule pt-2">
-              <p className="label mb-1.5">Já decidido nesta reunião</p>
+              <p className="label mb-1.5">Já decidido e computado</p>
               <div className="space-y-1">
                 {resolved.map((request) => (
                   <ResolvedAgendaItem key={request.id} request={request} />
@@ -351,21 +351,38 @@ function ResolvedAgendaItem({ request }: { request: CompanyRequest }) {
           : 'Vencido';
 
   return (
-    <div className="flex items-start justify-between gap-2 border-l-2 border-l-ink-700 bg-ink-900/30 px-2 py-1.5">
-      <div className="min-w-0">
-        <p className="truncate text-[12px] text-neutral-300">{request.title}</p>
-        {request.resolution && (
-          <p className="text-[10px] leading-snug text-neutral-600">{request.resolution}</p>
-        )}
+    <div
+      className={cx(
+        'border-l-2 bg-ink-900/30 px-2 py-1.5',
+        request.status === 'recusada' ? 'border-l-danger-700/60' : 'border-l-gov-700/60',
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 truncate text-[12px] text-neutral-300">{request.title}</p>
+        <span
+          className={cx(
+            'shrink-0 text-[10px] font-semibold',
+            request.status === 'recusada' ? 'text-danger-400' : 'text-gov-400',
+          )}
+        >
+          {statusLabel}
+        </span>
       </div>
-      <span
-        className={cx(
-          'shrink-0 text-[10px] font-semibold',
-          request.status === 'recusada' ? 'text-danger-400' : 'text-gov-400',
-        )}
-      >
-        {statusLabel}
-      </span>
+      {request.resolution && (
+        <p className="text-[10px] leading-snug text-neutral-600">{request.resolution}</p>
+      )}
+
+      {/* O que a resposta já fez com a empresa. Sem isto, "recusado" é só uma
+          palavra; com isto, é investimento cortado e vaga que não vai existir. */}
+      {request.impact && request.impact.length > 0 && (
+        <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+          {request.impact.map((line) => (
+            <li key={line} className="font-mono text-[10px] leading-snug text-neutral-500">
+              {line}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

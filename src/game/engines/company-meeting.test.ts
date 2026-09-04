@@ -394,3 +394,182 @@ describe('a audiência sobrevive ao save', () => {
     expect(clone.companies.companies.every((company) => Boolean(company.executive?.name))).toBe(true);
   });
 });
+
+/**
+ * O QUE ACONTECE DEPOIS DE RESPONDER
+ *
+ * Uma resposta dada na audiência precisa fazer duas coisas ao mesmo tempo: sair
+ * da mesa, porque o assunto acabou, e entrar no balanço da empresa, porque a
+ * empresa refaz o orçamento no dia seguinte. Estes testes cobrem as duas.
+ */
+describe('a decisão sai da mesa e entra no balanço', () => {
+  it('tira o item decidido da pauta em aberto e não deixa decidir de novo', () => {
+    const state = newGame();
+    const rng = new Rng(state.seed, state.rngCursor);
+    const meeting = openCompanyMeeting(state, 'jbs', rng).meeting!;
+    const pedido = meetingRequests(state, meeting.id)[0]!;
+
+    const primeira = runCompanyAction(
+      state,
+      { kind: 'atender_demanda', requestId: pedido.id, choice: 'aceitar' },
+      rng,
+    );
+    expect(primeira.ok).toBe(true);
+
+    const decidido = state.companies.requests.find((entry) => entry.id === pedido.id)!;
+    expect(decidido.status).toBe('atendida');
+    expect(decidido.resolution).toBeTruthy();
+    // A pauta em aberto da reunião perdeu esse item.
+    expect(
+      meetingRequests(state, meeting.id).filter((entry) => entry.status === 'aberta'),
+    ).not.toContainEqual(expect.objectContaining({ id: pedido.id }));
+
+    // Clicar de novo no mesmo pedido não cobra o caixa duas vezes.
+    const caixa = state.economy.treasuryCash;
+    const segunda = runCompanyAction(
+      state,
+      { kind: 'atender_demanda', requestId: pedido.id, choice: 'aceitar' },
+      rng,
+    );
+    expect(segunda.ok).toBe(false);
+    expect(state.economy.treasuryCash).toBe(caixa);
+  });
+
+  it('registra em números o que a decisão fez com a empresa', () => {
+    const state = newGame();
+    const rng = new Rng(state.seed, state.rngCursor);
+    const meeting = openCompanyMeeting(state, 'jbs', rng).meeting!;
+    const pedido = meetingRequests(state, meeting.id)[0]!;
+
+    runCompanyAction(state, { kind: 'atender_demanda', requestId: pedido.id, choice: 'aceitar' }, rng);
+
+    const impacto = state.companies.requests.find((entry) => entry.id === pedido.id)!.impact ?? [];
+    expect(impacto.length).toBeGreaterThan(1);
+    expect(impacto.some((linha) => linha.includes('Investimento anual'))).toBe(true);
+    expect(impacto.some((linha) => linha.includes('Relação com o governo'))).toBe(true);
+  });
+
+  it('atender coloca investimento, vaga e disposição no lugar de onde veio o pedido', () => {
+    const state = newGame();
+    const rng = new Rng(state.seed, state.rngCursor);
+    const meeting = openCompanyMeeting(state, 'jbs', rng).meeting!;
+    const pedido = meetingRequests(state, meeting.id)[0]!;
+
+    const jbs = state.companies.companies.find((entry) => entry.id === 'jbs')!;
+    const antes = {
+      investimento: jbs.financials.annualInvestment,
+      quadro: jbs.employeesBase,
+      risco: jbs.crisisRisk,
+      disposicao: jbs.executive.stance,
+    };
+
+    runCompanyAction(state, { kind: 'atender_demanda', requestId: pedido.id, choice: 'aceitar' }, rng);
+
+    expect(jbs.financials.annualInvestment).toBeGreaterThan(antes.investimento);
+    expect(jbs.employeesBase).toBeGreaterThan(antes.quadro);
+    expect(jbs.crisisRisk).toBeLessThan(antes.risco);
+    expect(jbs.executive.stance).toBeGreaterThan(antes.disposicao);
+  });
+
+  it('recusar pedido de empresa apertada vira corte de quadro, e não só uma cara feia', () => {
+    const state = newGame();
+    const rng = new Rng(state.seed, state.rngCursor);
+    const meeting = openCompanyMeeting(state, 'correios', rng).meeting!;
+    const pedido = meetingRequests(state, meeting.id)[0]!;
+
+    const correios = state.companies.companies.find((entry) => entry.id === 'correios')!;
+    const antes = {
+      investimento: correios.financials.annualInvestment,
+      quadro: correios.employeesBase,
+      risco: correios.crisisRisk,
+      disposicao: correios.executive.stance,
+    };
+
+    const outcome = runCompanyAction(
+      state,
+      { kind: 'atender_demanda', requestId: pedido.id, choice: 'recusar' },
+      rng,
+    );
+
+    expect(outcome.ok).toBe(true);
+    // Correios opera no vermelho: o não vira plano de corte na mesma semana.
+    expect(correios.employeesBase).toBeLessThan(antes.quadro);
+    expect(correios.financials.annualInvestment).toBeLessThan(antes.investimento * 0.95);
+    expect(correios.crisisRisk).toBeGreaterThan(antes.risco);
+    expect(correios.executive.stance).toBeLessThan(antes.disposicao);
+  });
+
+  it('faz a diferença entre atender e recusar aparecer no emprego meses depois', () => {
+    const base = newGame();
+    const rngBase = new Rng(base.seed, base.rngCursor);
+    const meeting = openCompanyMeeting(base, 'correios', rngBase).meeting!;
+    const pedidoId = meetingRequests(base, meeting.id)[0]!.id;
+    base.rngCursor = rngBase.cursor;
+
+    const atendido = deepClone(base);
+    const recusado = deepClone(base);
+
+    const rngA = new Rng(atendido.seed, atendido.rngCursor);
+    runCompanyAction(atendido, { kind: 'atender_demanda', requestId: pedidoId, choice: 'aceitar' }, rngA);
+    const rngR = new Rng(recusado.seed, recusado.rngCursor);
+    runCompanyAction(recusado, { kind: 'atender_demanda', requestId: pedidoId, choice: 'recusar' }, rngR);
+
+    let comAcordo = atendido;
+    let semAcordo = recusado;
+    for (let index = 0; index < 4; index += 1) {
+      comAcordo = tickMonth(comAcordo).state;
+      semAcordo = tickMonth(semAcordo).state;
+    }
+
+    const emprego = (state: GameState) =>
+      state.companies.companies.find((entry) => entry.id === 'correios')!.employees;
+
+    expect(emprego(comAcordo)).toBeGreaterThan(emprego(semAcordo));
+  });
+
+  it('negocia pela metade: o efeito é menor que aceitar, mas existe', () => {
+    const base = newGame();
+    const rngBase = new Rng(base.seed, base.rngCursor);
+    const meeting = openCompanyMeeting(base, 'jbs', rngBase).meeting!;
+    const pedidoId = meetingRequests(base, meeting.id)[0]!.id;
+    base.rngCursor = rngBase.cursor;
+
+    const cheio = deepClone(base);
+    const metade = deepClone(base);
+    runCompanyAction(
+      cheio,
+      { kind: 'atender_demanda', requestId: pedidoId, choice: 'aceitar' },
+      new Rng(cheio.seed, cheio.rngCursor),
+    );
+    runCompanyAction(
+      metade,
+      { kind: 'atender_demanda', requestId: pedidoId, choice: 'negociar' },
+      new Rng(metade.seed, metade.rngCursor),
+    );
+
+    const jbs = (state: GameState) => state.companies.companies.find((entry) => entry.id === 'jbs')!;
+    const original = jbs(base).politics.governmentRelation;
+
+    expect(jbs(metade).politics.governmentRelation).toBeGreaterThan(original);
+    expect(jbs(metade).politics.governmentRelation).toBeLessThan(
+      jbs(cheio).politics.governmentRelation,
+    );
+    expect(jbs(metade).financials.annualInvestment).toBeLessThan(
+      jbs(cheio).financials.annualInvestment,
+    );
+  });
+
+  it('publica a decisão no noticiário empresarial', () => {
+    const state = newGame();
+    const rng = new Rng(state.seed, state.rngCursor);
+    const meeting = openCompanyMeeting(state, 'correios', rng).meeting!;
+    const pedido = meetingRequests(state, meeting.id)[0]!;
+    const noticiasAntes = state.companies.news.length;
+
+    runCompanyAction(state, { kind: 'atender_demanda', requestId: pedido.id, choice: 'recusar' }, rng);
+
+    expect(state.companies.news.length).toBeGreaterThan(noticiasAntes);
+    expect(state.companies.news[0]!.companyId).toBe('correios');
+    expect(state.companies.news[0]!.valence).toBeLessThan(0);
+  });
+});

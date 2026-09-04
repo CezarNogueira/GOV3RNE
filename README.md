@@ -165,6 +165,14 @@ Duas formas de agir sobre uma empresa específica:
    pedido pode ser aceito, negociado pela metade, respondido com contraproposta
    ou recusado, e o presidente pode oferecer o que ninguém pediu.
 
+Respondido um item, ele sai da pauta: a decisão já entrou no balanço da empresa
+e não se decide duas vezes o mesmo pedido. O efeito é imediato e proporcional ao
+tamanho da resposta — investimento anual, quadro planejado, produção, risco de
+crise, preço da ação, relação com o governo e disposição de quem estava na sala.
+Recusa a uma empresa apertada vira plano de corte de pessoal, que o mês seguinte
+transforma em desemprego; atendimento vira vaga e obra. O que mudou fica listado
+ao lado do item, e a decisão sai no noticiário empresarial.
+
 Os números de partida vivem em
 [`company-financial-data.ts`](src/game/data/companies/company-financial-data.ts),
 separados da regra de jogo: atualizar um balanço é editar uma linha daquele

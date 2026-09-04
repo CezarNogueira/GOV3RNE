@@ -351,6 +351,12 @@ export interface CompanyRequest {
   status: CompanyRequestStatus;
   /** Preenchido quando o presidente decide. */
   resolution?: string;
+  /**
+   * O que a decisão fez com a empresa, já em números — investimento, quadro,
+   * ação, relação. Preenchido no momento em que o pedido é decidido, para a
+   * tela poder mostrar a consequência em vez de só dizer "atendido".
+   */
+  impact?: string[];
   urgency: 'baixa' | 'media' | 'alta';
 }
 

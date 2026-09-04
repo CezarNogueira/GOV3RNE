@@ -5,6 +5,7 @@ import {
   compact,
   createGame,
   createPolicy,
+  deepClone,
   deserialize,
   evaluateMandate,
   interpretLocally,
@@ -158,6 +159,21 @@ class GameRepository {
     return loaded.state;
   }
 
+  /**
+   * Cópia da partida para ser modificada.
+   *
+   * O motor altera o estado no lugar e a memória do repositório guarda sempre o
+   * mesmo objeto. Devolver esse objeto para a interface fazia o React comparar a
+   * referência com ela mesma e concluir que nada tinha mudado: a decisão era
+   * calculada, gravada no save, e a tela continuava igual até alguma outra coisa
+   * forçar o redesenho. Trabalhar sobre uma cópia entrega um objeto novo a cada
+   * ação — que é o sinal de que a interface precisa se redesenhar — e mantém a
+   * memória apontando para a versão mais recente, porque `persist` a substitui.
+   */
+  private draft(id: string): GameState {
+    return deepClone(this.read(id));
+  }
+
   /** Fotografia da posse, para a avaliação final medir o que mudou. */
   private inauguration(state: GameState): InaugurationSnapshot {
     try {
@@ -222,7 +238,7 @@ class GameRepository {
   }
 
   decideEvent(id: string, eventId: string, optionId: string): { state: GameState; message: string } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = resolveEvent(state, eventId, optionId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
@@ -235,7 +251,7 @@ class GameRepository {
 
   /** Marca uma viagem de Estado. Ela substitui o mês doméstico quando a data chegar. */
   scheduleVisit(id: string, countryId: string, month: number): { state: GameState; message: string } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const outcome = scheduleVisit(state, countryId, month);
     if (!outcome.ok) throw new Error(outcome.message);
     state.updatedAt = new Date().toISOString();
@@ -249,7 +265,7 @@ class GameRepository {
     offerId: string,
     accept: boolean,
   ): { state: GameState; message: string } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const outcome = respondToTreatyOffer(state, offerId, accept);
     if (!outcome.ok) throw new Error(outcome.message);
     state.updatedAt = new Date().toISOString();
@@ -266,7 +282,7 @@ class GameRepository {
    * motor cobra dentro de cada ação.
    */
   companyAction(id: string, action: CompanyAction): { state: GameState; message: string } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = runCompanyAction(state, action, rng);
     if (!outcome.ok) throw new Error(outcome.message);
@@ -282,7 +298,7 @@ class GameRepository {
     actionId: AgendaActionId,
     targetId?: string,
   ): { state: GameState; message: string } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const outcome = runAgendaAction(state, actionId, targetId);
     if (!outcome.ok) throw new Error(outcome.message);
     this.persist(outcome.state);
@@ -343,7 +359,7 @@ class GameRepository {
     analysis: ProposalAnalysis,
     authoredText: string,
   ): { state: GameState; policyId: string } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const action = runAgendaAction(state, 'escrever_medida');
     if (!action.ok) throw new Error(action.message);
 
@@ -363,7 +379,7 @@ class GameRepository {
     id: string,
     policyId: string,
   ): { state: GameState; entries: PublicReactionEntry[]; approvalDelta: number } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = revealPublicReaction(state, policyId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
@@ -381,7 +397,7 @@ class GameRepository {
     partyId: string,
     optionId: NegotiationOptionId,
   ): { state: GameState; message: string } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = negotiateWithParty(state, policyId, partyId, optionId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
@@ -394,7 +410,7 @@ class GameRepository {
 
   /** Encerra a negociação e roda a votação real da Casa em que a medida está. */
   castMeasureVote(id: string, policyId: string): { state: GameState; message: string; result?: VoteResult } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = castHouseVote(state, policyId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
@@ -407,7 +423,7 @@ class GameRepository {
 
   /** Confirma a transição de uma medida aprovada na Câmara para o Senado. */
   advanceMeasureToSenate(id: string, policyId: string): { state: GameState; message: string } {
-    const state = this.read(id);
+    const state = this.draft(id);
     const outcome = acknowledgeSenateTransition(state, policyId);
     if (!outcome.ok) throw new Error(outcome.message);
 
