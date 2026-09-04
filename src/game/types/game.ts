@@ -16,6 +16,7 @@ import type { CongressState, Committee, Minister, OppositionState, SupremeCourtS
 import type { Policy, GovernmentProgram, ScheduledAction } from './policy';
 import type { ActiveEvent, Consequence, NewsItem, SocialPost, TimelineEntry } from './events';
 import type { ElectionState } from './election';
+import type { DecisionEntry } from './decisions';
 
 export interface ApprovalState {
   /** Aprovação do governo, 0-100. */
@@ -178,6 +179,11 @@ export interface GameState {
   consequences: Consequence[];
   news: NewsItem[];
   posts: SocialPost[];
+  /**
+   * O que cada decisão do presidente fez com o país, medido antes e depois.
+   * É o extrato que a interface mostra na hora e o histórico guarda.
+   */
+  decisions: DecisionEntry[];
   timeline: TimelineEntry[];
   history: EconomySnapshot[];
   lastResult: MonthResult | null;

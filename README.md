@@ -333,6 +333,33 @@ reconhecidos (com o ponto do estado de onde cada valor é lido) em
 [`numeric-targets.ts`](src/game/data/numeric-targets.ts). Adicionar um número
 novo ao jogo é acrescentar uma entrada nessa lista.
 
+### Devolutiva de cada decisão
+
+Nenhuma ação do presidente termina em silêncio.
+[`decisions.ts`](src/game/engines/decisions.ts) fotografa o país antes e depois
+de cada decisão e mostra a diferença: aprovação, caixa, primário, inflação,
+desemprego, dívida, risco-país, credibilidade, boa vontade do Congresso, base na
+Câmara, risco de impeachment, energia e estresse do presidente, pobreza,
+homicídios, índices de saúde e educação, isolamento diplomático, emprego nas
+grandes empresas — mais a reação de cada grupo social.
+
+A regra é **medir, não narrar**. O texto lê o estado da partida, não uma
+promessa do código, e por isso nunca mente. Duas consequências práticas:
+
+- ação nova não precisa lembrar de escrever a própria devolutiva — basta passar
+  pelo mesmo caminho, e um teste no repositório cobra isso de todas;
+- quando nada se moveu, a tela diz exatamente isso: *"nenhum indicador se moveu
+  agora; o efeito aparece nos próximos meses"* — que é a verdade sobre quase
+  toda política pública.
+
+O que a fotografia macro não enxerga (o balanço de uma empresa, o placar de uma
+votação, o efeito de um movimento de campanha) chega pelas notas da própria
+ação, que o motor já mede.
+
+Todas as decisões ficam guardadas em `state.decisions` e podem ser revistas em
+**Histórico → Suas decisões**, com a variação de cada indicador ao lado. A linha
+do tempo conta o que aconteceu; essa lista conta o que o jogador fez.
+
 ### Reeleição
 
 O mandato pode não acabar no mês 48.

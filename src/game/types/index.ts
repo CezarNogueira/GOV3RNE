@@ -9,4 +9,5 @@ export * from './numeric-policy';
 export * from './events';
 export * from './election';
 export * from './recognizer';
+export * from './decisions';
 export * from './game';

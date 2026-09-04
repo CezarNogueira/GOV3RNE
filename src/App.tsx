@@ -4,6 +4,7 @@ import { useGame } from '@/state/game-store';
 import { TopNavigation } from '@/components/layout/TopNavigation';
 import { Toaster } from '@/components/ui/overlays';
 import { MonthResultModal } from '@/components/game/MonthResultModal';
+import { DecisionFeedback } from '@/components/game/DecisionFeedback';
 import { Landing } from '@/pages/Landing';
 
 /**
@@ -44,6 +45,8 @@ function GameShell() {
         <Outlet />
       </main>
       <MonthResultModal />
+      {/* Nenhuma decisão do presidente termina sem resposta na tela. */}
+      <DecisionFeedback />
       <FictionFooter />
     </div>
   );

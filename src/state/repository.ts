@@ -7,6 +7,9 @@ import {
   createPolicy,
   deepClone,
   deserialize,
+  AGENDA_ACTION_BY_ID,
+  recordDecision,
+  takeSnapshot,
   evaluateMandate,
   interpretLocally,
   monthLabel,
@@ -26,6 +29,7 @@ import {
   tickMonth,
   type AgendaActionId,
   type CompanyAction,
+  type DecisionEntry,
   type FinalEvaluation,
   type GameState,
   type InaugurationSnapshot,
@@ -60,6 +64,13 @@ export interface TickResponse {
   gameOver: boolean;
   briefing: string | null;
   evaluation: FinalEvaluation | null;
+}
+
+/** Toda ação devolve o estado novo, a frase do motor e o que ela fez no país. */
+export interface ActionResponse {
+  state: GameState;
+  message: string;
+  decision: DecisionEntry;
 }
 
 export interface InterpretResponse {
@@ -111,6 +122,66 @@ function toMeta(state: GameState): SaveSlotMeta {
     party: state.party.acronym,
     autosave: true,
   };
+}
+
+/**
+ * Como cada ação sobre empresa aparece no extrato de decisões.
+ *
+ * O motor devolve a frase do resultado; o que falta é o cabeçalho: o que foi
+ * feito, com quem. Sem isso o histórico viraria uma lista de mensagens soltas.
+ */
+function describeCompanyAction(
+  state: GameState,
+  action: CompanyAction,
+): { title: string; choice: string } {
+  const companyId = 'companyId' in action ? action.companyId : undefined;
+  const company = companyId
+    ? state.companies.companies.find((entry) => entry.id === companyId)
+    : undefined;
+  const nome = company?.name ?? 'empresa';
+
+  switch (action.kind) {
+    case 'atender_demanda': {
+      const request = state.companies.requests.find((entry) => entry.id === action.requestId);
+      const alvo = request?.companyName ?? nome;
+      return {
+        title: `${alvo} — ${request?.title ?? 'demanda'}`,
+        choice:
+          action.choice === 'aceitar'
+            ? 'Atendido integralmente'
+            : action.choice === 'negociar'
+              ? 'Negociado pela metade'
+              : action.choice === 'contraproposta'
+                ? 'Contraproposta com contrapartida'
+                : 'Recusado',
+      };
+    }
+    case 'reuniao':
+      return { title: `Audiência com a direção — ${nome}`, choice: 'Direção convocada ao Planalto' };
+    case 'encerrar_reuniao':
+      return { title: 'Audiência encerrada', choice: 'Reunião fechada com ata' };
+    case 'oferecer':
+      return { title: `Oferta a ${nome}`, choice: `Oferecido: ${action.offer}` };
+    case 'privatizar':
+      return { title: `Privatização — ${nome}`, choice: `${action.share}% colocados à venda` };
+    case 'comprar_participacao':
+      return {
+        title: `Compra de participação — ${nome}`,
+        choice: `${action.share}% por ${action.financing === 'caixa' ? 'caixa' : 'dívida'}`,
+      };
+    case 'resolver_crise':
+      return { title: `Crise em ${nome}`, choice: `Saída escolhida: ${action.choice}` };
+    case 'nomear':
+      return { title: `Direção de ${nome}`, choice: `Perfil ${action.profile}` };
+    case 'aportar':
+      return { title: `Aporte em ${nome}`, choice: `R$ ${action.amount} bi de capital` };
+    case 'contrato':
+      return { title: `Contrato com ${nome}`, choice: action.label };
+    case 'investigar':
+      return { title: `Investigação — ${nome}`, choice: 'Fiscalização aberta' };
+    default:
+      return { title: `Ação sobre ${nome}`, choice: action.kind.replace('_', ' ') };
+  }
 }
 
 class GameRepository {
@@ -225,7 +296,20 @@ class GameRepository {
     const current = this.read(id);
     if (current.flags.gameOver) throw new Error('Este mandato já foi encerrado.');
 
+    const before = takeSnapshot(current);
     const outcome = tickMonth(current);
+
+    // O mês também é uma decisão: a de deixar o tempo passar. Ele entra no
+    // mesmo extrato das outras, para o jogador poder comparar o que ELE fez com
+    // o que o país fez sozinho.
+    recordDecision(outcome.state, before, {
+      kind: 'mes',
+      title: `Mês encerrado — ${outcome.result.monthLabel}`,
+      choice: 'Tempo avançado',
+      message: outcome.notes[0] ?? 'O país seguiu o seu curso.',
+      notes: outcome.result.headlines.slice(0, 3),
+    });
+
     this.persist(outcome.state);
 
     return {
@@ -240,26 +324,49 @@ class GameRepository {
     };
   }
 
-  decideEvent(id: string, eventId: string, optionId: string): { state: GameState; message: string } {
+  decideEvent(id: string, eventId: string, optionId: string): ActionResponse {
     const state = this.draft(id);
+    const event = state.pendingEvents.find((entry) => entry.id === eventId);
+    const option = event?.options.find((entry) => entry.id === optionId);
+    const before = takeSnapshot(state);
+
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = resolveEvent(state, eventId, optionId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
-
     state.rngCursor = rng.cursor;
+
+    const decision = recordDecision(state, before, {
+      kind: 'evento',
+      title: event?.title ?? 'Evento',
+      choice: option?.label ?? 'Decisão tomada',
+      message: outcome.message,
+      notes: option?.warning ? [option.warning] : [],
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   /** Marca uma viagem de Estado. Ela substitui o mês doméstico quando a data chegar. */
-  scheduleVisit(id: string, countryId: string, month: number): { state: GameState; message: string } {
+  scheduleVisit(id: string, countryId: string, month: number): ActionResponse {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
     const outcome = scheduleVisit(state, countryId, month);
     if (!outcome.ok) throw new Error(outcome.message);
+
+    const country = state.diplomacy.countries.find((entry) => entry.id === countryId);
+    const decision = recordDecision(state, before, {
+      kind: 'diplomacia',
+      title: `Viagem de Estado${country ? ` — ${country.name}` : ''}`,
+      choice: `Marcada para o mês ${month}`,
+      message: outcome.message,
+      notes: ['Uma viagem substitui o mês doméstico: a agenda interna daquele mês não acontece.'],
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   /** Aceita ou recusa um acordo que está na mesa com um país. */
@@ -267,13 +374,24 @@ class GameRepository {
     id: string,
     offerId: string,
     accept: boolean,
-  ): { state: GameState; message: string } {
+  ): ActionResponse {
     const state = this.draft(id);
+    const offer = state.diplomacy.pendingOffers.find((entry) => entry.id === offerId);
+    const before = takeSnapshot(state);
+
     const outcome = respondToTreatyOffer(state, offerId, accept);
     if (!outcome.ok) throw new Error(outcome.message);
+
+    const decision = recordDecision(state, before, {
+      kind: 'diplomacia',
+      title: offer ? `Acordo com ${offer.countryName}` : 'Acordo internacional',
+      choice: accept ? 'Acordo aceito' : 'Acordo recusado',
+      message: outcome.message,
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   /**
@@ -284,16 +402,36 @@ class GameRepository {
    * elas consomem é caixa, capital político e participação acionária — e isso o
    * motor cobra dentro de cada ação.
    */
-  companyAction(id: string, action: CompanyAction): { state: GameState; message: string } {
+  companyAction(id: string, action: CompanyAction): ActionResponse {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
+
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = runCompanyAction(state, action, rng);
     if (!outcome.ok) throw new Error(outcome.message);
-
     state.rngCursor = rng.cursor;
+
+    // O efeito de uma decisão sobre empresa mora DENTRO da empresa — margem,
+    // investimento, quadro, ação —, e a fotografia macro não enxerga isso. O
+    // motor já mede essas linhas ao resolver o pedido; aqui elas só são
+    // repassadas para a mesma devolutiva das outras decisões.
+    const described = describeCompanyAction(state, action);
+    const impact =
+      action.kind === 'atender_demanda'
+        ? (state.companies.requests.find((entry) => entry.id === action.requestId)?.impact ?? [])
+        : [];
+
+    const decision = recordDecision(state, before, {
+      kind: 'empresa',
+      title: described.title,
+      choice: described.choice,
+      message: outcome.message,
+      notes: impact,
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   /**
@@ -302,52 +440,97 @@ class GameRepository {
    * Não custa agenda: é uma decisão política, não uma tarefa do mês. O que ela
    * cobra vem depois — campanha consome o tempo que era de governo.
    */
-  decideCandidacy(id: string, running: boolean): { state: GameState; message: string } {
+  decideCandidacy(id: string, running: boolean): ActionResponse {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
     const outcome = decideCandidacy(state, running);
     if (!outcome.ok) throw new Error(outcome.message);
 
+    const decision = recordDecision(state, before, {
+      kind: 'eleicao',
+      title: 'Candidatura à reeleição',
+      choice: running ? 'Vai disputar' : 'Não vai disputar',
+      message: outcome.message,
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   /** Executa um movimento de campanha. Cobra agenda e energia do presidente. */
-  campaignMove(id: string, moveId: string): { state: GameState; message: string } {
+  campaignMove(id: string, moveId: string): ActionResponse {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
+
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = runCampaignMove(state, moveId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
-
     state.rngCursor = rng.cursor;
+
+    const move = state.election?.moves.find((entry) => entry.moveId === moveId);
+    const decision = recordDecision(state, before, {
+      kind: 'campanha',
+      title: 'Campanha eleitoral',
+      choice: move?.label ?? 'Movimento de campanha',
+      message: outcome.message,
+      notes: move
+        ? [
+            `Efeito na intenção de voto: ${move.intentionDelta >= 0 ? '+' : ''}${move.intentionDelta.toFixed(1)} p.p.`,
+          ]
+        : [],
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   /** Assume o segundo mandato com o programa escolhido para ele. */
-  beginSecondTerm(id: string, promiseIds: string[]): { state: GameState; message: string } {
+  beginSecondTerm(id: string, promiseIds: string[]): ActionResponse {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
+
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = beginSecondTerm(state, promiseIds, rng);
     if (!outcome.ok) throw new Error(outcome.message);
-
     state.rngCursor = rng.cursor;
+
+    const decision = recordDecision(state, before, {
+      kind: 'eleicao',
+      title: 'Posse do segundo mandato',
+      choice:
+        promiseIds.length > 0 ? 'Programa novo para os próximos quatro anos' : 'Mesmos compromissos',
+      message: outcome.message,
+      notes: state.promises.map((promise) => `Compromisso: ${promise.title}`),
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   runAction(
     id: string,
     actionId: AgendaActionId,
     targetId?: string,
-  ): { state: GameState; message: string } {
+  ): ActionResponse {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
     const outcome = runAgendaAction(state, actionId, targetId);
     if (!outcome.ok) throw new Error(outcome.message);
-    this.persist(outcome.state);
-    return { state: outcome.state, message: outcome.message };
+
+    const next = outcome.state;
+    const action = AGENDA_ACTION_BY_ID[actionId];
+    const decision = recordDecision(next, before, {
+      kind: 'agenda',
+      title: action?.label ?? 'Ação de governo',
+      choice: action?.description ?? 'Executada',
+      message: outcome.message,
+    });
+
+    this.persist(next);
+    return { state: next, message: outcome.message, decision };
   }
 
   /**
@@ -403,8 +586,9 @@ class GameRepository {
     id: string,
     analysis: ProposalAnalysis,
     authoredText: string,
-  ): { state: GameState; policyId: string } {
+  ): { state: GameState; policyId: string; decision: DecisionEntry } {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
     const action = runAgendaAction(state, 'escrever_medida');
     if (!action.ok) throw new Error(action.message);
 
@@ -415,24 +599,52 @@ class GameRepository {
     next.rngCursor = rng.cursor;
     next.updatedAt = new Date().toISOString();
 
+    const decision = recordDecision(next, before, {
+      kind: 'medida',
+      title: analysis.title,
+      choice: `${analysis.instrument.replace('_', ' ')} assinada`,
+      message: analysis.summary,
+      notes: [
+        analysis.requiresCongress
+          ? 'Depende do Congresso: a tramitação começa agora.'
+          : 'Vale pela caneta: entra em vigor sem passar pelo Congresso.',
+        ...analysis.warnings.slice(0, 2),
+      ],
+    });
+
     this.persist(next);
-    return { state: next, policyId: policy.id };
+    return { state: next, policyId: policy.id, decision };
   }
 
   /** Revela a reação do país a uma medida, na tela de assinatura. */
   revealReaction(
     id: string,
     policyId: string,
-  ): { state: GameState; entries: PublicReactionEntry[]; approvalDelta: number } {
+  ): {
+    state: GameState;
+    entries: PublicReactionEntry[];
+    approvalDelta: number;
+    decision: DecisionEntry;
+  } {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = revealPublicReaction(state, policyId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
-
     state.rngCursor = rng.cursor;
+
+    const policy = state.policies.find((entry) => entry.id === policyId);
+    const decision = recordDecision(state, before, {
+      kind: 'medida',
+      title: policy?.title ?? 'Medida',
+      choice: 'Repercussão pública',
+      message: outcome.message,
+      notes: outcome.entries.slice(0, 3).map((entry) => `${entry.name}: "${entry.quote}"`),
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, entries: outcome.entries, approvalDelta: outcome.approvalDelta };
+    return { state, entries: outcome.entries, approvalDelta: outcome.approvalDelta, decision };
   }
 
   /** Fecha um acordo de negociação com uma bancada para uma medida em tramitação. */
@@ -441,40 +653,73 @@ class GameRepository {
     policyId: string,
     partyId: string,
     optionId: NegotiationOptionId,
-  ): { state: GameState; message: string } {
+  ): ActionResponse {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = negotiateWithParty(state, policyId, partyId, optionId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
-
     state.rngCursor = rng.cursor;
+
+    const policy = state.policies.find((entry) => entry.id === policyId);
+    const decision = recordDecision(state, before, {
+      kind: 'medida',
+      title: `Negociação — ${policy?.title ?? 'medida'}`,
+      choice: `${partyId}: ${optionId.replace('_', ' ')}`,
+      message: outcome.message,
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   /** Encerra a negociação e roda a votação real da Casa em que a medida está. */
-  castMeasureVote(id: string, policyId: string): { state: GameState; message: string; result?: VoteResult } {
+  castMeasureVote(
+    id: string,
+    policyId: string,
+  ): { state: GameState; message: string; result?: VoteResult; decision: DecisionEntry } {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = castHouseVote(state, policyId, rng);
     if (!outcome.ok) throw new Error(outcome.message);
-
     state.rngCursor = rng.cursor;
+
+    const policy = state.policies.find((entry) => entry.id === policyId);
+    const decision = recordDecision(state, before, {
+      kind: 'medida',
+      title: `Votação — ${policy?.title ?? 'medida'}`,
+      choice: outcome.result
+        ? `${outcome.result.favor} a favor, ${outcome.result.against} contra`
+        : 'Votação encerrada',
+      message: outcome.message,
+      notes: outcome.result ? [outcome.result.narrative] : [],
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message, result: outcome.result };
+    return { state, message: outcome.message, result: outcome.result, decision };
   }
 
   /** Confirma a transição de uma medida aprovada na Câmara para o Senado. */
-  advanceMeasureToSenate(id: string, policyId: string): { state: GameState; message: string } {
+  advanceMeasureToSenate(id: string, policyId: string): ActionResponse {
     const state = this.draft(id);
+    const before = takeSnapshot(state);
     const outcome = acknowledgeSenateTransition(state, policyId);
     if (!outcome.ok) throw new Error(outcome.message);
 
+    const policy = state.policies.find((entry) => entry.id === policyId);
+    const decision = recordDecision(state, before, {
+      kind: 'medida',
+      title: `Senado — ${policy?.title ?? 'medida'}`,
+      choice: 'Matéria enviada à outra Casa',
+      message: outcome.message,
+    });
+
     state.updatedAt = new Date().toISOString();
     this.persist(state);
-    return { state, message: outcome.message };
+    return { state, message: outcome.message, decision };
   }
 
   evaluate(id: string): FinalEvaluation {

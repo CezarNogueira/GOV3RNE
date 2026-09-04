@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type {
   AgendaActionId,
   CompanyAction,
+  DecisionEntry,
   FinalEvaluation,
   GameState,
   MonthResult,
@@ -39,6 +40,13 @@ interface GameStore {
 
   /** Resultado do último mês, exibido no modal de fechamento. */
   lastResult: MonthResult | null;
+  /**
+   * A última decisão tomada, com tudo o que ela mudou no país.
+   *
+   * Fica aqui para a interface poder mostrar a devolutiva imediatamente depois
+   * da ação — nenhuma decisão do jogador termina sem resposta na tela.
+   */
+  lastDecision: DecisionEntry | null;
   lastNotes: string[];
   briefing: string | null;
   evaluation: FinalEvaluation | null;
@@ -77,6 +85,7 @@ interface GameStore {
   exportSave: () => string | null;
   importSave: (raw: string) => void;
   dismissResult: () => void;
+  dismissDecision: () => void;
   toast: (toast: Omit<Toast, 'id'>) => void;
   dismissToast: (id: string) => void;
   clearError: () => void;
@@ -93,6 +102,7 @@ export const useGame = create<GameStore>((set, get) => ({
   advancing: false,
   error: null,
   lastResult: null,
+  lastDecision: null,
   lastNotes: [],
   briefing: null,
   evaluation: null,
@@ -154,6 +164,9 @@ export const useGame = create<GameStore>((set, get) => ({
           evaluation: outcome.evaluation,
           showResult: true,
           advancing: false,
+          // O fechamento do mês tem tela própria: a devolutiva da última ação
+          // sai da frente para não competir com ela.
+          lastDecision: null,
           saves: repository.list(),
         });
       } catch (error) {
@@ -167,8 +180,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return false;
     try {
       const outcome = repository.decideEvent(current.id, eventId, optionId);
-      set({ state: outcome.state });
-      get().toast({ kind: 'info', title: 'Decisão registrada', detail: outcome.message });
+      set({ state: outcome.state, lastDecision: outcome.decision });
       return true;
     } catch (error) {
       get().toast({ kind: 'erro', title: 'Não deu para decidir', detail: messageOf(error) });
@@ -181,8 +193,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.runAction(current.id, actionId, targetId);
-      set({ state: outcome.state });
-      get().toast({ kind: 'sucesso', title: 'Agenda cumprida', detail: outcome.message });
+      set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Ação não executada', detail: messageOf(error) });
     }
@@ -193,8 +204,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.companyAction(current.id, action);
-      set({ state: outcome.state });
-      get().toast({ kind: 'sucesso', title: 'Decisão registrada', detail: outcome.message });
+      set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Não foi possível executar', detail: messageOf(error) });
     }
@@ -205,12 +215,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.decideCandidacy(current.id, running);
-      set({ state: outcome.state });
-      get().toast({
-        kind: running ? 'sucesso' : 'info',
-        title: running ? 'Candidatura lançada' : 'Você não disputa a reeleição',
-        detail: outcome.message,
-      });
+      set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Decisão não registrada', detail: messageOf(error) });
     }
@@ -221,8 +226,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.campaignMove(current.id, moveId);
-      set({ state: outcome.state });
-      get().toast({ kind: 'sucesso', title: 'Campanha', detail: outcome.message });
+      set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Movimento não executado', detail: messageOf(error) });
     }
@@ -233,8 +237,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return false;
     try {
       const outcome = repository.beginSecondTerm(current.id, promiseIds);
-      set({ state: outcome.state, evaluation: null });
-      get().toast({ kind: 'sucesso', title: 'Segundo mandato', detail: outcome.message });
+      set({ state: outcome.state, evaluation: null, lastDecision: outcome.decision });
       return true;
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Posse não realizada', detail: messageOf(error) });
@@ -247,8 +250,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.scheduleVisit(current.id, countryId, month);
-      set({ state: outcome.state });
-      get().toast({ kind: 'sucesso', title: 'Viagem marcada', detail: outcome.message });
+      set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Viagem não marcada', detail: messageOf(error) });
     }
@@ -259,7 +261,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.respondToTreatyOffer(current.id, offerId, accept);
-      set({ state: outcome.state });
+      set({ state: outcome.state, lastDecision: outcome.decision });
       get().toast({
         kind: accept ? 'sucesso' : 'info',
         title: accept ? 'Acordo assinado' : 'Acordo recusado',
@@ -281,14 +283,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return null;
     try {
       const outcome = repository.sign(current.id, analysis, text);
-      set({ state: outcome.state });
-      get().toast({
-        kind: 'sucesso',
-        title: analysis.requiresCongress ? 'Sessão convocada' : 'Medida assinada',
-        detail: analysis.requiresCongress
-          ? 'A matéria vai a voto agora: negocie com as bancadas antes de encerrar.'
-          : 'Entra em vigor no fechamento deste mês.',
-      });
+      set({ state: outcome.state, lastDecision: outcome.decision });
       return outcome.policyId;
     } catch (error) {
       get().toast({ kind: 'erro', title: 'Não foi possível assinar', detail: messageOf(error) });
@@ -301,7 +296,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.revealReaction(current.id, policyId);
-      set({ state: outcome.state });
+      set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Sem repercussão apurada', detail: messageOf(error) });
     }
@@ -312,8 +307,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.negotiateMeasure(current.id, policyId, partyId, optionId);
-      set({ state: outcome.state });
-      get().toast({ kind: 'sucesso', title: 'Acordo fechado', detail: outcome.message });
+      set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Negociação não fechou', detail: messageOf(error) });
     }
@@ -324,7 +318,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return null;
     try {
       const outcome = repository.castMeasureVote(current.id, policyId);
-      set({ state: outcome.state });
+      set({ state: outcome.state, lastDecision: outcome.decision });
       return outcome.result ?? null;
     } catch (error) {
       get().toast({ kind: 'erro', title: 'Não foi possível votar', detail: messageOf(error) });
@@ -337,7 +331,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.advanceMeasureToSenate(current.id, policyId);
-      set({ state: outcome.state });
+      set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Não foi possível avançar', detail: messageOf(error) });
     }
@@ -374,6 +368,8 @@ export const useGame = create<GameStore>((set, get) => ({
   },
 
   dismissResult: () => set({ showResult: false }),
+
+  dismissDecision: () => set({ lastDecision: null }),
 
   toast: (toast) => {
     const id = `t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;

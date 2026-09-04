@@ -15,6 +15,7 @@ export * from './news';
 export * from './promises';
 export * from './impeachment';
 export * from './evaluation';
+export * from './decisions';
 export * from './election';
 export * from './recognizer/index';
 export * from './builders/index';

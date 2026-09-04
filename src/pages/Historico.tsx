@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { summarizeDecision, type DecisionEntry } from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader } from '@/components/layout/PageHeader';
 import { Badge, Bar, Empty, Section, cx } from '@/components/ui/primitives';
@@ -36,6 +37,7 @@ const KIND_TONE: Record<string, 'gov' | 'warn' | 'danger' | 'info' | 'neutral'> 
 export function Historico() {
   const state = useGame((store) => store.state);
   const [filter, setFilter] = useState<string>('todos');
+  const [view, setView] = useState<'linha' | 'decisoes'>('linha');
 
   if (!state) return null;
 
@@ -63,9 +65,21 @@ export function Historico() {
       <PageBody>
         <div className="grid gap-4 lg:grid-cols-[1fr_300px]">
           <Section
-            title="Linha do tempo"
+            title={view === 'linha' ? 'Linha do tempo' : 'Suas decisões'}
             action={
+              view === 'decisoes' ? (
+                <button type="button" className="btn-ghost btn-sm" onClick={() => setView('linha')}>
+                  Ver a linha do tempo
+                </button>
+              ) : (
               <div className="flex flex-wrap gap-1">
+                <button
+                  type="button"
+                  className="border border-ink-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-gov-400 transition-colors hover:border-gov-600"
+                  onClick={() => setView('decisoes')}
+                >
+                  Suas decisões
+                </button>
                 {kinds.map((kind) => (
                   <button
                     key={kind}
@@ -82,8 +96,13 @@ export function Historico() {
                   </button>
                 ))}
               </div>
+              )
             }
           >
+            {view === 'decisoes' ? (
+              <DecisionList decisions={state.decisions} />
+            ) : (
+              <>
             {entries.length === 0 ? (
               <Empty>Nada registrado com esse filtro.</Empty>
             ) : (
@@ -134,6 +153,8 @@ export function Historico() {
                     </div>
                   ))}
               </div>
+            )}
+              </>
             )}
           </Section>
 
@@ -187,5 +208,80 @@ export function Historico() {
         </div>
       </PageBody>
     </>
+  );
+}
+
+const DECISION_LABEL: Record<string, string> = {
+  evento: 'Evento',
+  medida: 'Medida',
+  agenda: 'Agenda',
+  empresa: 'Empresa',
+  diplomacia: 'Diplomacia',
+  campanha: 'Campanha',
+  eleicao: 'Eleição',
+  mes: 'Mês',
+};
+
+/**
+ * TUDO O QUE VOCÊ DECIDIU
+ *
+ * A linha do tempo conta o que ACONTECEU; esta lista conta o que VOCÊ FEZ, com
+ * a variação medida de cada indicador. É a diferença entre ler a história do
+ * governo e ler a própria responsabilidade sobre ela.
+ */
+function DecisionList({ decisions }: { decisions: DecisionEntry[] }) {
+  if (decisions.length === 0) {
+    return (
+      <Empty>
+        Nenhuma decisão registrada ainda. Cada ação sua aparece aqui com o que ela mudou no país.
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {decisions.map((decision) => (
+        <article key={decision.id} className="border border-ink-700 bg-ink-900/40 p-2.5">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[13px] font-semibold leading-snug text-neutral-100">
+                {decision.title}
+              </p>
+              <p className="text-[11px] leading-snug text-neutral-500">{decision.choice}</p>
+            </div>
+            <span className="flex shrink-0 items-center gap-1.5">
+              <Badge tone="neutral">{DECISION_LABEL[decision.kind] ?? decision.kind}</Badge>
+              <span className="font-mono text-[10px] text-neutral-600">{decision.monthLabel}</span>
+            </span>
+          </div>
+
+          <p className="mt-1.5 text-[11px] leading-snug text-neutral-400">
+            {summarizeDecision(decision)}
+          </p>
+
+          {decision.deltas.length > 0 && (
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              {decision.deltas.slice(0, 6).map((delta) => (
+                <span
+                  key={delta.label}
+                  className={cx(
+                    'border px-1.5 py-0.5 font-mono text-[10px]',
+                    delta.tone === 'pos'
+                      ? 'border-gov-800 text-gov-400'
+                      : delta.tone === 'neg'
+                        ? 'border-danger-900 text-danger-400'
+                        : 'border-ink-700 text-neutral-400',
+                  )}
+                >
+                  {delta.label} {delta.delta > 0 ? '+' : '−'}
+                  {Math.abs(delta.delta).toFixed(delta.decimals)}
+                  {delta.unit}
+                </span>
+              ))}
+            </div>
+          )}
+        </article>
+      ))}
+    </div>
   );
 }

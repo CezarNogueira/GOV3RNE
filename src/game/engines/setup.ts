@@ -147,6 +147,7 @@ export function createGame(input: NewGameInput): GameState {
     consequences: [],
     news: [],
     posts: [],
+    decisions: [],
     timeline: [
       {
         id: makeId('tl', rng),

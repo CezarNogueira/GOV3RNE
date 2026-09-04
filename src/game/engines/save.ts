@@ -75,6 +75,9 @@ export function migrate(state: GameState): GameState {
 
   if (!migrated.consequences) migrated.consequences = [];
   if (!migrated.posts) migrated.posts = [];
+  // Saves anteriores ao registro de decisões: a lista começa vazia e passa a
+  // ser preenchida da próxima ação em diante.
+  if (!migrated.decisions) migrated.decisions = [];
   if (!migrated.news) migrated.news = [];
   if (!migrated.timeline) migrated.timeline = [];
   if (!migrated.history) migrated.history = [];

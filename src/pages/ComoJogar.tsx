@@ -15,6 +15,7 @@ const SECTIONS = [
       'O mandato tem 48 meses e cada mês é um turno. Você recebe uma cota de pontos de agenda — o tempo do presidente — e gasta como quiser: escrever uma medida, trabalhar votos no Congresso, receber um governador, falar em rede nacional, ou guardar o fim de semana e recuperar energia.',
       'Quando você avança o mês, tudo é processado de uma vez: as medidas executam, a economia roda, os grupos sociais reagem, o Congresso recalcula o apoio e a aprovação é fechada. O resultado aparece numa tela só, com o que subiu e o que caiu.',
       'Se houver evento pendente e você avançar sem decidir, o país decide por você — com metade do efeito e o dobro do desgaste. Não decidir também é uma decisão.',
+      'Toda decisão sua devolve uma resposta na tela: o que ela mudou no país, indicador por indicador, e quem gostou e quem não gostou. Não é um texto pronto — o jogo compara o país antes e depois da sua ação e mostra a diferença. Quando a resposta é "nada mudou agora", ela também aparece, porque quase toda política pública leva meses para chegar ao indicador. Tudo isso fica guardado em Histórico → Suas decisões.',
     ],
   },
   {
