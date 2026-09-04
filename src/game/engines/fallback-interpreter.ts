@@ -547,7 +547,7 @@ function dedupeGroups(entries: GroupImpact[]): GroupImpact[] {
   return [...map.values()].slice(0, 12);
 }
 
-function estimateSupport(
+export function estimateSupport(
   state: GameState,
   groupImpacts: GroupImpact[],
   cost: number,

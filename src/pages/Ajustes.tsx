@@ -67,7 +67,9 @@ export function Ajustes() {
             <StatRow
               label="Reeleição"
               value={state.settings.reelection ? 'Habilitada' : 'Desabilitada'}
+              tip="Com a reeleição habilitada, a eleição entra no calendário no quarto ano: você decide se disputa, faz campanha e, ganhando, governa mais 48 meses."
             />
+            <StatRow label="Mandato" value={state.term > 1 ? 'Segundo' : 'Primeiro'} />
           </Section>
 
           <Section title="Save">

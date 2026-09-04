@@ -23,10 +23,14 @@ export function MonthResultModal() {
   const briefing = useGame((store) => store.briefing);
   const evaluation = useGame((store) => store.evaluation);
   const dismiss = useGame((store) => store.dismissResult);
+  const state = useGame((store) => store.state);
 
   if (!result) return null;
 
   const finished = Boolean(evaluation);
+  // Ganhou a eleição: o mandato não terminou, começou outro. O botão leva à
+  // posse, não à avaliação final.
+  const reelected = state?.phase === 'transicao';
 
   return (
     <Modal
@@ -34,13 +38,26 @@ export function MonthResultModal() {
       onClose={dismiss}
       title={`Resultado de ${result.monthLabel}`}
       subtitle={
-        finished
-          ? 'Este foi o último mês do mandato.'
-          : 'O que mudou no país por causa do que você decidiu.'
+        reelected
+          ? 'Último mês do primeiro mandato. Você foi reeleito.'
+          : finished
+            ? 'Este foi o último mês do mandato.'
+            : 'O que mudou no país por causa do que você decidiu.'
       }
       size="lg"
       footer={
-        finished ? (
+        reelected ? (
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              dismiss();
+              navigate('/eleicao');
+            }}
+          >
+            Assumir o segundo mandato
+          </button>
+        ) : finished ? (
           <button
             type="button"
             className="btn-primary"

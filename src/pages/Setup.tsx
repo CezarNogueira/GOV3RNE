@@ -265,7 +265,7 @@ export function Setup() {
       difficulty: draft.difficulty,
       startYear: 2027,
       seed: createSeed(),
-      reelection: false,
+      reelection: true,
     };
 
     const parsed = newGameSchema.safeParse(payload);

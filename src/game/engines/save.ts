@@ -83,6 +83,15 @@ export function migrate(state: GameState): GameState {
     migrated.flags = { tutorialStep: 0, seenIntro: false, firedEvents: [], gameOver: false };
   }
   if (!migrated.flags.firedEvents) migrated.flags.firedEvents = [];
+
+  // Saves anteriores à reeleição: toda partida antiga é um primeiro mandato,
+  // ainda sem disputa montada. A eleição passa a valer para elas também — quem
+  // está no mês 30 de um save antigo vai encontrar a urna no quarto ano.
+  if (typeof migrated.term !== 'number') migrated.term = 1;
+  if (migrated.election === undefined) migrated.election = null;
+  if (typeof migrated.settings?.reelection !== 'boolean') {
+    migrated.settings = { ...migrated.settings, reelection: true };
+  }
   if (migrated.lastResult === undefined) migrated.lastResult = null;
   if (!migrated.economy.pipeline) {
     migrated.economy.pipeline = {

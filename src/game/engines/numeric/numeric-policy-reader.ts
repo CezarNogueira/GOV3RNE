@@ -202,6 +202,16 @@ function pickNumber(
  * Lê a frase e devolve a intenção numérica, ou null quando a medida não é
  * numérica (ou o número não pertence ao alvo).
  */
+/** Multiplicador da palavra de escala escrita ao lado do número. */
+function scaleOf(word: string | undefined): number {
+  if (!word) return 1;
+  if (word.startsWith('tri')) return 1e12;
+  if (word === 'bi' || word.startsWith('bilh')) return 1e9;
+  if (word === 'mi' || word.startsWith('milh')) return 1e6;
+  if (word === 'mil') return 1e3;
+  return 1;
+}
+
 export function readNumericIntent(text: string, state: GameState): NumericIntent | null {
   const normalized = normalize(text);
   const found = findTarget(normalized);
@@ -223,12 +233,15 @@ export function readNumericIntent(text: string, state: GameState): NumericIntent
   // ------------------------------------------------------ "de X para Y"
   // O par é a leitura mais confiável que existe: diz o ponto de partida e o de
   // chegada. O X serve de conferência contra o valor real do estado.
+  // A escala entra no par: "de 220 bilhões para 200 bilhões" é a forma como uma
+  // pessoa escreve orçamento, e sem aceitar a palavra de escala o par não casava
+  // — a frase caía na leitura de porcentagem e virava um corte de 220%.
   const pair = normalized.match(
-    /de\s*(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)\s*(?:%|por cento|reais)?\s*(?:para|ate)\s*(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)/,
+    /de\s*(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)\s*(bi|bilhao|bilhoes|mi|milhao|milhoes|mil|tri|trilhao|trilhoes)?\s*(?:%|por cento|reais)?\s*(?:para|ate)\s*(?:r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?)\s*(bi|bilhao|bilhoes|mi|milhao|milhoes|mil|tri|trilhao|trilhoes)?/,
   );
-  if (pair?.[1] && pair[2]) {
-    const from = toTargetUnit(parseLoose(pair[1]), target);
-    const to = toTargetUnit(parseLoose(pair[2]), target);
+  if (pair?.[1] && pair[3]) {
+    const from = toTargetUnit(parseLoose(pair[1]) * scaleOf(pair[2]), target);
+    const to = toTargetUnit(parseLoose(pair[3]) * scaleOf(pair[4]), target);
     if (Number.isFinite(from) && Number.isFinite(to)) {
       return {
         target,

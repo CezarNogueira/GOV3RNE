@@ -149,6 +149,7 @@ export function createPolicy(
     // permite gravar o valor novo no estado quando a medida entrar em vigor —
     // e devolvê-lo se ela cair.
     ...(analysis.numericImpact ? { numericImpact: analysis.numericImpact } : {}),
+    ...(analysis.numericExtras?.length ? { numericExtras: analysis.numericExtras } : {}),
     // A matéria já nasce em negociação: o governo convoca a sessão no ato da
     // assinatura, e o presidente decide na hora se negocia, vota ou deixa
     // correr. O que continua valendo é a consequência — o efeito só entra no
@@ -300,6 +301,9 @@ export function processPolicies(
       if (policy.numericImpact) {
         applyNumericChange(state, policy.numericImpact.change);
       }
+      // O pacote inteiro entra em vigor de uma vez: as outras alíquotas e
+      // dotações da mesma medida não podem ficar para depois.
+      for (const extra of policy.numericExtras ?? []) applyNumericChange(state, extra);
 
       // Uma parte do efeito chega de imediato: o anúncio já move expectativa.
       applyImpacts(state, policy.impacts, 0.25);
@@ -419,6 +423,7 @@ export function revokePolicy(state: GameState, policyId: string): boolean {
   if (policy.numericImpact) {
     revertNumericChange(state, policy.numericImpact.change);
   }
+  for (const extra of policy.numericExtras ?? []) revertNumericChange(state, extra);
   // A alavanca empresarial volta ao que era: medida revogada não pode continuar
   // desonerando folha nem protegendo setor.
   if (policy.companyImpact) {

@@ -1,6 +1,6 @@
 import type { LegalInstrument, PolicyCategory } from './common';
 import type { CompanyPolicyImpact } from './companies';
-import type { NumericImpactBreakdown } from './numeric-policy';
+import type { NumericImpactBreakdown, NumericPolicyChange } from './numeric-policy';
 import type { ChamberId, MinistryId } from './politics';
 import type { SocialSensitivity } from './world';
 
@@ -75,6 +75,15 @@ export interface ProposalAnalysis {
    * diferentes, em vez de caírem no mesmo modelo por tipo de medida.
    */
   numericImpact?: NumericImpactBreakdown;
+  /**
+   * Alterações numéricas adicionais que viajam na MESMA medida.
+   *
+   * Existe para o pacote: uma reforma tributária mexe em cinco alíquotas e um
+   * corte de gastos atinge quatro pastas, e as duas coisas são votadas uma vez
+   * só. Sem isto, o jogo teria de picar o pacote em cinco medidas — que é
+   * exatamente o que não acontece na vida real.
+   */
+  numericExtras?: NumericPolicyChange[];
   /** Justificativa curta da leitura feita pelo interpretador. */
   rationale: string;
   /** true quando o texto foi lido pelo fallback heurístico, sem IA. */
@@ -129,6 +138,15 @@ export interface Policy {
    * ela cair. Enquanto tramita, o número é só uma intenção.
    */
   numericImpact?: NumericImpactBreakdown;
+  /**
+   * Alterações numéricas adicionais que viajam na MESMA medida.
+   *
+   * Existe para o pacote: uma reforma tributária mexe em cinco alíquotas e um
+   * corte de gastos atinge quatro pastas, e as duas coisas são votadas uma vez
+   * só. Sem isto, o jogo teria de picar o pacote em cinco medidas — que é
+   * exatamente o que não acontece na vida real.
+   */
+  numericExtras?: NumericPolicyChange[];
   /**
    * O que esta medida faz com as empresas, lido do texto do presidente na
    * assinatura. Fica guardado na medida (e não recalculado toda vez) para que

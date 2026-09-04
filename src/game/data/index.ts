@@ -10,6 +10,7 @@ export * from './treaties';
 export * from './promises';
 export * from './people';
 export * from './agenda';
+export * from './campaign';
 export * from './difficulty';
 export * from './avatar';
 export * from './programs';

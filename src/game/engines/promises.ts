@@ -58,6 +58,17 @@ interface PromiseBaselineHolder {
   [BASELINE_KEY]?: Record<string, number>;
 }
 
+/**
+ * Zera o valor de partida das promessas.
+ *
+ * Existe para a posse do segundo mandato: o programa novo é medido a partir do
+ * país que o presidente entregou no primeiro, não do que ele recebeu em 2027.
+ */
+export function resetPromiseBaselines(state: GameState): void {
+  const holder = state as unknown as PromiseBaselineHolder;
+  delete holder[BASELINE_KEY];
+}
+
 export function processPromises(state: GameState): void {
   const holder = state as unknown as PromiseBaselineHolder;
   if (!holder[BASELINE_KEY]) {

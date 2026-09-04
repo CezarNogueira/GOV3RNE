@@ -127,7 +127,8 @@ export type ProposalAnalysisInput = z.infer<typeof proposalAnalysisSchema>;
 export const proposalRequestSchema = z.object({
   text: z.string().trim().min(12, 'Escreva pelo menos uma frase.').max(900),
   name: z.string().trim().max(120).optional(),
-  month: z.number().int().min(1).max(48),
+  // Até 96: um presidente reeleito continua escrevendo medidas no segundo mandato.
+  month: z.number().int().min(1).max(96),
 });
 
 export type ProposalRequest = z.infer<typeof proposalRequestSchema>;

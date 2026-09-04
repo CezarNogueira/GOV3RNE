@@ -159,7 +159,7 @@ export const newGameSchema = z
     difficulty: z.enum(DIFFICULTIES),
     startYear: z.number().int().min(2024).max(2099).default(2027),
     seed: z.number().int().optional(),
-    reelection: z.boolean().default(false),
+    reelection: z.boolean().default(true),
   })
   .refine((data) => data.partyId !== null || data.customParty !== null, {
     message: 'Escolha um partido existente ou funde a sua própria legenda.',

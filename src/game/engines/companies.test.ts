@@ -19,6 +19,7 @@ import {
   type Company,
   type GameState,
 } from './index';
+import { GAME_STATE_VERSION } from './setup';
 import { financialRecord } from '../data/companies/company-financial-data';
 import { Rng } from '../utils/rng';
 import { deepClone } from '../utils/clone';
@@ -545,6 +546,6 @@ describe('integração com o resto do jogo', () => {
     const migrado = migrate(legado);
     expect(migrado.companies.companies).toHaveLength(28);
     expect((migrado as { corporations?: unknown }).corporations).toBeUndefined();
-    expect(migrado.version).toBe(2);
+    expect(migrado.version).toBe(GAME_STATE_VERSION);
   });
 });

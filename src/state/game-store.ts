@@ -57,6 +57,12 @@ interface GameStore {
   decideEvent: (eventId: string, optionId: string) => boolean;
   runAction: (actionId: AgendaActionId, targetId?: string) => void;
   companyAction: (action: CompanyAction) => void;
+  /** Diz se o presidente disputa a reeleição. */
+  decideCandidacy: (running: boolean) => void;
+  /** Executa um movimento de campanha. */
+  campaignMove: (moveId: string) => void;
+  /** Assume o segundo mandato com o programa escolhido. */
+  beginSecondTerm: (promiseIds: string[]) => boolean;
   scheduleVisit: (countryId: string, month: number) => void;
   respondToTreatyOffer: (offerId: string, accept: boolean) => void;
   interpret: (text: string, name?: string) => Promise<InterpretResponse>;
@@ -191,6 +197,48 @@ export const useGame = create<GameStore>((set, get) => ({
       get().toast({ kind: 'sucesso', title: 'Decisão registrada', detail: outcome.message });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Não foi possível executar', detail: messageOf(error) });
+    }
+  },
+
+  decideCandidacy: (running) => {
+    const current = get().state;
+    if (!current) return;
+    try {
+      const outcome = repository.decideCandidacy(current.id, running);
+      set({ state: outcome.state });
+      get().toast({
+        kind: running ? 'sucesso' : 'info',
+        title: running ? 'Candidatura lançada' : 'Você não disputa a reeleição',
+        detail: outcome.message,
+      });
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Decisão não registrada', detail: messageOf(error) });
+    }
+  },
+
+  campaignMove: (moveId) => {
+    const current = get().state;
+    if (!current) return;
+    try {
+      const outcome = repository.campaignMove(current.id, moveId);
+      set({ state: outcome.state });
+      get().toast({ kind: 'sucesso', title: 'Campanha', detail: outcome.message });
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Movimento não executado', detail: messageOf(error) });
+    }
+  },
+
+  beginSecondTerm: (promiseIds) => {
+    const current = get().state;
+    if (!current) return false;
+    try {
+      const outcome = repository.beginSecondTerm(current.id, promiseIds);
+      set({ state: outcome.state, evaluation: null });
+      get().toast({ kind: 'sucesso', title: 'Segundo mandato', detail: outcome.message });
+      return true;
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Posse não realizada', detail: messageOf(error) });
+      return false;
     }
   },
 

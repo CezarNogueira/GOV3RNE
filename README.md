@@ -182,7 +182,76 @@ empresa (`estimated: false`) ou um parâmetro de balanceamento do jogo
 
 ### Interpretação de propostas
 
-O texto do jogador vira ficha técnica por um de dois caminhos:
+O jogo não tem modelo de linguagem próprio, e mesmo assim precisa entender
+qualquer frase de governo. A camada que faz isso é local, determinística e
+montada sobre os bancos de dados da própria partida —
+[`recognizer/`](src/game/engines/recognizer):
+
+```
+texto do jogador
+   ↓  normalização (acento, pontuação, gíria, plural, stopwords)
+   ↓  intenção      banco de intenções: frases, verbos, complementos
+   ↓  entidades     empresas, pastas, tributos, grupos, alvos numéricos
+   ↓  números       "para" ≠ "em", ponto percentual ≠ variação relativa
+   ↓  contexto      negação, pedido de estudo, urgência
+   ↓  confiança     0-1, combinando intenção e alvo
+RecognizedMeasure
+```
+
+O banco de entidades não é uma segunda lista: ele é **construído a partir do
+estado da partida** ([`entities.ts`](src/game/engines/recognizer/entities.ts)).
+As 28 empresas vêm do banco de empresas, as dez pastas vêm do banco de
+ministérios, os tributos e os orçamentos vêm do registro de alvos numéricos. Uma
+empresa nova passa a ser reconhecida no texto sem ninguém editar o
+interpretador; o que mora ali são só os apelidos ("petro", "estatal do
+petróleo", "pequenos negócios"), que são informação de linguagem e não existiriam
+em nenhum outro banco.
+
+A comparação é aproximada por distância de edição e bigramas
+([`fuzzy.ts`](src/game/engines/recognizer/fuzzy.ts)), com limite proporcional ao
+tamanho da palavra: "correius" chega em Correios, "privatisar" em privatizar, e
+"saúde" nunca chega em "salário".
+
+Três regras de contexto impedem o erro clássico de interpretador por
+palavra-chave:
+
+- **negação** — "não quero privatizar os Correios" contém "privatizar" e não
+  abre nada;
+- **hipótese** — "estude uma possível privatização" vira estudo, não venda;
+- **componente** — "vender os correios" não traz complemento cadastrado nenhum;
+  traz um verbo e uma empresa estatal, e é a entidade que faz o papel do
+  complemento.
+
+A confiança decide o que a interface faz: acima de 0,78 segue direto; no meio,
+oferece as leituras plausíveis; abaixo de 0,42, o texto cai no interpretador
+temático de sempre, que nunca recusa uma frase.
+
+#### Construtores de medida
+
+Intenção clara e "como" indefinido abre um painel em vez de recusar a medida
+([`builders/`](src/game/engines/builders)). "Apoiar pequenas empresas" não é uma
+medida: é um desejo que pode virar oito políticas diferentes. O painel escreve a
+medida — a frase que o jogador teria digitado se soubesse o jargão — e devolve
+ao fluxo de sempre.
+
+| Painel | O que ele mexe de verdade |
+| ------ | ------------------------- |
+| Corte / reforço de orçamento | as dez linhas de `state.budget`, respeitando a fração obrigatória de cada pasta |
+| Reforma tributária | as alíquotas vigentes em `state.taxes`, num pacote só |
+| Saúde, educação, infraestrutura, social, agricultura, segurança, pequenas empresas, emprego jovem | o orçamento da área correspondente, com o repertório de políticas escrito na medida |
+| Privatização e compra de participação | o processo societário que já existia, na empresa reconhecida |
+
+Um pacote com várias alterações viaja numa medida só: `numericExtras` leva as
+alterações extras junto de `numericImpact`, e todas entram em vigor — ou caem —
+no mesmo momento, porque é assim que um pacote é votado.
+
+O interpretador **não altera o estado da partida**. Ele produz uma medida
+estruturada; quem decide o resto é o sistema legislativo que já existia.
+
+#### Os dois caminhos da ficha técnica
+
+
+Fechada a leitura, o texto vira ficha técnica por um de dois caminhos:
 
 1. **Interpretador local** (padrão) — regras em
    [`fallback-interpreter.ts`](src/game/engines/fallback-interpreter.ts).
@@ -264,6 +333,49 @@ reconhecidos (com o ponto do estado de onde cada valor é lido) em
 [`numeric-targets.ts`](src/game/data/numeric-targets.ts). Adicionar um número
 novo ao jogo é acrescentar uma entrada nessa lista.
 
+### Reeleição
+
+O mandato pode não acabar no mês 48.
+[`election.ts`](src/game/engines/election.ts) monta a disputa no quarto ano:
+definição da candidatura no mês 40, campanha até outubro, primeiro turno no mês
+46 e segundo turno no 47. O adversário não é gerado no dia da eleição — é o
+líder da oposição que já estava em `government.opposition` desde a posse, com o
+partido e a estratégia que ele desenvolveu durante o mandato.
+
+A intenção de voto é montada de baixo para cima, como a aprovação:
+
+```
+grupo social  →  0,60 aprovação do grupo + 0,25 aprovação pessoal
+                 + 0,15 média dos últimos 12 meses
+              →  amplificada em 1,15 em torno de 50 (eleição polariza)
+              +  bolso, promessas, integridade, máquina, campanha
+              →  normalizada com espaço fixo para nanicos, brancos e nulos
+```
+
+O adversário fica com a parcela de quem não vota no presidente, corrigida pela
+afinidade de cada grupo com o partido dele. No segundo turno, o voto dos
+eliminados vai para quem tem **menor rejeição**, não para quem foi mais votado.
+
+O acaso só entra como margem de erro da pesquisa publicada e imprevisto de urna,
+na ordem de um ponto — a pesquisa que o jogador lê nunca é a resposta
+antecipada. A curva resultante, medida com o país inteiro num humor fixo:
+
+| Aprovação | Resultado típico |
+| --------- | ---------------- |
+| 25        | derrota com ~25% dos válidos |
+| 32        | derrota no primeiro turno |
+| 38        | segundo turno, derrota apertada |
+| 42        | segundo turno decidido no fio |
+| 46        | segundo turno, vitória |
+| 50        | vitória no primeiro turno |
+| 62        | vitória com ~65% |
+
+Vencendo, `beginSecondTerm` estende a partida para 96 meses sem zerar nada do
+país: renova o Congresso na mesma urna (bancada aliada cresce com a margem da
+vitória), reduz o desgaste dos ministros, troca o líder da oposição derrotado e
+recomeça a régua das promessas a partir do país entregue. A Constituição permite
+uma reeleição e só uma: o segundo mandato termina sem nova urna.
+
 ### Segurança da camada de IA
 
 O texto do jogador é entrada hostil por definição — qualquer pessoa pode
@@ -316,9 +428,10 @@ Duas famílias:
   indicadores ao longo de 48 meses, o laço macro (gasto sem lastro precisa
   derrubar credibilidade e subir risco-país), ciclo de vida das medidas,
   validação contra respostas de IA adulteradas, save/load.
-- **Renderização** (`src/pages/pages.render.test.tsx`) — as 13 telas montadas em
+- **Renderização** (`src/pages/pages.render.test.tsx`) — as telas montadas em
   DOM real, no mês 1 e depois de 14 meses, verificando que nenhuma exibe `NaN`
-  ou `undefined`.
+  ou `undefined`, mais os momentos que só existem em fases específicas (eleição,
+  apuração, posse do segundo mandato).
 
 ---
 

@@ -31,6 +31,7 @@ import { processPersonalLife, rest } from './personal';
 import { generateNews, generatePosts } from './news';
 import { processPromises } from './promises';
 import { processImpeachment } from './impeachment';
+import { processElection } from './election';
 import { rollEvents, resolveUnattendedEvents, forecastNextCrisis } from './events';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
@@ -68,6 +69,18 @@ export function tickMonth(input: GameState): TickOutcome {
       result: state.lastResult ?? emptyResult(state),
       notes: ['O mandato já foi encerrado.'],
       gameOver: true,
+      intelligenceBriefing: null,
+    };
+  }
+
+  // Eleição ganha e segundo mandato ainda não assumido: o calendário para até o
+  // presidente tomar posse de novo.
+  if (state.phase === 'transicao') {
+    return {
+      state,
+      result: state.lastResult ?? emptyResult(state),
+      notes: ['O primeiro mandato acabou. Assuma o segundo mandato para o relógio voltar a andar.'],
+      gameOver: false,
       intelligenceBriefing: null,
     };
   }
@@ -166,6 +179,7 @@ export function tickMonth(input: GameState): TickOutcome {
     // que caiu não pode continuar valendo no estado da partida.
     if (policy.numericImpact) {
       revertNumericChange(state, policy.numericImpact.change);
+      for (const extra of policy.numericExtras ?? []) revertNumericChange(state, extra);
       notes.push(
         `Com a queda de "${policy.title}", ${policy.numericImpact.change.targetLabel} voltou a ${policy.numericImpact.change.currentValue.toLocaleString(
           'pt-BR',
@@ -218,6 +232,11 @@ export function tickMonth(input: GameState): TickOutcome {
   // ---------------------------------------------------------------- 11. Promessas
   processPromises(state);
 
+  // ------------------------------------------------------------ 11b. Eleição
+  // Roda depois da aprovação e das promessas porque é disso que a intenção de
+  // voto é feita: a urna lê o país deste mês, não o do mês passado.
+  notes.push(...processElection(state, rng));
+
   // ---------------------------------------------------------------- 12. Fechamento
   const result: MonthResult = {
     month: state.month,
@@ -269,9 +288,26 @@ export function tickMonth(input: GameState): TickOutcome {
     state.flags.gameOver = true;
     state.phase = 'encerrado';
   } else if (state.month >= state.totalMonths) {
-    state.flags.gameOver = true;
-    state.flags.gameOverReason = 'mandato_encerrado';
-    state.phase = 'encerrado';
+    // A vitória só abre transição enquanto o mandato conquistado nela ainda não
+    // começou. Sem esta comparação, o fim do segundo mandato leria a mesma
+    // vitória de quatro anos antes e daria um terceiro.
+    const wonNextTerm =
+      state.election?.outcome === 'venceu' && state.election.termAtStake > state.term;
+    if (wonNextTerm) {
+      // Ganhou a eleição: o mandato não acaba, ele passa por uma transição. O
+      // relógio só volta a andar quando o presidente assume com o programa novo.
+      state.phase = 'transicao';
+      notes.push(
+        'Último mês do mandato encerrado. Você foi reeleito: falta assumir o segundo mandato e dizer com que compromissos volta.',
+      );
+    } else {
+      state.flags.gameOver = true;
+      state.flags.gameOverReason =
+        state.election?.outcome === 'derrotado' && state.election.termAtStake > state.term
+          ? 'derrota_eleitoral'
+          : 'mandato_encerrado';
+      state.phase = 'encerrado';
+    }
   } else if (state.president.health <= 12) {
     state.flags.gameOver = true;
     state.flags.gameOverReason = 'saude';

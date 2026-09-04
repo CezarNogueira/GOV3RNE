@@ -32,7 +32,11 @@ export function FimDeMandato() {
     impeachment: 'Mandato interrompido por decisão da Câmara.',
     renuncia: 'Mandato interrompido por renúncia.',
     saude: 'Mandato interrompido por impedimento de saúde.',
+    derrota_eleitoral: 'Mandato cumprido, reeleição perdida nas urnas.',
   };
+
+  const election = state.election;
+  const finalRound = election?.rounds[election.rounds.length - 1];
 
   return (
     <div className="min-h-full">
@@ -65,7 +69,9 @@ export function FimDeMandato() {
                 {state.president.politicalName}
               </p>
               <p className="text-[12px] uppercase tracking-wider text-neutral-500">
-                {state.party.acronym} · {state.startYear}–{state.startYear + 4}
+                {state.party.acronym} · {state.startYear}–
+                {state.startYear + Math.round(state.totalMonths / 12)}
+                {state.term > 1 && ' · dois mandatos'}
               </p>
             </div>
 
@@ -224,6 +230,36 @@ export function FimDeMandato() {
             </Section>
           </aside>
         </div>
+
+        {/* ------------------------------------------------------- a eleição */}
+        {election && election.outcome && (
+          <section className="mt-4 border-l-2 border-l-gov-700 bg-ink-900/40 p-4">
+            <p className="label text-gov-400">
+              {election.outcome === 'venceu'
+                ? 'Eleição vencida'
+                : election.outcome === 'derrotado'
+                  ? 'Eleição perdida'
+                  : 'Eleição sem você'}
+            </p>
+            <p className="mt-1 text-[13px] leading-relaxed text-neutral-300">
+              {election.summary ?? 'A disputa terminou.'}
+            </p>
+            {finalRound && (
+              <ul className="mt-2 space-y-1">
+                {finalRound.results.map((entry) => (
+                  <li key={entry.candidateId} className="flex items-baseline justify-between gap-3">
+                    <span className="text-[12px] text-neutral-400">
+                      {entry.name} <span className="text-neutral-600">({entry.party})</span>
+                    </span>
+                    <span className="font-mono text-[13px] text-neutral-200">
+                      {entry.share.toFixed(2)}%
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
         <div className="mt-6 flex flex-wrap gap-2 border-t border-ink-800 pt-5">
           <button

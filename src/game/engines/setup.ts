@@ -54,7 +54,7 @@ import { makeId, monthLabel } from '../utils/index';
  * lista decorativa de "corporations"; a migração descarta aquela lista e monta
  * o sistema novo a partir dos dados de referência.
  */
-export const GAME_STATE_VERSION = 2;
+export const GAME_STATE_VERSION = 3;
 
 /**
  * Monta uma partida inteira a partir das escolhas de campanha.
@@ -94,6 +94,7 @@ export function createGame(input: NewGameInput): GameState {
     month: 1,
     startYear: input.startYear,
     totalMonths: 48,
+    term: 1,
     settings: {
       difficulty: input.difficulty,
       animations: true,
@@ -138,6 +139,8 @@ export function createGame(input: NewGameInput): GameState {
       inflation: economy.inflation,
       gdpGrowth: economy.gdpGrowth,
     }),
+    // A disputa só é montada no quarto ano, quando a janela eleitoral abre.
+    election: null,
     policies: [],
     programs: INHERITED_PROGRAMS.map((program) => ({ ...program, createdMonth: 0 })),
     pendingEvents: [],

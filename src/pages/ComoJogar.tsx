@@ -25,6 +25,8 @@ const SECTIONS = [
       'A ficha aparece ANTES de você assinar. Ver a conta antes é a parte interessante: muita medida boa no discurso fica cara demais quando os números aparecem, e desistir também é jogar.',
       'Escreva os números. "Aumentar o salário mínimo" é um discurso; "aumentar o salário mínimo para R$ 1.800" é uma medida. Quando você diz o valor, o jogo calcula a partir dele: pega o valor vigente, mede a diferença, vê quanta gente é atingida e projeta o custo, a inflação, o emprego e a reação de cada grupo. R$ 1.700 e R$ 1.800 são medidas diferentes e produzem simulações diferentes — inclusive na conta que chega depois.',
       'Vale para qualquer número: alíquota ("reduzir o FGTS de 8% para 6%"), orçamento ("mais R$ 20 bilhões na saúde"), meta ("500 mil casas populares"), prazo ("por seis meses") e transição ("ao longo de dois anos"). O jogo entende "para" como valor final e "em" como acréscimo, e distingue ponto percentual de variação relativa: de 8% para 6% são 2 pontos a menos e um corte de 25%.',
+      'Você não precisa saber o nome técnico de nada. Enquanto digita, o jogo mostra o que entendeu: a intenção, o alvo, os números lidos e o quanto ele tem certeza disso. Escreva "privatizar os Correios" e ele abre o processo daquela empresa; escreva "correius" com erro e ele chega na mesma; escreva "não quero privatizar os Correios" e ele não abre nada, porque leu a negativa.',
+      'Quando a intenção é clara mas falta o como, o jogo abre um painel em vez de recusar a medida. "Cortar gastos" abre as dez pastas com a dotação real de cada uma e o quanto dá para cortar sem furar piso constitucional. "Reforma tributária" abre as alíquotas vigentes para você montar o pacote, que será votado de uma vez só. "Apoiar pequenas empresas" abre o repertório: crédito, tributo, encargo, garantia, burocracia, compras públicas. O painel escreve a medida por você — e daí em diante é o fluxo de sempre.',
       'Assinar não termina o assunto: se a medida depende do Congresso, a sessão é convocada na hora. Você negocia com as bancadas, encerra a negociação, assiste à apuração e vê a repercussão — tudo em sequência, cada fase confirmada por você. Fechar a tela no meio não cancela nada: a matéria fica onde parou, e se você nunca voltar a ela o Congresso vota sozinho alguns meses depois, sem nenhum acordo.',
     ],
   },
@@ -66,10 +68,21 @@ const SECTIONS = [
     ],
   },
   {
+    title: 'Como se ganha a reeleição',
+    body: [
+      'No quarto ano a eleição entra no calendário. Em abril o partido cobra uma resposta: você disputa ou não. Não disputar é legítimo — o governo vai até o último dia sem o desgaste da campanha, mas o Congresso passa a negociar com quem vem depois de você.',
+      'Do outro lado está o líder da oposição que aparece no Painel desde o primeiro mês, com o partido dele e a estratégia que ele escolheu durante o seu mandato. Não é um adversário inventado no dia da eleição: é o que você deixou crescer.',
+      'Quem decide a eleição é o país que você construiu. A intenção de voto é montada grupo por grupo a partir da aprovação de cada um, e depois somam-se as coisas que a aprovação não explica sozinha: preço da comida, emprego, promessa cumprida ou quebrada, escândalo, tamanho da base e palanque de governador. A eleição amplifica diferenças — com aprovação em 50 você ganha, em 40 vai para o segundo turno, em 30 perde feio.',
+      'A campanha custa governo. Cada movimento — caravana, debate, palanque, aliança, campanha contra o adversário — vale uma vez, consome pontos de agenda que deixariam de virar medida e escolhe um lado do eleitorado. O debate é o de maior risco: pode render quatro pontos ou custar dois, dependendo do seu carisma e da sua energia.',
+      'A pesquisa publicada não é o resultado: ela traz margem de erro, e a apuração usa o número real. No segundo turno, o voto de quem foi eliminado não vai para o mais votado — vai para quem o eleitor rejeita menos. É por isso que atacar o adversário é arriscado: sobe a rejeição dos dois.',
+      'Ganhando, você governa mais 48 meses. O país continua exatamente como você o deixou — dívida, inflação, desemprego e cicatriz política —, mas o Congresso é renovado na mesma urna (vitória folgada puxa bancada), o desgaste dos ministros cai, a oposição se reorganiza atrás de outro nome e você escolhe cinco compromissos novos, medidos a partir de onde o país está hoje. E só existe uma reeleição: o segundo mandato termina em 96 meses.',
+    ],
+  },
+  {
     title: 'Como o mandato termina',
     body: [
-      'Ao fim dos 48 meses, o governo é avaliado em oito eixos — economia, responsabilidade fiscal, saúde, educação, segurança, desenvolvimento social, diplomacia e integridade institucional. Cada nota compara o país que você entrega com o país que você recebeu, não com um ideal abstrato.',
-      'As cinco promessas de campanha são cobradas uma por uma, com o número atual ao lado.',
+      'Ao fim do mandato — 48 meses, ou 96 se você se reelegeu —, o governo é avaliado em oito eixos: economia, responsabilidade fiscal, saúde, educação, segurança, desenvolvimento social, diplomacia e integridade institucional. Cada nota compara o país que você entrega com o país que você recebeu na primeira posse, não com um ideal abstrato.',
+      'As cinco promessas em vigor são cobradas uma por uma, com o número atual ao lado. Quem se reelegeu é cobrado pelo programa do segundo mandato.',
       'O mandato também pode acabar antes. Impeachment exige três coisas ao mesmo tempo: aprovação baixa, base pequena e um assunto que a oposição consiga sustentar. Governo impopular com maioria sólida não cai; governo popular sem base também não. Cai quem perde os dois — e ainda assim são necessários 342 votos.',
     ],
   },
@@ -91,7 +104,7 @@ export function ComoJogar() {
             Como jogar
           </h1>
           <p className="mt-2 max-w-xl text-[13px] leading-relaxed text-neutral-400">
-            Seis coisas para entender antes do primeiro mês. Nenhuma delas é sobre onde clicar.
+            O que entender antes do primeiro mês. Nada disso é sobre onde clicar.
           </p>
         </div>
       </div>

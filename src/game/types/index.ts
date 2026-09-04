@@ -7,4 +7,6 @@ export * from './politics';
 export * from './policy';
 export * from './numeric-policy';
 export * from './events';
+export * from './election';
+export * from './recognizer';
 export * from './game';

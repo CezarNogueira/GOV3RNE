@@ -15,7 +15,10 @@ import {
   reconcileNumericMath,
   respondToTreatyOffer,
   revealPublicReaction,
+  beginSecondTerm,
+  decideCandidacy,
   runAgendaAction,
+  runCampaignMove,
   runCompanyAction,
   scheduleVisit,
   serialize,
@@ -285,6 +288,48 @@ class GameRepository {
     const state = this.draft(id);
     const rng = new Rng(state.seed, state.rngCursor);
     const outcome = runCompanyAction(state, action, rng);
+    if (!outcome.ok) throw new Error(outcome.message);
+
+    state.rngCursor = rng.cursor;
+    state.updatedAt = new Date().toISOString();
+    this.persist(state);
+    return { state, message: outcome.message };
+  }
+
+  /**
+   * Decide se o presidente disputa a reeleição.
+   *
+   * Não custa agenda: é uma decisão política, não uma tarefa do mês. O que ela
+   * cobra vem depois — campanha consome o tempo que era de governo.
+   */
+  decideCandidacy(id: string, running: boolean): { state: GameState; message: string } {
+    const state = this.draft(id);
+    const outcome = decideCandidacy(state, running);
+    if (!outcome.ok) throw new Error(outcome.message);
+
+    state.updatedAt = new Date().toISOString();
+    this.persist(state);
+    return { state, message: outcome.message };
+  }
+
+  /** Executa um movimento de campanha. Cobra agenda e energia do presidente. */
+  campaignMove(id: string, moveId: string): { state: GameState; message: string } {
+    const state = this.draft(id);
+    const rng = new Rng(state.seed, state.rngCursor);
+    const outcome = runCampaignMove(state, moveId, rng);
+    if (!outcome.ok) throw new Error(outcome.message);
+
+    state.rngCursor = rng.cursor;
+    state.updatedAt = new Date().toISOString();
+    this.persist(state);
+    return { state, message: outcome.message };
+  }
+
+  /** Assume o segundo mandato com o programa escolhido para ele. */
+  beginSecondTerm(id: string, promiseIds: string[]): { state: GameState; message: string } {
+    const state = this.draft(id);
+    const rng = new Rng(state.seed, state.rngCursor);
+    const outcome = beginSecondTerm(state, promiseIds, rng);
     if (!outcome.ok) throw new Error(outcome.message);
 
     state.rngCursor = rng.cursor;

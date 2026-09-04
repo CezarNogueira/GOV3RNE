@@ -493,6 +493,108 @@ export const NUMERIC_TARGETS: readonly NumericTargetSpec[] = [
     whoPays: 'O Tesouro. É a despesa que mais rápido vira consumo — e a mais difícil de desmontar depois.',
   },
 
+  // As quatro pastas que faltavam para o orçamento ser endereçável por escrito
+  // nas dez. Sem elas, "cortar da Fazenda" não tinha onde escrever o número.
+  {
+    id: 'financeBudget',
+    label: 'orçamento da Fazenda',
+    actionLabel: 'Orçamento da Fazenda',
+    unit: 'BRL_ANNUAL_BILLION',
+    model: 'orcamento',
+    keywords: ['orcamento da fazenda', 'verba da fazenda', 'gasto da fazenda'],
+    category: 'economia',
+    ministries: ['fazenda'],
+    instrument: 'projeto_lei',
+    legalRisk: 10,
+    months: 10,
+    scope: 'administração fazendária e Receita',
+    economicCategory: 'despesa pública',
+    read: (state) => budgetLine(state, 'fazenda')?.allocated ?? 40,
+    write: (state, value) => {
+      const line = budgetLine(state, 'fazenda');
+      if (line) line.allocated = value;
+    },
+    plausible: { min: 0, max: 1_000 },
+    whoPays: 'O Tesouro. Cortar aqui enfraquece a arrecadação que sustenta todo o resto.',
+  },
+  {
+    id: 'agricultureBudget',
+    label: 'orçamento da Agricultura e Meio Ambiente',
+    actionLabel: 'Orçamento da Agricultura e Meio Ambiente',
+    unit: 'BRL_ANNUAL_BILLION',
+    model: 'orcamento',
+    keywords: [
+      'orcamento da agricultura',
+      'verba da agricultura',
+      'gasto com agricultura',
+      'orcamento do meio ambiente',
+      'verba do meio ambiente',
+    ],
+    category: 'agricultura',
+    ministries: ['agricultura'],
+    instrument: 'projeto_lei',
+    legalRisk: 12,
+    months: 12,
+    scope: 'crédito rural, fiscalização ambiental e pesquisa agropecuária',
+    economicCategory: 'despesa pública',
+    read: (state) => budgetLine(state, 'agricultura')?.allocated ?? 30,
+    write: (state, value) => {
+      const line = budgetLine(state, 'agricultura');
+      if (line) line.allocated = value;
+    },
+    plausible: { min: 0, max: 1_000 },
+    whoPays: 'O Tesouro. É a pasta que sustenta safra e fiscalização ao mesmo tempo.',
+  },
+  {
+    id: 'presidencyBudget',
+    label: 'orçamento da Casa Civil',
+    actionLabel: 'Orçamento da Casa Civil',
+    unit: 'BRL_ANNUAL_BILLION',
+    model: 'orcamento',
+    keywords: ['orcamento da casa civil', 'verba da casa civil', 'custeio da presidencia'],
+    category: 'institucional',
+    ministries: ['casa_civil'],
+    instrument: 'decreto',
+    legalRisk: 8,
+    months: 6,
+    scope: 'coordenação do governo',
+    economicCategory: 'despesa pública',
+    read: (state) => budgetLine(state, 'casa_civil')?.allocated ?? 8,
+    write: (state, value) => {
+      const line = budgetLine(state, 'casa_civil');
+      if (line) line.allocated = value;
+    },
+    plausible: { min: 0, max: 200 },
+    whoPays: 'O Tesouro. É a pasta mais fácil de cortar politicamente e a que menos economiza.',
+  },
+  {
+    id: 'foreignBudget',
+    label: 'orçamento das Relações Exteriores',
+    actionLabel: 'Orçamento das Relações Exteriores',
+    unit: 'BRL_ANNUAL_BILLION',
+    model: 'orcamento',
+    keywords: [
+      'orcamento das relacoes exteriores',
+      'verba do itamaraty',
+      'orcamento do itamaraty',
+      'gasto com diplomacia',
+    ],
+    category: 'diplomacia',
+    ministries: ['relacoes_exteriores'],
+    instrument: 'projeto_lei',
+    legalRisk: 10,
+    months: 10,
+    scope: 'rede diplomática e consular',
+    economicCategory: 'despesa pública',
+    read: (state) => budgetLine(state, 'relacoes_exteriores')?.allocated ?? 6,
+    write: (state, value) => {
+      const line = budgetLine(state, 'relacoes_exteriores');
+      if (line) line.allocated = value;
+    },
+    plausible: { min: 0, max: 200 },
+    whoPays: 'O Tesouro. Embaixada fechada é influência perdida por uma década.',
+  },
+
   // ------------------------------------------------------------- Benefícios
   {
     id: 'incomeTransfer',

@@ -15,6 +15,7 @@ import type {
 import type { CongressState, Committee, Minister, OppositionState, SupremeCourtState } from './politics';
 import type { Policy, GovernmentProgram, ScheduledAction } from './policy';
 import type { ActiveEvent, Consequence, NewsItem, SocialPost, TimelineEntry } from './events';
+import type { ElectionState } from './election';
 
 export interface ApprovalState {
   /** Aprovação do governo, 0-100. */
@@ -108,10 +109,15 @@ export interface GameFlags {
   /** Eventos "once" já disparados. */
   firedEvents: string[];
   gameOver: boolean;
-  gameOverReason?: 'mandato_encerrado' | 'impeachment' | 'renuncia' | 'saude';
+  gameOverReason?: 'mandato_encerrado' | 'impeachment' | 'renuncia' | 'saude' | 'derrota_eleitoral';
 }
 
-export type GamePhase = 'criacao' | 'posse' | 'mandato' | 'encerrado';
+/**
+ * `transicao` é o intervalo entre ganhar a eleição e assumir o segundo
+ * mandato: o relógio do primeiro parou, o do segundo ainda não começou, e o
+ * presidente precisa dizer com que programa volta.
+ */
+export type GamePhase = 'criacao' | 'posse' | 'mandato' | 'transicao' | 'encerrado';
 
 /** Estado completo e serializável de uma partida. */
 export interface GameState {
@@ -122,10 +128,15 @@ export interface GameState {
   seed: number;
   rngCursor: number;
   phase: GamePhase;
-  /** 1 a 48. */
+  /** 1 a 48 no primeiro mandato; até 96 quando há reeleição. */
   month: number;
   startYear: number;
   totalMonths: number;
+  /**
+   * Mandato em curso: 1 no primeiro, 2 depois de uma reeleição. A Constituição
+   * permite uma reeleição e só uma, então este número nunca passa de 2.
+   */
+  term: number;
   settings: GameSettings;
   flags: GameFlags;
 
@@ -152,6 +163,13 @@ export interface GameState {
    * de "corporations" que existia antes — aquela não reagia a nada.
    */
   companies: CompaniesState;
+
+  /**
+   * A disputa pela reeleição. Nasce nula e é montada no quarto ano, quando a
+   * janela eleitoral abre — ou fica nula para sempre se a partida foi criada
+   * com a reeleição desabilitada.
+   */
+  election: ElectionState | null;
 
   policies: Policy[];
   programs: GovernmentProgram[];

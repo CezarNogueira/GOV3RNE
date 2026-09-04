@@ -69,6 +69,33 @@ export function Painel() {
   const companyRequests = state.companies.requests.filter((request) => request.status === 'aberta');
   const companyCrises = state.companies.companies.filter((company) => company.inCrisis);
 
+  // A eleição só ocupa o Painel enquanto exige alguma coisa do presidente:
+  // decidir, fazer campanha, esperar a apuração ou assumir de novo.
+  const eleicao =
+    state.election &&
+    (state.election.outcome === null || state.phase === 'transicao') &&
+    !state.flags.gameOver
+      ? state.election
+      : null;
+  const candidato = eleicao?.candidates.find((entry) => !entry.incumbent);
+  const pesquisa = eleicao?.polls[0];
+  const eleicaoTitulo =
+    state.phase === 'transicao'
+      ? 'Você foi reeleito. Falta assumir.'
+      : eleicao?.stage === 'definicao'
+        ? 'Você disputa a reeleição?'
+        : `Você × ${candidato?.name ?? 'a oposição'}`;
+  const eleicaoDetalhe =
+    state.phase === 'transicao'
+      ? 'Escolha os compromissos do segundo mandato para o relógio voltar a andar.'
+      : pesquisa
+        ? `${pesquisa.institute}: ${(pesquisa.byCandidate.incumbente ?? 0).toFixed(0)}% contra ${(
+            pesquisa.byCandidate.oposicao ?? 0
+          ).toFixed(0)}%. Primeiro turno no mês ${eleicao?.electionMonth}.`
+        : `${candidato?.name ?? 'A oposição'} (${candidato?.partyAcronym ?? '—'}) já está na rua. Primeiro turno no mês ${
+            eleicao?.electionMonth
+          }.`;
+
   return (
     <>
       <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
@@ -147,6 +174,34 @@ export function Painel() {
             footer={<span className="label">Risco {state.economy.countryRisk}</span>}
           />
         </div>
+
+        {/* ------------------------------------------------------- eleição */}
+        {eleicao && (
+          <button
+            type="button"
+            onClick={() => navigate('/eleicao')}
+            className="card-active mt-4 flex w-full flex-wrap items-center justify-between gap-3 p-4 text-left transition-colors hover:border-gov-700/60"
+          >
+            <div className="min-w-0">
+              <p className="label text-gov-400">
+                {eleicao.stage === 'definicao'
+                  ? 'O partido espera uma resposta'
+                  : eleicao.stage === 'entre_turnos'
+                    ? 'Segundo turno'
+                    : state.phase === 'transicao'
+                      ? 'Transição de mandato'
+                      : 'Corrida eleitoral'}
+              </p>
+              <h2 className="mt-0.5 font-display text-xl font-semibold text-neutral-50">
+                {eleicaoTitulo}
+              </h2>
+              <p className="mt-0.5 text-[12px] leading-snug text-neutral-400">{eleicaoDetalhe}</p>
+            </div>
+            <span className="btn-primary shrink-0 px-4 py-2 text-[13px]">
+              {state.phase === 'transicao' ? 'Assumir o segundo mandato' : 'Abrir a eleição'}
+            </span>
+          </button>
+        )}
 
         {/* ------------------------------------------------------ conteúdo */}
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_360px]">
@@ -586,30 +641,43 @@ export function Painel() {
         <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-3 sm:px-6">
           <CalendarClock size={15} className="shrink-0 text-neutral-600" aria-hidden />
           <p className="min-w-0 flex-1 truncate text-[12px] text-neutral-500">
-            {pending.length > 0
-              ? `${pending.length} decisão(ões) pendente(s). O que você não decidir, o país decide por você.`
-              : state.agenda.points > 0
-                ? `${state.agenda.points} ponto(s) de agenda ainda disponíveis neste mês.`
-                : 'Agenda esgotada. É hora de deixar o mês correr.'}
+            {state.phase === 'transicao'
+              ? 'O primeiro mandato acabou e você venceu a eleição. O relógio só volta a andar depois da posse.'
+              : pending.length > 0
+                ? `${pending.length} decisão(ões) pendente(s). O que você não decidir, o país decide por você.`
+                : state.agenda.points > 0
+                  ? `${state.agenda.points} ponto(s) de agenda ainda disponíveis neste mês.`
+                  : 'Agenda esgotada. É hora de deixar o mês correr.'}
           </p>
-          <button
-            type="button"
-            className="btn-primary shrink-0"
-            onClick={advance}
-            disabled={advancing || state.flags.gameOver}
-          >
-            {advancing ? (
-              <>
-                <Loader2 size={13} className="animate-spin" aria-hidden />
-                Processando
-              </>
-            ) : (
-              <>
-                Avançar mês
-                <ArrowRight size={13} aria-hidden />
-              </>
-            )}
-          </button>
+          {state.phase === 'transicao' ? (
+            <button
+              type="button"
+              className="btn-primary shrink-0"
+              onClick={() => navigate('/eleicao')}
+            >
+              Assumir o segundo mandato
+              <ArrowRight size={13} aria-hidden />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="btn-primary shrink-0"
+              onClick={advance}
+              disabled={advancing || state.flags.gameOver}
+            >
+              {advancing ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" aria-hidden />
+                  Processando
+                </>
+              ) : (
+                <>
+                  Avançar mês
+                  <ArrowRight size={13} aria-hidden />
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
 

@@ -86,6 +86,7 @@ export function TopNavigation({ state }: { state: GameState }) {
           </p>
           <p className="label -mt-0.5">
             Mês {state.month} de {state.totalMonths}
+            {state.term > 1 && ' · 2º mandato'}
           </p>
         </div>
 

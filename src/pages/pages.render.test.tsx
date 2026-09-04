@@ -10,18 +10,21 @@ import {
   Rng,
   createGame,
   createPolicy,
+  decideCandidacy,
   deepClone,
   generatePublicReaction,
   interpretLocally,
   newGameSchema,
   openCompanyMeeting,
   processPolicies,
+  serialize,
   tickMonth,
   type GameState,
   type NewGameInput,
   type Policy,
 } from '@/game';
 import { useGame } from '@/state/game-store';
+import { repository } from '@/state/repository';
 
 import { Landing } from './Landing';
 import { Setup } from './Setup';
@@ -36,6 +39,7 @@ import { Historico } from './Historico';
 import { Ajustes } from './Ajustes';
 import { ComoJogar } from './ComoJogar';
 import { FimDeMandato } from './FimDeMandato';
+import { Eleicao } from './Eleicao';
 
 /**
  * TESTES DE RENDERIZAÇÃO
@@ -505,5 +509,100 @@ describe('fim de mandato', () => {
   it('o mandato de fato terminou depois de 48 meses', () => {
     expect(finishedGame.flags.gameOver).toBe(true);
     expect(finishedGame.month).toBeGreaterThanOrEqual(48);
+  });
+});
+
+/**
+ * A TELA DA ELEIÇÃO
+ *
+ * Três momentos que quebram de formas diferentes: a decisão de disputar (sem
+ * pesquisa nenhuma publicada), a campanha (com pesquisa, adversário e
+ * movimentos) e a transição depois da vitória (o seletor de compromissos do
+ * segundo mandato, que muda o estado da partida ao ser confirmado).
+ */
+describe('Eleição', () => {
+  /** Coloca o país num humor conhecido: é dele que sai a intenção de voto. */
+  function setMood(state: GameState, value: number): void {
+    for (const group of state.socialGroups) group.approval = value;
+    state.approval.overall = value;
+    state.approval.personal = value;
+    state.approval.history = Array.from({ length: 12 }, () => value);
+    for (const region of Object.keys(state.approval.byRegion) as (keyof typeof state.approval.byRegion)[]) {
+      state.approval.byRegion[region] = value;
+    }
+  }
+
+  function runTo(month: number, mood: number): GameState {
+    let state = createGame(buildInput({ reelection: true, seed: 9090 }));
+    while (state.month < month && !state.flags.gameOver && state.phase !== 'transicao') {
+      setMood(state, mood);
+      state = tickMonth(state).state;
+    }
+    setMood(state, mood);
+    return state;
+  }
+
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('monta a decisão de disputar a reeleição', () => {
+    const state = runTo(41, 56);
+    loadState(state);
+    renderPage(<Eleicao />);
+
+    expect(screen.getByRole('heading', { name: /você disputa a reeleição/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /disputar a reeleição/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /não disputar/i })).toBeInTheDocument();
+  });
+
+  it('monta a campanha com pesquisa, adversário e movimentos', () => {
+    const state = runTo(41, 56);
+    decideCandidacy(state, true);
+    let current = state;
+    for (let index = 0; index < 3; index += 1) {
+      setMood(current, 56);
+      current = tickMonth(current).state;
+    }
+
+    loadState(current);
+    renderPage(<Eleicao />);
+
+    const adversario = current.election!.candidates.find((candidate) => !candidate.incumbent)!;
+    expect(screen.getByText(adversario.name)).toBeInTheDocument();
+    expect(screen.getAllByText(/margem/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /pt de agenda/i }).length).toBeGreaterThan(0);
+  });
+
+  it('mostra a apuração e leva o vencedor ao segundo mandato', async () => {
+    let state = runTo(41, 70);
+    decideCandidacy(state, true);
+    while (state.phase !== 'transicao' && !state.flags.gameOver) {
+      setMood(state, 70);
+      state = tickMonth(state).state;
+    }
+
+    expect(state.election!.outcome).toBe('venceu');
+    expect(state.phase).toBe('transicao');
+
+    repository.importSave(serialize(state));
+    loadState(state);
+    renderPage(<Eleicao />);
+
+    expect(screen.getAllByText(/primeiro turno/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: /com que compromissos você volta/i })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /manter os compromissos atuais/i }));
+
+    const depois = useGame.getState().state!;
+    expect(depois.term).toBe(2);
+    expect(depois.month).toBe(49);
+    expect(depois.totalMonths).toBe(96);
+  });
+
+  it('avisa quando a urna ainda não entrou no calendário', () => {
+    loadState(freshGame);
+    renderPage(<Eleicao />);
+    expect(screen.getByText(/fora da janela eleitoral/i)).toBeInTheDocument();
   });
 });

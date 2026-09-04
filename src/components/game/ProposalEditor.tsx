@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertTriangle, Cpu, Loader2, PenLine, Sparkles } from 'lucide-react';
-import type { ProposalAnalysis } from '@/game';
+import { recognizeMeasure, type ProposalAnalysis } from '@/game';
 import { useGame } from '@/state/game-store';
 import { cx } from '../ui/primitives';
 import { CabinetReviewModal } from './CabinetReviewModal';
+import { MeasureRecognition } from './MeasureRecognition';
+import { MeasureBuilderModal } from './MeasureBuilderModal';
+import { PrivatizationModal } from '../economy/PrivatizationModal';
+import { StateAcquisitionModal } from '../economy/StateAcquisitionModal';
 
 /**
  * EDITOR DE MEDIDAS
@@ -50,6 +54,22 @@ export function ProposalEditor({ onSigned }: { onSigned?: (policyId: string | nu
   const [analysis, setAnalysis] = useState<ProposalAnalysis | null>(null);
   const [source, setSource] = useState<'ia' | 'fallback'>('fallback');
   const [showExamples, setShowExamples] = useState(false);
+  const [builderId, setBuilderId] = useState<string | null>(null);
+  const [companyModal, setCompanyModal] = useState<'privatizar' | 'comprar' | null>(null);
+  /** Empresa escolhida no painel quando a frase não nomeou nenhuma. */
+  const [pickedCompanyId, setPickedCompanyId] = useState<string | null>(null);
+
+  /**
+   * A leitura acontece enquanto o presidente escreve.
+   *
+   * É local e instantânea — não custa chamada nem ponto de agenda —, então não
+   * há razão para esperar o clique: o jogador vê o sistema entendendo a frase
+   * no momento em que a digita, e corrige antes de gastar agenda com ela.
+   */
+  const recognition = useMemo(() => {
+    if (!state || text.trim().length < 6) return null;
+    return recognizeMeasure(text, state);
+  }, [text, state]);
 
   if (!state) return null;
 
@@ -84,6 +104,52 @@ export function ProposalEditor({ onSigned }: { onSigned?: (policyId: string | nu
     } finally {
       setBusy(false);
     }
+  };
+
+  /** A empresa que a frase citou, quando citou uma. */
+  const alvoEmpresa = recognition?.entities.find((entity) => entity.kind === 'COMPANY');
+  const empresa = state.companies.companies.find(
+    (company) => company.id === (pickedCompanyId ?? alvoEmpresa?.id),
+  );
+
+  /**
+   * Abre o caminho certo para a leitura.
+   *
+   * Privatização e compra de participação já têm painel próprio no jogo, ligado
+   * ao processo societário de verdade; o resto abre o construtor de medida.
+   * Nada aqui altera o estado: os dois caminhos terminam no mesmo lugar de
+   * sempre — proposta, tramitação, votação.
+   */
+  const handleConfigure = () => {
+    if (!recognition?.builder) return;
+    if (recognition.builder === 'privatizacao' && empresa) {
+      setCompanyModal('privatizar');
+      return;
+    }
+    if (recognition.builder === 'estatizacao' && empresa) {
+      setCompanyModal('comprar');
+      return;
+    }
+    setBuilderId(recognition.builder);
+  };
+
+  /**
+   * O construtor devolve a medida escrita E a ficha dela.
+   *
+   * A ficha vem junto de propósito: o pacote montado no painel pode carregar
+   * várias alterações numéricas, e reanalisar o texto encontraria só a
+   * primeira. Daqui em diante é o fluxo de sempre — o presidente lê a ficha e
+   * decide se assina.
+   */
+  const handleBuilt = (built: string, title: string, builtAnalysis: ProposalAnalysis) => {
+    setBuilderId(null);
+    setText(built.slice(0, 900));
+    const version = proposalVersion + 1;
+    setProposalVersion(version);
+    setAnalyzedVersion(version);
+    setAnalysis(builtAnalysis);
+    setSource('fallback');
+    if (!name.trim()) setName(title.slice(0, 120));
   };
 
   const handleSign = () => {
@@ -163,6 +229,18 @@ export function ProposalEditor({ onSigned }: { onSigned?: (policyId: string | nu
         />
       </div>
 
+      {recognition && (
+        <MeasureRecognition
+          recognition={recognition}
+          onConfigure={handleConfigure}
+          onChoose={(choiceId) => {
+            const choice = recognition.choices.find((entry) => entry.id === choiceId);
+            if (choice?.rewrite) editProposal(choice.rewrite);
+            else if (recognition.builder) setBuilderId(recognition.builder);
+          }}
+        />
+      )}
+
       {error && (
         <p className="mt-3 flex items-start gap-2 border-l-2 border-l-danger-500 bg-danger-900/20 p-2 text-[12px] text-danger-400">
           <AlertTriangle size={13} className="mt-0.5 shrink-0" aria-hidden />
@@ -228,6 +306,43 @@ export function ProposalEditor({ onSigned }: { onSigned?: (policyId: string | nu
         onSign={handleSign}
         onDiscard={() => setAnalysis(null)}
       />
+
+      {builderId && (
+        <MeasureBuilderModal
+          builderId={builderId}
+          recognition={recognition}
+          state={state}
+          open
+          onClose={() => setBuilderId(null)}
+          onBuild={handleBuilt}
+          onPickCompany={(companyId) => {
+            setPickedCompanyId(companyId);
+            setBuilderId(null);
+            setCompanyModal(builderId === 'estatizacao' ? 'comprar' : 'privatizar');
+          }}
+        />
+      )}
+
+      {empresa && companyModal === 'privatizar' && (
+        <PrivatizationModal
+          company={empresa}
+          state={state}
+          open
+          onClose={() => {
+            setCompanyModal(null);
+            setPickedCompanyId(null);
+          }}
+        />
+      )}
+
+      {empresa && companyModal === 'comprar' && (
+        <StateAcquisitionModal
+          company={empresa}
+          state={state}
+          open
+          onClose={() => setCompanyModal(null)}
+        />
+      )}
     </div>
   );
 }
