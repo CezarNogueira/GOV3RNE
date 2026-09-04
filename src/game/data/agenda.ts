@@ -25,16 +25,6 @@ export const AGENDA_ACTIONS: readonly AgendaAction[] = [
     consequence: 'Aprovação da base sobe, aprovação no centro oscila.',
   },
   {
-    id: 'tratar_com_a_rua',
-    label: 'Tratar com quem está na rua',
-    description:
-      'Receber, ceder ou mandar desobstruir. A escolha vira memória política de longo prazo.',
-    cost: 2,
-    energyCost: 10,
-    category: 'articulacao',
-    consequence: 'Reduz mobilização de um grupo social — ou multiplica.',
-  },
-  {
     id: 'trabalhar_os_votos',
     label: 'Trabalhar os votos',
     description:
