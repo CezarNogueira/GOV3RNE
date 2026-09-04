@@ -56,7 +56,11 @@ export function CompanyMeetingModal({
   const companyAction = useGame((store) => store.companyAction);
   const company = state.companies.companies.find((entry) => entry.id === meeting.companyId);
   const requests = state.companies.requests.filter((request) => meeting.requestIds.includes(request.id));
+  // Item decidido sai da mesa. O que ficou combinado vira registro logo abaixo,
+  // porque continuar mostrando botões de um pedido já resolvido é convidar o
+  // jogador a decidir duas vezes a mesma coisa.
   const pending = requests.filter((request) => request.status === 'aberta');
+  const resolved = requests.filter((request) => request.status !== 'aberta');
   const tone = TONE_LABEL[meeting.tone];
 
   return (
