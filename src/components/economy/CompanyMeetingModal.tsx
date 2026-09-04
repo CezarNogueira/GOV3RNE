@@ -213,7 +213,9 @@ export function CompanyMeetingModal({
         {/* --------------------------------------------------------- a pauta */}
         <section>
           <p className="label mb-1.5">
-            Pauta trazida pela direção {requests.length > 0 && `· ${requests.length} ${requests.length === 1 ? 'item' : 'itens'}`}
+            Pauta trazida pela direção
+            {pending.length > 0 &&
+              ` · ${pending.length} ${pending.length === 1 ? 'item em aberto' : 'itens em aberto'}`}
           </p>
 
           {requests.length === 0 ? (
@@ -222,9 +224,9 @@ export function CompanyMeetingModal({
               serve para o governo ouvir — o que também vale alguma coisa, e custou um ponto de
               agenda.
             </p>
-          ) : (
+          ) : pending.length > 0 ? (
             <div className="space-y-2">
-              {requests.map((request) => (
+              {pending.map((request) => (
                 <AgendaItem
                   key={request.id}
                   request={request}
@@ -235,6 +237,21 @@ export function CompanyMeetingModal({
                   }
                 />
               ))}
+            </div>
+          ) : (
+            <p className="border border-ink-700 bg-ink-900/40 p-3 text-[12px] leading-relaxed text-neutral-500">
+              Todos os itens da pauta já foram decididos nesta reunião.
+            </p>
+          )}
+
+          {resolved.length > 0 && (
+            <div className="mt-3 rule pt-2">
+              <p className="label mb-1.5">Já decidido nesta reunião</p>
+              <div className="space-y-1">
+                {resolved.map((request) => (
+                  <ResolvedAgendaItem key={request.id} request={request} />
+                ))}
+              </div>
             </div>
           )}
 
@@ -261,15 +278,13 @@ function AgendaItem({
   locked: boolean;
   onChoose: (choice: CompanyMeetingChoice) => void;
 }) {
-  const decided = request.status !== 'aberta';
   const affordable = request.fiscalCost <= state.economy.treasuryCash;
 
   return (
     <article
       className={cx(
-        'border p-2.5',
-        decided ? 'border-ink-800 bg-ink-900/30' : 'border-ink-700 bg-ink-900/50',
-        request.urgency === 'alta' && !decided && 'border-l-2 border-l-warn-500',
+        'border border-ink-700 bg-ink-900/50 p-2.5',
+        request.urgency === 'alta' && 'border-l-2 border-l-warn-500',
       )}
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -288,7 +303,7 @@ function AgendaItem({
         {request.offer}
       </p>
 
-      {request.angeredGroups.length > 0 && !decided && (
+      {request.angeredGroups.length > 0 && (
         <p className="mt-1 text-[10px] leading-snug text-neutral-600">
           Reclama se você atender:{' '}
           {request.angeredGroups
@@ -298,49 +313,59 @@ function AgendaItem({
         </p>
       )}
 
-      {decided ? (
-        <p className="mt-1.5 border-t border-ink-800 pt-1.5 text-[11px] text-neutral-500">
-          <span
-            className={cx(
-              'font-semibold',
-              request.status === 'recusada' ? 'text-danger-400' : 'text-gov-400',
-            )}
-          >
-            {request.status === 'atendida'
-              ? 'Atendido'
-              : request.status === 'negociada'
-                ? 'Negociado'
-                : request.status === 'recusada'
-                  ? 'Recusado'
-                  : 'Vencido'}
-          </span>
-          {request.resolution && ` · ${request.resolution}`}
-        </p>
-      ) : (
-        !locked && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {CHOICES.map((choice) => {
-              const blocked = choice.id !== 'recusar' && !affordable;
-              return (
-                <button
-                  key={choice.id}
-                  type="button"
-                  title={choice.hint}
-                  disabled={blocked}
-                  onClick={() => onChoose(choice.id)}
-                  className={cx(
-                    choice.tone === 'danger' ? 'btn-danger' : choice.tone === 'primary' ? 'btn-primary' : 'btn-ghost',
-                    'btn-sm',
-                    blocked && 'cursor-not-allowed opacity-40',
-                  )}
-                >
-                  {choice.label}
-                </button>
-              );
-            })}
-          </div>
-        )
+      {!locked && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {CHOICES.map((choice) => {
+            const blocked = choice.id !== 'recusar' && !affordable;
+            return (
+              <button
+                key={choice.id}
+                type="button"
+                title={choice.hint}
+                disabled={blocked}
+                onClick={() => onChoose(choice.id)}
+                className={cx(
+                  choice.tone === 'danger' ? 'btn-danger' : choice.tone === 'primary' ? 'btn-primary' : 'btn-ghost',
+                  'btn-sm',
+                  blocked && 'cursor-not-allowed opacity-40',
+                )}
+              >
+                {choice.label}
+              </button>
+            );
+          })}
+        </div>
       )}
     </article>
+  );
+}
+
+function ResolvedAgendaItem({ request }: { request: CompanyRequest }) {
+  const statusLabel =
+    request.status === 'atendida'
+      ? 'Atendido'
+      : request.status === 'negociada'
+        ? 'Negociado'
+        : request.status === 'recusada'
+          ? 'Recusado'
+          : 'Vencido';
+
+  return (
+    <div className="flex items-start justify-between gap-2 border-l-2 border-l-ink-700 bg-ink-900/30 px-2 py-1.5">
+      <div className="min-w-0">
+        <p className="truncate text-[12px] text-neutral-300">{request.title}</p>
+        {request.resolution && (
+          <p className="text-[10px] leading-snug text-neutral-600">{request.resolution}</p>
+        )}
+      </div>
+      <span
+        className={cx(
+          'shrink-0 text-[10px] font-semibold',
+          request.status === 'recusada' ? 'text-danger-400' : 'text-gov-400',
+        )}
+      >
+        {statusLabel}
+      </span>
+    </div>
   );
 }
