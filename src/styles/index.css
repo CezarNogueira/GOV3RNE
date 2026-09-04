@@ -1,0 +1,196 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 text-neutral-200 font-sans antialiased;
+    /* Textura muito sutil: evita que áreas grandes de preto puro pareçam mortas. */
+    background-image: radial-gradient(circle at 50% -10%, #101318 0%, #07080a 55%);
+    background-attachment: fixed;
+  }
+
+  /* Números nunca dançam quando mudam de valor. */
+  .tabular,
+  table,
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    @apply bg-gov-600/40 text-white;
+  }
+
+  /* Barra de rolagem discreta, no tom da interface. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #2a2f38 transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: #2a2f38;
+    border-radius: 0;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: #3a404b;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-1 ring-gov-500 ring-offset-1 ring-offset-ink-950;
+  }
+}
+
+@layer components {
+  /* ------------------------------------------------------------ Superfícies */
+  .card {
+    @apply border border-ink-700/70 bg-ink-850/80 rounded-card;
+  }
+
+  .card-raised {
+    @apply border border-ink-600/60 bg-ink-800 rounded-card;
+  }
+
+  /* Cartão com faixa lateral de estado — usado quando algo exige decisão. */
+  .card-active {
+    @apply card border-l-2 border-l-gov-500;
+  }
+
+  .card-alert {
+    @apply card border-l-2 border-l-warn-500;
+  }
+
+  .card-danger {
+    @apply card border-l-2 border-l-danger-500;
+  }
+
+  /* ---------------------------------------------------------------- Rótulos */
+  .label {
+    @apply text-label uppercase font-medium text-neutral-500;
+  }
+
+  .label-strong {
+    @apply text-label uppercase font-semibold text-neutral-400;
+  }
+
+  .section-title {
+    @apply font-display uppercase tracking-wide text-neutral-100;
+  }
+
+  /* ---------------------------------------------------------------- Números */
+  .metric {
+    @apply font-mono text-metric font-medium text-neutral-50;
+  }
+
+  .metric-lg {
+    @apply font-mono text-metric-lg font-medium text-neutral-50;
+  }
+
+  .unit {
+    @apply font-mono text-xs text-neutral-500 ml-0.5;
+  }
+
+  /* ---------------------------------------------------------------- Badges */
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-pill border px-1.5 py-0.5 text-label uppercase font-semibold;
+  }
+  .badge-neutral {
+    @apply badge border-ink-600 text-neutral-400;
+  }
+  .badge-gov {
+    @apply badge border-gov-700 bg-gov-900/40 text-gov-400;
+  }
+  .badge-warn {
+    @apply badge border-warn-600/60 bg-warn-900/40 text-warn-400;
+  }
+  .badge-danger {
+    @apply badge border-danger-600/60 bg-danger-900/40 text-danger-400;
+  }
+  .badge-info {
+    @apply badge border-info-600/60 bg-info-900/40 text-info-400;
+  }
+
+  /* --------------------------------------------------------------- Controles */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-card border px-3 py-2
+           text-xs font-semibold uppercase tracking-wider transition-colors duration-snap
+           disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply btn border-gov-600 bg-gov-600 text-ink-950 hover:bg-gov-500 hover:border-gov-500;
+  }
+  .btn-ghost {
+    @apply btn border-ink-600 bg-transparent text-neutral-300 hover:border-ink-500 hover:bg-ink-800;
+  }
+  .btn-danger {
+    @apply btn border-danger-600/70 bg-transparent text-danger-400 hover:bg-danger-900/40;
+  }
+  .btn-sm {
+    @apply px-2 py-1 text-label;
+  }
+
+  .field {
+    @apply w-full rounded-card border border-ink-700 bg-ink-900/80 px-3 py-2 text-sm
+           text-neutral-100 placeholder:text-neutral-600
+           focus:border-gov-600 focus:outline-none focus:ring-0 transition-colors duration-snap;
+  }
+
+  /* Opção selecionável — a unidade de escolha do jogo inteiro. */
+  .option {
+    @apply w-full rounded-card border border-ink-700 bg-ink-900/50 p-3 text-left
+           transition-colors duration-snap hover:border-ink-500 hover:bg-ink-800/70;
+  }
+  .option-selected {
+    @apply border-gov-600 bg-gov-900/25;
+  }
+
+  /* ----------------------------------------------------------- Separadores */
+  .rule {
+    @apply border-t border-ink-700/60;
+  }
+
+  .grid-lines {
+    background-image:
+      linear-gradient(to right, rgba(42, 47, 56, 0.35) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(42, 47, 56, 0.35) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+}
+
+@layer utilities {
+  .text-pos {
+    @apply text-gov-400;
+  }
+  .text-neg {
+    @apply text-danger-400;
+  }
+  .text-flat {
+    @apply text-neutral-500;
+  }
+
+  /* Respeita quem pediu menos movimento no sistema operacional. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
