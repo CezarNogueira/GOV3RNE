@@ -86,6 +86,10 @@ export function migrate(state: GameState): GameState {
     migrated.flags = { tutorialStep: 0, seenIntro: false, firedEvents: [], gameOver: false };
   }
   if (!migrated.flags.firedEvents) migrated.flags.firedEvents = [];
+  // Saves anteriores à agenda dinâmica: sem histórico de cooldown e sem
+  // desdobramentos pendentes, os dois começam vazios e passam a ser usados.
+  if (!migrated.flags.eventCooldowns) migrated.flags.eventCooldowns = {};
+  if (!migrated.flags.pendingFollowUps) migrated.flags.pendingFollowUps = [];
 
   // Saves anteriores à reeleição: toda partida antiga é um primeiro mandato,
   // ainda sem disputa montada. A eleição passa a valer para elas também — quem
@@ -207,5 +211,8 @@ export function compact(state: GameState): GameState {
     // Notícia de empresa é recriada todo mês; guardar o histórico inteiro só
     // engorda o save.
     companies: { ...state.companies, news: state.companies.news.slice(0, 12) },
+    // O extrato de decisões é a memória do que o jogador fez: guarda as
+    // últimas, não todas, pelo mesmo motivo das notícias.
+    decisions: (state.decisions ?? []).slice(0, 60),
   };
 }

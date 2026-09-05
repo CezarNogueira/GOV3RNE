@@ -110,6 +110,17 @@ export interface GameFlags {
   /** Eventos "once" já disparados. */
   firedEvents: string[];
   gameOver: boolean;
+  /**
+   * Mês em que cada evento dinâmico aconteceu pela última vez. É o que impede
+   * a agenda de repetir o mesmo assunto duas vezes seguidas.
+   */
+  eventCooldowns?: Record<string, number>;
+  /**
+   * Desdobramentos agendados: evento que passa a ser prioritário a partir do
+   * mês marcado. É o que transforma uma provocação em rompimento e um
+   * escândalo em CPI, em vez de deixar cada crise isolada.
+   */
+  pendingFollowUps?: { definitionId: string; dueMonth: number }[];
   gameOverReason?: 'mandato_encerrado' | 'impeachment' | 'renuncia' | 'saude' | 'derrota_eleitoral';
 }
 

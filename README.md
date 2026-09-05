@@ -333,6 +333,98 @@ reconhecidos (com o ponto do estado de onde cada valor é lido) em
 [`numeric-targets.ts`](src/game/data/numeric-targets.ts). Adicionar um número
 novo ao jogo é acrescentar uma entrada nessa lista.
 
+### A agenda do mês
+
+A agenda é o país batendo na porta. Ela tem **90% de chance de trazer alguma
+coisa e 10% de vir limpa** — um mês tranquilo é parte do jogo, e é ele que dá
+contraste ao mês em que tudo acontece junto. Quando há agenda, o tamanho dela
+sai do estado do país:
+
+| Situação | Assuntos no mês |
+| -------- | --------------- |
+| Governo estável (aprovação alta, Congresso calmo) | 1 a 3 |
+| Mês comum | 2 a 5 |
+| Governo em crise (aprovação baixa, impeachment no radar, inflação ou desemprego alto) | 4 a 8 |
+
+Dois catálogos concorrem no mesmo sorteio, com o mesmo peso multiplicado pela
+mesma urgência:
+
+- **estático** ([`events.ts`](src/game/data/events.ts)) — situações escritas por
+  inteiro, como sempre foram;
+- **dinâmico** ([`dynamic-events/`](src/game/data/dynamic-events)) — moldes que
+  se montam com as pessoas, empresas e países **da partida**.
+
+O que sai dos dois é o mesmo `ActiveEvent`: a interface, a decisão e o
+fechamento do mês não sabem a diferença, e é assim que a expansão não virou um
+sistema paralelo.
+
+#### Eventos que se montam com o país
+
+Um evento dinâmico não escreve nomes: ele pede gente ao estado
+([`event-actors.ts`](src/game/engines/event-actors.ts)), e só recebe quem existe
+e quem cabe no papel.
+
+```
+ministro         government.ministers, com preferência pelos mais desgastados
+governador       states[], com filtro de aliado ou adversário
+deputado/senador bancadas do Congresso, pelo apoio real de cada uma
+prefeito         nome sorteado + capital de um estado do jogo
+empresa estatal  companies com control 'federal' e participação da União
+multinacional    companies privadas, ponderadas por emprego
+país             diplomacy.countries, filtrado por comércio ou relação
+cônjuge / filho  family[], com título e artigo definidos pelo gênero do presidente
+imprensa         NEWS_OUTLETS e COMMENTATORS
+medida recente   a maior medida em vigor dos últimos seis meses
+```
+
+Quando não há com quem montar — sem cônjuge, sem estatal, sem país parceiro —
+o `build` devolve `null` e o motor segue para o próximo candidato. É o que faz
+"evento do cônjuge" ser **impossível** para quem não tem cônjuge, em vez de ser
+um texto com um espaço em branco.
+
+Três regras de coerência valem para todos:
+
+- **o papel manda.** Escândalo de estatal nunca sorteia empresa privada; senador
+  aliado vem de bancada com apoio acima de 45; deputado da oposição, de bancada
+  abaixo de 15; sanção comercial só vem de país que realmente compra do Brasil;
+- **o tamanho manda.** O impacto é proporcional ao peso econômico da empresa e
+  ao peso do país no tabuleiro — crise na maior estatal não vale o mesmo que
+  crise numa pequena;
+- **o assunto não se repete.** Cada evento tem descanso próprio
+  (`cooldownMonths`), e uma categoria que já entrou na agenda do mês pesa menos
+  na escolha seguinte.
+
+#### Consequências que evoluem
+
+Um evento pode agendar o próximo: ministro que provoca governador marca o
+rompimento para dois meses depois, escândalo de estatal marca a CPI para três.
+Fica em `flags.pendingFollowUps` e entra com prioridade quando vence — é a
+diferença entre uma crise que evolui e uma sequência de crises sem memória.
+
+Efeitos internacionais mexem na relação bilateral de verdade (`diplomacy` na
+opção do evento): retaliar uma sanção derrubou, numa partida de teste, a relação
+com o parceiro de 40 para 22, o comércio de 70 para 56 e subiu o isolamento do
+Brasil de 28 para 34. A próxima visita e o próximo acordo encontram o país
+exatamente nesse estado.
+
+#### Acrescentar um evento
+
+```ts
+registerAgendaEvent({
+  id: 'dyn_meu_evento',
+  category: 'politico',
+  severity: 'grave',
+  weight: 12,
+  tags: ['institucional'],
+  cooldownMonths: 6,
+  canGenerate: (state) => state.states.length > 0,
+  pressure: (state) => 1 + Math.max(0, 50 - state.approval.overall) * 0.02,
+  build: (state, rng) => ({ title: '…', brief: '…', options: [/* … */] }),
+});
+```
+
+Nada mais precisa ser tocado.
+
 ### Devolutiva de cada decisão
 
 Nenhuma ação do presidente termina em silêncio.

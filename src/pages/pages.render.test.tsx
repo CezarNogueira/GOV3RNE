@@ -17,6 +17,7 @@ import {
   newGameSchema,
   openCompanyMeeting,
   processPolicies,
+  rollEvents,
   serialize,
   tickMonth,
   type GameState,
@@ -604,5 +605,47 @@ describe('Eleição', () => {
     loadState(freshGame);
     renderPage(<Eleicao />);
     expect(screen.getByText(/fora da janela eleitoral/i)).toBeInTheDocument();
+  });
+});
+
+describe('agenda dinâmica na tela', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('monta o Painel com um evento montado a partir do país', () => {
+    let state = deepClone(playedGame);
+    state.pendingEvents = [];
+
+    // Sorteia até cair um evento dinâmico e o coloca na mesa do presidente.
+    for (let index = 0; index < 200 && state.pendingEvents.length === 0; index += 1) {
+      const draft = deepClone(state);
+      const events = rollEvents(draft, new Rng(7000 + index * 11, index));
+      const dynamic = events.filter((event) => event.definitionId.startsWith('dyn_'));
+      if (dynamic.length > 0) {
+        draft.pendingEvents = dynamic;
+        state = draft;
+      }
+    }
+
+    expect(state.pendingEvents.length).toBeGreaterThan(0);
+    loadState(state);
+    renderPage(<Painel />);
+
+    const event = state.pendingEvents[0]!;
+    expect(screen.getByText(event.title)).toBeInTheDocument();
+    // O texto chega pronto: nenhum marcador de molde sobra na tela.
+    expect(screen.getByText(event.title).textContent).not.toMatch(/\{\w+\}/);
+    // O texto do evento chega inteiro à tela, com as entidades já preenchidas.
+    expect(screen.getByText(event.brief)).toBeInTheDocument();
+  });
+
+  it('mostra o mês tranquilo quando a agenda vem limpa', () => {
+    const calmo = deepClone(playedGame);
+    calmo.pendingEvents = [];
+    loadState(calmo);
+    renderPage(<Painel />);
+
+    expect(screen.getByText(/sua agenda está limpa/i)).toBeInTheDocument();
   });
 });

@@ -282,7 +282,9 @@ export function tickMonth(input: GameState): TickOutcome {
   ].slice(0, 200);
 
   // ---------------------------------------------------------------- 13. Próximo mês
-  state.pendingEvents = state.pendingEvents.filter((event) => !event.resolvedOptionId).slice(0, 4);
+  // A agenda pode trazer até oito assuntos num mês de crise; o teto de
+  // pendentes acompanha isso para nenhum evento sorteado sumir sem aparecer.
+  state.pendingEvents = state.pendingEvents.filter((event) => !event.resolvedOptionId).slice(0, 8);
 
   if (impeachment.removed) {
     state.flags.gameOver = true;

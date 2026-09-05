@@ -1,11 +1,14 @@
 import type {
   ActiveEvent,
+  DynamicEventDefinition,
   EventConditions,
+  EventDiplomaticEffect,
   EventOption,
   GameEventDefinition,
   GameState,
 } from '../types/index';
 import { EVENT_CATALOG } from '../data/events';
+import { agendaEventById, agendaEvents } from '../data/dynamic-events/index';
 import { DIFFICULTY_PRESETS } from '../data/difficulty';
 import { applyImpacts } from './policy';
 import { nudgeGroup } from './social';
@@ -109,43 +112,198 @@ function urgencyMultiplier(state: GameState, definition: GameEventDefinition): n
 }
 
 /**
- * Sorteia os eventos do mês. Devolve entre zero e dois, dependendo da pressão
- * acumulada e da frequência configurada.
+ * A AGENDA DO MÊS
+ *
+ * Regra de desenho, e ela é a razão de existir deste bloco: a agenda tem 90% de
+ * chance de trazer alguma coisa e 10% de vir limpa. Um mês tranquilo é parte do
+ * jogo — governo não é crise ininterrupta, e a calmaria é o que dá contraste
+ * para o mês em que tudo acontece ao mesmo tempo.
+ *
+ * Quando há agenda, o TAMANHO dela sai do estado do país:
+ *
+ *   governo estável       1 a 3 assuntos, e os mais leves;
+ *   mês comum             2 a 5;
+ *   governo em crise      4 a 8, e os mais pesados.
+ *
+ * Os dois catálogos — o estático e o dinâmico — concorrem no mesmo sorteio, com
+ * o mesmo peso multiplicado pela mesma urgência. Para o resto do jogo, o que sai
+ * daqui é o `ActiveEvent` de sempre.
  */
-export function rollEvents(state: GameState, rng: Rng): ActiveEvent[] {
+const CLEAN_MONTH_CHANCE = 0.1;
+
+/** Quantos assuntos a agenda deste mês comporta. */
+function agendaSize(state: GameState, rng: Rng): number {
   const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
   const pressure = preset.eventPressure * state.settings.eventFrequency;
 
-  const candidates = EVENT_CATALOG.filter((definition) => {
+  const crise =
+    state.approval.overall < 38 ||
+    state.congress.impeachmentRisk > 45 ||
+    state.economy.inflation > state.economy.inflationTarget + 3 ||
+    state.economy.unemployment > 11;
+
+  const estavel =
+    state.approval.overall > 58 &&
+    state.congress.goodwill > 55 &&
+    state.congress.impeachmentRisk < 20;
+
+  const [min, max] = crise ? [4, 8] : estavel ? [1, 3] : [2, 5];
+  const size = rng.int(min as number, max as number);
+
+  // A dificuldade e a frequência configurada ainda mandam: em partida calma o
+  // teto cai, em partida difícil ele sobe.
+  return Math.max(1, Math.min(8, Math.round(size * clamp(pressure, 0.6, 1.4))));
+}
+
+/** Um evento dinâmico está disponível? Cooldown, condições e porta de entrada. */
+function dynamicAvailable(state: GameState, definition: DynamicEventDefinition): boolean {
+  if (definition.once && state.flags.firedEvents.includes(definition.id)) return false;
+  if (state.pendingEvents.some((pending) => pending.definitionId === definition.id)) return false;
+
+  const lastMonth = state.flags.eventCooldowns?.[definition.id];
+  if (lastMonth !== undefined && definition.cooldownMonths !== undefined) {
+    if (state.month - lastMonth < definition.cooldownMonths) return false;
+  }
+
+  if (!meetsConditions(state, definition.conditions)) return false;
+  if (definition.canGenerate && !definition.canGenerate(state)) return false;
+  return true;
+}
+
+/** Peso final de um evento dinâmico: base vezes a urgência declarada por ele. */
+function dynamicWeight(state: GameState, definition: DynamicEventDefinition): number {
+  const pressure = definition.pressure ? definition.pressure(state) : 1;
+  return definition.weight * clamp(pressure, 0.2, 4);
+}
+
+/**
+ * Constrói o evento dinâmico. Devolve `null` quando não havia com quem montá-lo
+ * — sem ministro, sem estatal, sem país parceiro —, e o motor segue adiante.
+ */
+function buildDynamic(
+  state: GameState,
+  definition: DynamicEventDefinition,
+  rng: Rng,
+): ActiveEvent | null {
+  const built = definition.build(state, rng);
+  if (!built || built.options.length === 0) return null;
+
+  if (built.followUp) {
+    const list = (state.flags.pendingFollowUps ??= []);
+    // Um desdobramento por vez para o mesmo assunto.
+    if (!list.some((entry) => entry.definitionId === built.followUp?.definitionId)) {
+      list.push({
+        definitionId: built.followUp.definitionId,
+        dueMonth: state.month + built.followUp.afterMonths,
+      });
+    }
+  }
+
+  return {
+    id: makeId('evt', rng),
+    definitionId: definition.id,
+    month: state.month,
+    title: built.title,
+    brief: built.brief,
+    category: definition.category,
+    severity: definition.severity,
+    options: built.options.filter((option) => optionAvailable(state, option)),
+  };
+}
+
+export function rollEvents(state: GameState, rng: Rng): ActiveEvent[] {
+  // Mês limpo: nenhum evento especial, e a interface mostra a calmaria.
+  if (rng.bool(CLEAN_MONTH_CHANCE)) return [];
+
+  const staticPool = EVENT_CATALOG.filter((definition) => {
     if (definition.once && state.flags.firedEvents.includes(definition.id)) return false;
-    // Um evento não repete enquanto o anterior do mesmo tipo não sai da tela.
     if (state.pendingEvents.some((pending) => pending.definitionId === definition.id)) return false;
     return meetsConditions(state, definition.conditions);
   });
 
-  if (candidates.length === 0) return [];
-
-  // Probabilidade de acontecer alguma coisa neste mês.
-  const baseChance = clamp(0.42 * pressure, 0.1, 0.92);
-  if (!rng.bool(baseChance)) return [];
+  const dynamicPool = agendaEvents().filter((definition) => dynamicAvailable(state, definition));
+  if (staticPool.length === 0 && dynamicPool.length === 0) return [];
 
   const events: ActiveEvent[] = [];
-  const first = rng.weighted(candidates, (definition) => definition.weight * urgencyMultiplier(state, definition));
-  events.push(toActiveEvent(first, state, rng));
+  const usedStatic = new Set<string>();
+  const usedDynamic = new Set<string>();
 
-  // Mês ruim pode trazer o segundo evento: crise raramente vem sozinha.
-  const secondChance = clamp(0.14 * pressure + Math.max(0, 48 - state.approval.overall) * 0.006, 0, 0.5);
-  if (rng.bool(secondChance)) {
-    const remaining = candidates.filter((definition) => definition.id !== first.id);
-    if (remaining.length > 0) {
-      const second = rng.weighted(remaining, (definition) => definition.weight * urgencyMultiplier(state, definition));
-      events.push(toActiveEvent(second, state, rng));
-    }
+  /**
+   * Assunto que já entrou na agenda deste mês pesa menos na próxima escolha.
+   *
+   * Sem isto, um mês de crise política sorteava dois pedidos de impeachment e
+   * três brigas com o Congresso — cada um coerente sozinho e ridículo em
+   * conjunto. A agenda de um governo tem assuntos diferentes no mesmo mês.
+   */
+  const spentCategories = new Map<string, number>();
+  const variety = (category: string) => 1 / (1 + (spentCategories.get(category) ?? 0) * 2.4);
+  const spend = (category: string) =>
+    spentCategories.set(category, (spentCategories.get(category) ?? 0) + 1);
+
+  // ------------------------------------------------------ desdobramentos
+  // O que foi agendado por um evento anterior entra primeiro: é a diferença
+  // entre uma crise que evolui e uma sequência de crises sem memória.
+  const due = (state.flags.pendingFollowUps ?? []).filter((entry) => entry.dueMonth <= state.month);
+  for (const entry of due) {
+    const definition = agendaEventById(entry.definitionId);
+    if (!definition || !dynamicAvailable(state, definition)) continue;
+    const built = buildDynamic(state, definition, rng);
+    if (!built) continue;
+    events.push(built);
+    usedDynamic.add(definition.id);
+    spend(definition.category);
+    (state.flags.eventCooldowns ??= {})[definition.id] = state.month;
+  }
+  if (due.length > 0) {
+    state.flags.pendingFollowUps = (state.flags.pendingFollowUps ?? []).filter(
+      (entry) => entry.dueMonth > state.month,
+    );
   }
 
-  for (const event of events) {
-    const definition = EVENT_CATALOG.find((candidate) => candidate.id === event.definitionId);
-    if (definition?.once) state.flags.firedEvents.push(definition.id);
+  const size = agendaSize(state, rng);
+
+  for (let index = events.length; index < size; index += 1) {
+    const staticCandidates = staticPool.filter((definition) => !usedStatic.has(definition.id));
+    const dynamicCandidates = dynamicPool.filter((definition) => !usedDynamic.has(definition.id));
+    if (staticCandidates.length === 0 && dynamicCandidates.length === 0) break;
+
+    const staticTotal = staticCandidates.reduce(
+      (total, definition) =>
+        total + definition.weight * urgencyMultiplier(state, definition) * variety(definition.category),
+      0,
+    );
+    const dynamicTotal = dynamicCandidates.reduce(
+      (total, definition) => total + dynamicWeight(state, definition) * variety(definition.category),
+      0,
+    );
+    if (staticTotal + dynamicTotal <= 0) break;
+
+    const goDynamic = rng.next() < dynamicTotal / (staticTotal + dynamicTotal);
+
+    if (goDynamic && dynamicCandidates.length > 0) {
+      const definition = rng.weighted(
+        dynamicCandidates,
+        (candidate) => dynamicWeight(state, candidate) * variety(candidate.category),
+      );
+      usedDynamic.add(definition.id);
+      const built = buildDynamic(state, definition, rng);
+      if (!built) continue;
+      events.push(built);
+      spend(definition.category);
+      (state.flags.eventCooldowns ??= {})[definition.id] = state.month;
+      if (definition.once) state.flags.firedEvents.push(definition.id);
+      continue;
+    }
+
+    if (staticCandidates.length === 0) continue;
+    const definition = rng.weighted(
+      staticCandidates,
+      (candidate) => candidate.weight * urgencyMultiplier(state, candidate) * variety(candidate.category),
+    );
+    usedStatic.add(definition.id);
+    events.push(toActiveEvent(definition, state, rng));
+    spend(definition.category);
+    if (definition.once) state.flags.firedEvents.push(definition.id);
   }
 
   return events;
@@ -220,10 +378,27 @@ export function resolveEvent(
   state.president.stress = round(clamp100(state.president.stress + wear), 1);
   state.president.energy = round(clamp100(state.president.energy - Math.max(0, wear) * 0.4), 1);
 
+  // Efeito diplomático: muda a relação com AQUELE país, não um número solto.
+  if (option.diplomacy) applyDiplomaticEffect(state, option.diplomacy);
+
   event.resolvedOptionId = optionId;
   event.resolution = option.warning;
 
   return { ok: true, message: option.warning };
+}
+
+/** Leva o efeito de um evento internacional para o país envolvido. */
+function applyDiplomaticEffect(state: GameState, effect: EventDiplomaticEffect): void {
+  const country = state.diplomacy.countries.find((entry) => entry.id === effect.countryId);
+  if (country) {
+    country.relation = round(clamp(country.relation + (effect.relationDelta ?? 0), -100, 100), 1);
+    country.trade = round(clamp100(country.trade + (effect.tradeDelta ?? 0)), 1);
+    country.trust = round(clamp100(country.trust + (effect.trustDelta ?? 0)), 1);
+    country.tension = round(clamp100(country.tension + (effect.tensionDelta ?? 0)), 1);
+  }
+  if (effect.isolationDelta) {
+    state.diplomacy.isolation = round(clamp100(state.diplomacy.isolation + effect.isolationDelta), 1);
+  }
 }
 
 /**

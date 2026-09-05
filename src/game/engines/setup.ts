@@ -109,6 +109,8 @@ export function createGame(input: NewGameInput): GameState {
       tutorialStep: 0,
       seenIntro: false,
       firedEvents: [],
+      eventCooldowns: {},
+      pendingFollowUps: [],
       gameOver: false,
     },
     president,

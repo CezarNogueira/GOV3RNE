@@ -16,6 +16,7 @@ export * from './avatar';
 export * from './programs';
 export * from './companies/index';
 export * from './events';
+export * from './dynamic-events/index';
 export * from './measure-types';
 export * from './numeric-targets';
 export * from './policy-elasticities';
