@@ -12,6 +12,7 @@ import {
   Menu as MenuIcon,
   Settings,
   Star,
+  Shield,
   X,
 } from 'lucide-react';
 import { monthLabel, type GameState } from '@/game';
@@ -31,6 +32,7 @@ const TABS = [
   { to: '/nacao', label: 'Nação', icon: Flag },
   { to: '/economia', label: 'Economia', icon: Banknote },
   { to: '/diplomacia', label: 'Diplomacia', icon: Globe2 },
+  { to: '/poder', label: 'Poder', icon: Shield },
   { to: '/programas', label: 'Programas', icon: LayoutGrid },
   { to: '/vida-pessoal', label: 'Vida pessoal', icon: Heart },
 ] as const;

@@ -37,6 +37,7 @@ import {
   LAST_NAMES,
 } from '../data/people';
 import { INHERITED_PROGRAMS } from '../data/programs';
+import { buildRegime, buildWar } from './regime-setup';
 import { buildCompaniesState } from './companies/company-service';
 
 /** Custo anualizado dos programas herdados, já contabilizado como custeio mensal. */
@@ -129,6 +130,8 @@ export function createGame(input: NewGameInput): GameState {
     government,
     congress,
     diplomacy,
+    regime: buildRegime(preset.startingApproval),
+    war: buildWar(),
     states,
     socialGroups,
     budget: buildBudget(),

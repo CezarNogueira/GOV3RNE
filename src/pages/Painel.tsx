@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import {
   AGENDA_ACTIONS,
+  REGIME_LABEL,
   REGIONS,
   REGION_LABEL,
   approvalLabel,
@@ -174,6 +175,41 @@ export function Painel() {
             footer={<span className="label">Risco {state.economy.countryRisk}</span>}
           />
         </div>
+
+        {/* ------------------------------------------------- poder e ordem */}
+        {/* Só aparece quando há o que dizer: instituição sob pressão, exceção
+            em vigor, guerra em curso ou regime que deixou de ser democracia. */}
+        {(state.regime.ruptureRisk > 32 ||
+          state.regime.regime !== 'democracia' ||
+          state.war.status === 'guerra') && (
+          <button
+            type="button"
+            onClick={() => navigate('/poder')}
+            className={cx(
+              'mt-4 flex w-full flex-wrap items-center justify-between gap-3 border p-4 text-left transition-colors',
+              state.regime.regime === 'democracia'
+                ? 'border-warn-700/50 bg-warn-900/10 hover:border-warn-600'
+                : 'border-danger-700/50 bg-danger-900/10 hover:border-danger-600',
+            )}
+          >
+            <div className="min-w-0">
+              <p className="label text-warn-400">
+                {state.war.status === 'guerra' ? 'País em guerra' : 'Poder e ordem'}
+              </p>
+              <h2 className="mt-0.5 font-display text-xl font-semibold text-neutral-50">
+                {REGIME_LABEL[state.regime.regime]}
+                {state.war.status === 'guerra' ? ` · guerra com ${state.war.countryName}` : ''}
+              </h2>
+              <p className="mt-0.5 text-[12px] leading-snug text-neutral-400">
+                Risco de ruptura {state.regime.ruptureRisk.toFixed(0)}% · lealdade militar{' '}
+                {state.regime.militaryLoyalty.toFixed(0)}% · liberdades{' '}
+                {state.regime.civilLiberties.toFixed(0)}%
+                {state.regime.exception.active ? ' · estado de exceção em vigor' : ''}
+              </p>
+            </div>
+            <span className="btn-ghost shrink-0">Abrir o gabinete de crise</span>
+          </button>
+        )}
 
         {/* ------------------------------------------------------- eleição */}
         {eleicao && (

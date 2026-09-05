@@ -219,6 +219,7 @@ const DECISION_LABEL: Record<string, string> = {
   diplomacia: 'Diplomacia',
   campanha: 'Campanha',
   eleicao: 'Eleição',
+  regime: 'Poder',
   mes: 'Mês',
 };
 

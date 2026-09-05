@@ -4,6 +4,7 @@ import { INSTRUMENT_RULES } from './policy';
 import { buildCompaniesState, buildExecutive } from './companies/company-service';
 import { SECTOR_PROFILE, companyBlueprint } from '../data/companies/index';
 import { monthLabel } from '../utils/format';
+import { buildWar, migrateRegime } from './regime-setup';
 
 /**
  * SAVE GAME
@@ -78,6 +79,10 @@ export function migrate(state: GameState): GameState {
   // Saves anteriores ao registro de decisões: a lista começa vazia e passa a
   // ser preenchida da próxima ação em diante.
   if (!migrated.decisions) migrated.decisions = [];
+  // Saves anteriores à camada de regime: o país é reconstruído como a
+  // democracia que ele era, com o desgaste que o save já mostra.
+  if (!migrated.regime) migrated.regime = migrateRegime(migrated);
+  if (!migrated.war) migrated.war = buildWar();
   if (!migrated.news) migrated.news = [];
   if (!migrated.timeline) migrated.timeline = [];
   if (!migrated.history) migrated.history = [];

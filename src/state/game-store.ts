@@ -9,6 +9,7 @@ import type {
   NegotiationOptionId,
   NewGameInput,
   ProposalAnalysis,
+  RegimeAction,
   SaveSlotMeta,
   VoteResult,
 } from '@/game';
@@ -65,6 +66,8 @@ interface GameStore {
   decideEvent: (eventId: string, optionId: string) => boolean;
   runAction: (actionId: AgendaActionId, targetId?: string) => void;
   companyAction: (action: CompanyAction) => void;
+  /** Executa uma ação extraordinária de regime ou de guerra. */
+  regimeAction: (action: RegimeAction) => void;
   /** Diz se o presidente disputa a reeleição. */
   decideCandidacy: (running: boolean) => void;
   /** Executa um movimento de campanha. */
@@ -207,6 +210,17 @@ export const useGame = create<GameStore>((set, get) => ({
       set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Não foi possível executar', detail: messageOf(error) });
+    }
+  },
+
+  regimeAction: (action) => {
+    const current = get().state;
+    if (!current) return;
+    try {
+      const outcome = repository.regimeAction(current.id, action);
+      set({ state: outcome.state, lastDecision: outcome.decision });
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Ação não executada', detail: messageOf(error) });
     }
   },
 

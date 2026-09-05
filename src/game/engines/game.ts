@@ -32,6 +32,8 @@ import { generateNews, generatePosts } from './news';
 import { processPromises } from './promises';
 import { processImpeachment } from './impeachment';
 import { processElection } from './election';
+import { processCoupAgainstPresident, processRegime } from './regime';
+import { processWar } from './war';
 import { rollEvents, resolveUnattendedEvents, forecastNextCrisis } from './events';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
@@ -232,6 +234,16 @@ export function tickMonth(input: GameState): TickOutcome {
   // ---------------------------------------------------------------- 11. Promessas
   processPromises(state);
 
+  // ------------------------------------------------------- 10b. Regime e guerra
+  // Rodam depois da aprovação porque leem o país já atualizado: as ruas, os
+  // quartéis e a frente de batalha reagem ao mês que acabou de acontecer, e o
+  // que muda aqui entra no mesmo fechamento.
+  notes.push(...processRegime(state, rng));
+  notes.push(...processWar(state, rng));
+
+  const golpe = processCoupAgainstPresident(state, rng);
+  if (golpe) notes.push(golpe);
+
   // ------------------------------------------------------------ 11b. Eleição
   // Roda depois da aprovação e das promessas porque é disso que a intenção de
   // voto é feita: a urna lê o país deste mês, não o do mês passado.
@@ -286,7 +298,11 @@ export function tickMonth(input: GameState): TickOutcome {
   // pendentes acompanha isso para nenhum evento sorteado sumir sem aparecer.
   state.pendingEvents = state.pendingEvents.filter((event) => !event.resolvedOptionId).slice(0, 8);
 
-  if (impeachment.removed) {
+  if (state.flags.gameOverReason === 'ruptura') {
+    // O presidente foi deposto neste mês: o calendário não continua.
+    state.flags.gameOver = true;
+    state.phase = 'encerrado';
+  } else if (impeachment.removed) {
     state.flags.gameOver = true;
     state.phase = 'encerrado';
   } else if (state.month >= state.totalMonths) {

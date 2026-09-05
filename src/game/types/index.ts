@@ -10,4 +10,5 @@ export * from './events';
 export * from './election';
 export * from './recognizer';
 export * from './decisions';
+export * from './regime';
 export * from './game';

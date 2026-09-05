@@ -4,6 +4,7 @@ import { GOVERNMENT_EVENTS } from './government';
 import { OPPOSITION_EVENTS } from './opposition';
 import { ECONOMY_EVENTS } from './economy';
 import { INTERNATIONAL_EVENTS } from './international';
+import { REGIME_EVENTS } from './regime';
 
 /**
  * A AGENDA DINÂMICA
@@ -21,7 +22,15 @@ registerAgendaEvents([
   ...OPPOSITION_EVENTS,
   ...ECONOMY_EVENTS,
   ...INTERNATIONAL_EVENTS,
+  ...REGIME_EVENTS,
 ]);
 
 export * from './registry';
-export { FAMILY_EVENTS, GOVERNMENT_EVENTS, OPPOSITION_EVENTS, ECONOMY_EVENTS, INTERNATIONAL_EVENTS };
+export {
+  FAMILY_EVENTS,
+  GOVERNMENT_EVENTS,
+  OPPOSITION_EVENTS,
+  ECONOMY_EVENTS,
+  INTERNATIONAL_EVENTS,
+  REGIME_EVENTS,
+};

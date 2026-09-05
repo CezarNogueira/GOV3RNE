@@ -333,6 +333,124 @@ reconhecidos (com o ponto do estado de onde cada valor é lido) em
 [`numeric-targets.ts`](src/game/data/numeric-targets.ts). Adicionar um número
 novo ao jogo é acrescentar uma entrada nessa lista.
 
+### Regime, poder e guerra
+
+A segunda camada do jogo. Até aqui o presidente governava por medida: escrevia,
+negociava, votava. Esta camada é a outra forma de governar — a que dispensa a
+votação — e ela não é um botão: é um **estado do país** que muda devagar, com
+custo, e que pode ser usado contra quem o construiu.
+
+O regime não é escolhido, é **classificado** a partir do arranjo de poder
+([`regime.ts`](src/game/engines/regime.ts)):
+
+```
+democracia            instituições de pé, exceção zerada
+democracia em crise   estabilidade < 46, rua > 58 ou impeachment > 48
+estado de exceção     poderes extraordinários em vigor
+autoritário           Executivo > 72 e força institucional < 42
+regime militar        Congresso fechado + influência militar > 65
+ditadura              Congresso fechado + liberdades < 35
+```
+
+Isso importa: não existe botão de ditadura, e o jogador **atravessa a fronteira
+sem que ninguém anuncie** — que é como isso costuma acontecer.
+
+#### As ações e o preço de cada uma
+
+| Ação | O que entrega | O que cobra |
+| ---- | ------------- | ----------- |
+| Mobilizar (parcial → total) | prontidão até 96%, lealdade militar | R$ 3,5 a 18 bi/mês, Congresso hostil, medo, isolamento |
+| Reprimir (policial → severa) | rua esvazia **agora** | liberdades, **resistência acumulada**, risco-país, pressão externa |
+| Estado de exceção | capacidade de resposta, controle | −15 liberdades, −12 instituições, +30 risco-país, caduca sozinho |
+| Concentrar poder (5 caminhos) | velocidade de decisão | instituições, legitimidade, Judiciário, imprensa |
+| Esvaziar/suspender o Congresso | governar sem votação | +90 risco-país, isolamento, resistência, goodwill zerado |
+| Ruptura | regime militar ou ditadura | pode falhar — e o fracasso entrega o mandato |
+| Consolidar (5 caminhos) | controle do aparato | caixa, liberdades, resistência |
+| Transição democrática | legitimidade, mercado, mundo | devolve o poder concentrado |
+
+**Repressão não é botão de resolver protesto.** O que ela faz é trocar rua por
+medo hoje e acumular `resistance` para depois — numa campanha de teste, oito
+meses de repressão severa levaram a rua de 62 para 4 e a resistência organizada
+de 8 para 64.
+
+#### A ruptura é uma ordem que pode não ser cumprida
+
+A chance sai de oito fatores com pesos expostos em `RUPTURE_WEIGHTS`, nunca de
+um `if`:
+
+```
++ lealdade militar (0,42)      + controle do aparato (0,24)
++ fragilidade institucional    + polarização
+− oposição organizada (−0,30)  − rua mobilizada (−0,26)
+− legitimidade do governo      − pressão internacional
+```
+
+Numa partida de teste, um governo com exceção decretada, Judiciário pressionado
+e imprensa restringida chegou a **53,7%** — a mesma tropa leal valendo menos
+quando a rua estava cheia.
+
+**O sistema aponta nos dois sentidos.** `processCoupAgainstPresident` roda todo
+mês e exige três gatilhos simultâneos — quartéis desleais, legitimidade no chão,
+rua cheia, instituições incapazes — antes de sequer sortear. Quem destruiu as
+próprias instituições fica sem elas quando vierem buscá-lo; quem governa mal
+numa democracia sólida é protegido por ela.
+
+#### Guerra
+
+Usa os países que já existem em `diplomacy.countries` — não há segundo banco de
+nações nem segunda economia. O que a guerra acrescenta é frente de batalha,
+apoio popular, exaustão e conta ([`war.ts`](src/game/engines/war.ts)). Numa
+partida de teste, uma guerra inteira contra a maior potência do tabuleiro:
+
+```
+declarada    apoio 72% · R$ 27 bi/mês · risco-país +84 · Congresso −14,4
+mês 8        frente −15 · apoio 38% · exaustão 36% · R$ 210 bi · 12 mil baixas
+mês 15       frente −24 · apoio 0% · exaustão 99% · R$ 483 bi · 29 mil baixas
+fim          armistício por exaustão · dívida 111,9% do PIB · aprovação 21,8
+```
+
+Três coisas mantêm a guerra viva em vez de decorativa. A conta **encarece**:
+reposição de equipamento e linha mais longa fazem o décimo mês custar mais que o
+primeiro, e é por isso que R$ 27 bi/mês viram R$ 483 bi em quinze meses em vez
+dos R$ 405 bi de uma parcela fixa. O **apoio internacional** deixou de ser um
+número tirado no dia da declaração: ele persegue todo mês um alvo formado por
+isolamento, regime e repressão — a mesma guerra rende menos aliados quando quem
+a conduz fechou o país. E o **Congresso responde ao anúncio**: declarar sem
+conflito prévio é guerra de agressão, custa boa vontade e risco de impeachment
+na proporção da tensão que ainda não existia com o país atacado.
+
+A guerra termina por acordo, por colapso da frente ou por exaustão — e a derrota
+derruba a lealdade militar e alimenta o impeachment, que é como regimes caem
+depois de perder guerras.
+
+#### Democracia não é o modo difícil
+
+Doze meses de cada campanha, mesma semente:
+
+| | Democrática | Autoritária |
+| --- | --- | --- |
+| Legitimidade | 70 | 31 |
+| Força institucional | 84 | 37 |
+| Liberdades civis | 93 | 8 |
+| Resistência organizada | 0 | 64 |
+| Poder do Executivo | 33 | 70 |
+
+O autoritarismo entrega velocidade de decisão e controle; a democracia entrega
+legitimidade, mercado calmo, mundo aberto e sucessão previsível. Nenhum dos dois
+é gratuito.
+
+#### Integrado, não paralelo
+
+A camada inteira usa o que já existia: a agenda dinâmica ganhou 7 eventos de
+regime e guerra (militares insatisfeitos, governadores questionando os poderes,
+manifestação de massa, sanções por ruptura democrática, resistência organizada,
+exaustão de guerra); o interpretador local ganhou 6 intenções
+(`mobilizar_militares`, `estado_de_excecao`, `aumentar_repressao`,
+`mudar_regime`, `declarar_guerra`, `negociar_paz`) que abrem o gabinete de crise
+em vez de executar sozinhas; cada ação passa pela mesma devolutiva medida das
+outras decisões; e tudo entra no mesmo save, na mesma linha do tempo e no mesmo
+fechamento de mês.
+
 ### A agenda do mês
 
 A agenda é o país batendo na porta. Ela tem **90% de chance de trazer alguma

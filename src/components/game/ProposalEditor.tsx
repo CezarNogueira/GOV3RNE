@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Cpu, Loader2, PenLine, Sparkles } from 'lucide-react';
 import { recognizeMeasure, type ProposalAnalysis } from '@/game';
 import { useGame } from '@/state/game-store';
@@ -34,6 +35,7 @@ const EXAMPLES = [
 ];
 
 export function ProposalEditor({ onSigned }: { onSigned?: (policyId: string | null) => void }) {
+  const navigate = useNavigate();
   const state = useGame((store) => store.state);
   const interpret = useGame((store) => store.interpret);
   const signPolicy = useGame((store) => store.signPolicy);
@@ -122,6 +124,16 @@ export function ProposalEditor({ onSigned }: { onSigned?: (policyId: string | nu
    */
   const handleConfigure = () => {
     if (!recognition?.builder) return;
+
+    // Poder e ordem tem tela própria: mobilizar tropa, decretar exceção ou
+    // declarar guerra não vira medida escrita — vira uma decisão que o jogo faz
+    // o presidente olhar de frente, com a conta na mesa.
+    if (recognition.builder === 'poder') {
+      const country = recognition.entities.find((entity) => entity.kind === 'COUNTRY');
+      navigate(country ? `/poder?guerra=${country.id}` : '/poder');
+      return;
+    }
+
     if (recognition.builder === 'privatizacao' && empresa) {
       setCompanyModal('privatizar');
       return;

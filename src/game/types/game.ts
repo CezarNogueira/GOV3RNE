@@ -17,6 +17,7 @@ import type { Policy, GovernmentProgram, ScheduledAction } from './policy';
 import type { ActiveEvent, Consequence, NewsItem, SocialPost, TimelineEntry } from './events';
 import type { ElectionState } from './election';
 import type { DecisionEntry } from './decisions';
+import type { RegimeState, WarState } from './regime';
 
 export interface ApprovalState {
   /** Aprovação do governo, 0-100. */
@@ -121,7 +122,7 @@ export interface GameFlags {
    * escândalo em CPI, em vez de deixar cada crise isolada.
    */
   pendingFollowUps?: { definitionId: string; dueMonth: number }[];
-  gameOverReason?: 'mandato_encerrado' | 'impeachment' | 'renuncia' | 'saude' | 'derrota_eleitoral';
+  gameOverReason?: 'mandato_encerrado' | 'impeachment' | 'renuncia' | 'saude' | 'derrota_eleitoral' | 'ruptura';
 }
 
 /**
@@ -164,6 +165,14 @@ export interface GameState {
   government: GovernmentState;
   congress: CongressState;
   diplomacy: DiplomacyState;
+  /**
+   * Regime político, poder institucional e forças armadas. É a camada que
+   * permite governar por decreto, por exceção ou por ruptura — e a que permite
+   * que rompam com o presidente.
+   */
+  regime: RegimeState;
+  /** O conflito internacional em curso, quando existe. */
+  war: WarState;
 
   states: FederalUnit[];
   socialGroups: SocialGroup[];

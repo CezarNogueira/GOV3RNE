@@ -16,8 +16,10 @@ import {
   interpretLocally,
   newGameSchema,
   openCompanyMeeting,
+  declareWar,
   processPolicies,
   rollEvents,
+  runRegimeAction,
   serialize,
   tickMonth,
   type GameState,
@@ -41,6 +43,7 @@ import { Ajustes } from './Ajustes';
 import { ComoJogar } from './ComoJogar';
 import { FimDeMandato } from './FimDeMandato';
 import { Eleicao } from './Eleicao';
+import { Poder } from './Poder';
 
 /**
  * TESTES DE RENDERIZAÇÃO
@@ -647,5 +650,38 @@ describe('agenda dinâmica na tela', () => {
     renderPage(<Painel />);
 
     expect(screen.getByText(/sua agenda está limpa/i)).toBeInTheDocument();
+  });
+});
+
+describe('Poder e ordem', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('monta o gabinete de crise numa democracia', () => {
+    loadState(playedGame);
+    renderPage(<Poder />);
+
+    expect(screen.getAllByText(/democracia/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/risco de ruptura institucional/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /dar a ordem/i })).toBeInTheDocument();
+    // Sem crise, os poderes extraordinários aparecem bloqueados com a razão.
+    expect(screen.getByRole('button', { name: /declarar estado de exceção/i })).toBeDisabled();
+  });
+
+  it('monta o painel de um país em guerra e sob exceção', () => {
+    const state = deepClone(playedGame);
+    state.regime.protestLevel = 70;
+    state.regime.politicalStability = 30;
+    runRegimeAction(state, { kind: 'estado_excecao', reason: 'guerra', months: 6 }, new Rng(1, 0));
+    declareWar(state, state.diplomacy.countries[0]!.id, new Rng(2, 0));
+
+    loadState(state);
+    renderPage(<Poder />);
+
+    expect(screen.getByText(/estado de exceção ativo/i)).toBeInTheDocument();
+    expect(screen.getAllByText(new RegExp(state.war.countryName!, 'i')).length).toBeGreaterThan(0);
+    expect(screen.getByText(/apoio à guerra/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /buscar aliados/i })).toBeInTheDocument();
   });
 });

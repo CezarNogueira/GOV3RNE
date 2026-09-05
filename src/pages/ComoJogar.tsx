@@ -71,6 +71,18 @@ const SECTIONS = [
     ],
   },
   {
+    title: 'A outra forma de governar',
+    body: [
+      'Existe uma segunda camada no jogo, e ela não tem botão de ligar. Mobilizar tropas, reprimir manifestações, decretar estado de exceção, concentrar poder no Executivo, esvaziar o Congresso — cada uma dessas decisões existe, tem requisito e cobra um preço. O painel Poder mostra o arranjo inteiro: quem obedece, quem resiste e o que ainda segura de pé.',
+      'O regime não é escolhido, é lido. Ninguém aperta "virar autoritário": o jogo classifica o país a partir do que ele virou — Executivo forte demais e instituições fracas demais viram governo autoritário; Congresso fechado com liberdades no chão vira ditadura. É de propósito que dê para atravessar essa fronteira sem que ninguém anuncie.',
+      'Reprimir não resolve protesto: troca rua por medo hoje e acumula resistência organizada para depois, junto com liberdades perdidas e sanções de fora. Concentrar poder acelera as decisões e derruba legitimidade. Estado de exceção dá capacidade de resposta e caduca sozinho no prazo, se ninguém renovar.',
+      'A ruptura institucional é uma ordem que pode não ser cumprida. A chance sai de oito fatores ao mesmo tempo — tropa leal, aparato de Estado, instituições fracas, polarização, contra oposição organizada, rua cheia, legitimidade e pressão internacional — e o painel mostra a conta antes. Se der certo, o Congresso fecha. Se der errado, o mandato acaba.',
+      'E o sistema aponta nos dois sentidos: um presidente que destrói as próprias instituições fica sem elas quando vierem buscá-lo. Quartéis desleais, legitimidade no chão e rua cheia ao mesmo tempo podem depor você.',
+      'Guerra é a mesma lógica, para fora. Você declara contra um país do tabuleiro, vê a conta antes de confirmar, e depois convive com ela: custo mensal no caixa, dívida subindo, comércio parado, inflação pelo lado da oferta e um apoio popular que começa alto e cai todo mês. Guerra acaba por acordo, por colapso da frente ou por exaustão — e perder uma costuma derrubar quem a começou.',
+      'Democracia não é o modo difícil. Ela entrega legitimidade, mercado calmo, relação internacional e sucessão previsível. O autoritarismo entrega velocidade e controle. Os dois cobram, em moedas diferentes.',
+    ],
+  },
+  {
     title: 'Como se ganha a reeleição',
     body: [
       'No quarto ano a eleição entra no calendário. Em abril o partido cobra uma resposta: você disputa ou não. Não disputar é legítimo — o governo vai até o último dia sem o desgaste da campanha, mas o Congresso passa a negociar com quem vem depois de você.',

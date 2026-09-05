@@ -269,3 +269,42 @@ describe('números do país que não são imposto', () => {
     expect(read('aumentar a tributação de dividendos').intent).toBe('aumentar_imposto');
   });
 });
+
+describe('poder e ordem no interpretador', () => {
+  const casos: [string, string][] = [
+    ['Mobilizar o exército', 'mobilizar_militares'],
+    ['mobilizar as tropas', 'mobilizar_militares'],
+    ['Declarar estado de emergência', 'estado_de_excecao'],
+    ['Colocar o país em estado de exceção', 'estado_de_excecao'],
+    ['Aumentar a repressão', 'aumentar_repressao'],
+    ['reprimir os protestos', 'aumentar_repressao'],
+    ['Quero uma ditadura', 'mudar_regime'],
+    ['fechar o congresso', 'mudar_regime'],
+    ['Declarar guerra', 'declarar_guerra'],
+    ['negociar a paz', 'negociar_paz'],
+  ];
+
+  for (const [frase, esperado] of casos) {
+    it(`lê "${frase}" como ${esperado}`, () => {
+      const leitura = read(frase);
+      expect(leitura.intent).toBe(esperado);
+      // Poder não vira medida escrita: abre o gabinete de crise.
+      expect(leitura.builder).toBe('poder');
+      expect(leitura.action).toBe('CONFIGURAR');
+    });
+  }
+
+  it('encontra o país citado numa declaração de guerra', () => {
+    const pais = state.diplomacy.countries[0]!;
+    const leitura = read(`Quero declarar guerra contra ${pais.name}`);
+
+    expect(leitura.intent).toBe('declarar_guerra');
+    expect(leitura.entities.some((entity) => entity.kind === 'COUNTRY' && entity.id === pais.id)).toBe(true);
+  });
+
+  it('não executa nada sozinho: "quero uma ditadura" abre os caminhos', () => {
+    const leitura = read('Quero uma ditadura');
+    expect(leitura.action).toBe('CONFIGURAR');
+    expect(leitura.negated).toBe(false);
+  });
+});

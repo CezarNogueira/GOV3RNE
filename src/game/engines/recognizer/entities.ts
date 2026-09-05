@@ -256,6 +256,19 @@ export function buildEntityRegistry(state: GameState): EntityRecord[] {
   }
   records.push(...CONCEPT_ENTITIES.map((entity) => ({ ...entity, aliases: mergeAliases(entity.aliases) })));
 
+  // ------------------------------------------------------------- Países
+  // O tabuleiro internacional da partida: é dele que sai o alvo de uma
+  // declaração de guerra ou de um acordo, nunca de uma lista à parte.
+  for (const country of state.diplomacy?.countries ?? []) {
+    records.push({
+      kind: 'COUNTRY',
+      id: country.id,
+      name: country.name,
+      aliases: mergeAliases([country.name]),
+      meta: { relation: country.relation, trade: country.trade, weight: country.weight },
+    });
+  }
+
   // -------------------------------------------------- Alvos numéricos
   // Tributo, orçamento, piso, efetivo: tudo que já tem `read`/`write` no
   // registro numérico é endereçável por nome no texto. A separação entre

@@ -23,6 +23,7 @@ import {
   runAgendaAction,
   runCampaignMove,
   runCompanyAction,
+  runRegimeAction,
   scheduleVisit,
   serialize,
   snapshotInauguration,
@@ -30,6 +31,7 @@ import {
   type AgendaActionId,
   type CompanyAction,
   type DecisionEntry,
+  type RegimeAction,
   type FinalEvaluation,
   type GameState,
   type InaugurationSnapshot,
@@ -181,6 +183,47 @@ function describeCompanyAction(
       return { title: `Investigação — ${nome}`, choice: 'Fiscalização aberta' };
     default:
       return { title: `Ação sobre ${nome}`, choice: action.kind.replace('_', ' ') };
+  }
+}
+
+/** Como cada ação extraordinária aparece no extrato de decisões. */
+function describeRegimeAction(
+  state: GameState,
+  action: RegimeAction,
+): { title: string; choice: string } {
+  switch (action.kind) {
+    case 'mobilizar':
+      return { title: 'Mobilização militar', choice: `Nível ${action.level}` };
+    case 'reprimir':
+      return { title: 'Controle de manifestações', choice: `Resposta ${action.level}` };
+    case 'estado_excecao':
+      return { title: 'Estado de exceção', choice: action.reason };
+    case 'encerrar_excecao':
+      return { title: 'Estado de exceção', choice: 'Encerrado antes do prazo' };
+    case 'concentrar_poder':
+      return { title: 'Concentração de poder', choice: action.move };
+    case 'congresso':
+      return { title: 'Relação com o Congresso', choice: action.move };
+    case 'ruptura':
+      return { title: 'Ruptura institucional', choice: 'Ordem dada' };
+    case 'consolidar':
+      return { title: 'Consolidação do regime', choice: action.move };
+    case 'transicao_democratica':
+      return { title: 'Transição democrática', choice: 'Calendário eleitoral anunciado' };
+    case 'negociar_oposicao':
+      return { title: 'Negociação com a oposição', choice: 'Acordo político' };
+    case 'declarar_guerra': {
+      const country = state.diplomacy.countries.find((entry) => entry.id === action.countryId);
+      return { title: 'Declaração de guerra', choice: country?.name ?? action.countryId };
+    }
+    case 'orcamento_militar':
+      return { title: 'Orçamento da Defesa', choice: `R$ ${action.amount} bi` };
+    case 'buscar_aliados':
+      return { title: 'Missão diplomática', choice: 'Busca de apoio internacional' };
+    case 'negociar_paz':
+      return { title: 'Negociação de paz', choice: action.accept ? 'Acordo aceito' : 'Proposta recusada' };
+    default:
+      return { title: 'Ação extraordinária', choice: 'Executada' };
   }
 }
 
@@ -503,6 +546,36 @@ class GameRepository {
         promiseIds.length > 0 ? 'Programa novo para os próximos quatro anos' : 'Mesmos compromissos',
       message: outcome.message,
       notes: state.promises.map((promise) => `Compromisso: ${promise.title}`),
+    });
+
+    state.updatedAt = new Date().toISOString();
+    this.persist(state);
+    return { state, message: outcome.message, decision };
+  }
+
+  /**
+   * Executa uma ação extraordinária de regime ou de guerra.
+   *
+   * Passa pelo mesmo caminho das outras decisões — snapshot antes, motor,
+   * devolutiva medida depois —, porque declarar estado de exceção precisa
+   * mostrar o que mudou no país exatamente como qualquer outra decisão mostra.
+   */
+  regimeAction(id: string, action: RegimeAction): ActionResponse {
+    const state = this.draft(id);
+    const before = takeSnapshot(state);
+
+    const rng = new Rng(state.seed, state.rngCursor);
+    const outcome = runRegimeAction(state, action, rng);
+    if (!outcome.ok) throw new Error(outcome.message);
+    state.rngCursor = rng.cursor;
+
+    const described = describeRegimeAction(state, action);
+    const decision = recordDecision(state, before, {
+      kind: 'regime',
+      title: described.title,
+      choice: described.choice,
+      message: outcome.message,
+      notes: [`Regime atual: ${state.regime.regime.replace(/_/g, ' ')}.`],
     });
 
     state.updatedAt = new Date().toISOString();

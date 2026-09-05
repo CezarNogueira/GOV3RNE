@@ -48,6 +48,7 @@ const KIND_LABEL: Record<DecisionEntry['kind'], string> = {
   diplomacia: 'Diplomacia',
   campanha: 'Campanha',
   eleicao: 'Eleição',
+  regime: 'Poder e ordem',
   mes: 'Fechamento do mês',
 };
 

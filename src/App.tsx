@@ -25,6 +25,7 @@ const Ajustes = lazy(() => import('@/pages/Ajustes').then((m) => ({ default: m.A
 const ComoJogar = lazy(() => import('@/pages/ComoJogar').then((m) => ({ default: m.ComoJogar })));
 const FimDeMandato = lazy(() => import('@/pages/FimDeMandato').then((m) => ({ default: m.FimDeMandato })));
 const Eleicao = lazy(() => import('@/pages/Eleicao').then((m) => ({ default: m.Eleicao })));
+const Poder = lazy(() => import('@/pages/Poder').then((m) => ({ default: m.Poder })));
 
 /**
  * O jogo tem dois territórios: as telas de fora (início, criação, como jogar),
@@ -110,6 +111,7 @@ export default function App() {
             <Route path="/vida-pessoal" element={<VidaPessoal />} />
             <Route path="/historico" element={<Historico />} />
             <Route path="/ajustes" element={<Ajustes />} />
+            <Route path="/poder" element={<Poder />} />
             <Route path="/eleicao" element={<Eleicao />} />
             <Route path="/fim" element={<FimDeMandato />} />
           </Route>

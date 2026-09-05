@@ -19,6 +19,7 @@ export type DecisionKind =
   | 'diplomacia'
   | 'campanha'
   | 'eleicao'
+  | 'regime'
   | 'mes';
 
 /** Uma variação medida entre antes e depois. */

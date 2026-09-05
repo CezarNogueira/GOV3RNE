@@ -29,7 +29,8 @@ export type EntityKind =
   | 'SECTOR'
   | 'SOCIAL_GROUP'
   | 'NUMERIC_TARGET'
-  | 'PROGRAM';
+  | 'PROGRAM'
+  | 'COUNTRY';
 
 export interface EntityRecord {
   kind: EntityKind;
@@ -145,7 +146,7 @@ export interface BuilderAmountSpec {
 }
 
 /** Tipo de tela que o construtor pede. */
-export type BuilderShape = 'OPCOES' | 'ORCAMENTO' | 'REFORMA_TRIBUTARIA' | 'EMPRESA';
+export type BuilderShape = 'OPCOES' | 'ORCAMENTO' | 'REFORMA_TRIBUTARIA' | 'EMPRESA' | 'PODER';
 
 export interface BuilderSpec {
   id: string;
