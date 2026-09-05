@@ -284,7 +284,7 @@ export function Setup() {
   };
 
   return (
-    <div className="min-h-full bg-ink-950">
+    <div className="min-h-full select-none bg-ink-950">
       {/* ---------------------------------------------------- cabeçalho */}
       <header className="sticky top-0 z-30 border-b border-ink-700 bg-ink-950/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-3 sm:px-6">

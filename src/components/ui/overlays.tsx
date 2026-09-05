@@ -62,7 +62,7 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-[2px] sm:p-8"
+          className="fixed inset-0 z-50 flex select-none items-start justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-[2px] sm:p-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -125,7 +125,7 @@ export function Toaster() {
 
   return createPortal(
     <div
-      className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
+      className="pointer-events-none fixed bottom-4 right-4 z-[60] flex w-[min(24rem,calc(100vw-2rem))] select-none flex-col gap-2"
       role="status"
       aria-live="polite"
     >

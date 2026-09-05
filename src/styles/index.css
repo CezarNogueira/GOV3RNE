@@ -27,6 +27,20 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /*
+   * A interface inteira é `select-none`: o jogo se comporta como aplicativo, e
+   * arrastar o mouse sobre um painel não deve pintar meia tela de azul. O que
+   * é texto para digitar ou copiar continua selecionável — proposta de medida,
+   * nome do presidente, campo de busca —, senão a proibição atrapalharia
+   * justamente quem está escrevendo.
+   */
+  input,
+  textarea,
+  select,
+  [contenteditable='true'] {
+    @apply select-text;
+  }
+
   ::selection {
     @apply bg-gov-600/40 text-white;
   }

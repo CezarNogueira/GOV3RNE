@@ -54,7 +54,7 @@ export function Landing() {
   };
 
   return (
-    <div className="relative min-h-full overflow-hidden">
+    <div className="relative min-h-full select-none overflow-hidden">
       <div className="grid-lines pointer-events-none absolute inset-0 opacity-30" aria-hidden />
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-20%,rgba(34,197,94,0.14),transparent_65%)]"

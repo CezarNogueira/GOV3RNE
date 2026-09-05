@@ -107,7 +107,7 @@ export function ComoJogar() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-full">
+    <div className="min-h-full select-none">
       <div className="border-b border-ink-700 bg-gradient-to-br from-ink-800 via-ink-900 to-ink-950">
         <div className="grid-lines absolute inset-x-0 h-40 opacity-25" aria-hidden />
         <div className="relative mx-auto max-w-3xl px-5 py-8">

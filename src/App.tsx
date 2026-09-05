@@ -40,7 +40,7 @@ function GameShell() {
   if (!state) return <Navigate to="/" replace state={{ from: location.pathname }} />;
 
   return (
-    <div className="flex min-h-full flex-col">
+    <div className="flex min-h-full select-none flex-col">
       <TopNavigation state={state} />
       <main className="flex-1">
         <Outlet />
