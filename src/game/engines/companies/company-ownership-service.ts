@@ -1,13 +1,14 @@
 import type {
   AcquisitionProcess,
   Company,
+  CompanyController,
   CompanyNews,
   CompanyProcessLog,
   GameState,
   PrivatizationProcess,
 } from '../../types/index';
 import { buildExecutive, findCompany, valuationOf } from './company-service';
-import { companyBlueprint } from '../../data/companies/index';
+import { BUYER_POOL, companyBlueprint } from '../../data/companies/index';
 import { shockMarket } from './company-market-service';
 import { Rng } from '../../utils/rng';
 import { clamp, clamp100, round } from '../../utils/math';
@@ -303,10 +304,27 @@ export function advancePrivatizations(state: GameState, rng: Rng): CompanyNews[]
           ),
         );
 
-        applySale(state, company, process.shareOffered, process.proceeds);
+        applySale(state, company, process.shareOffered, process.proceeds, rng, 'leilao');
+
+        // Quem comprou entra na manchete: daqui para a frente é o nome dele que
+        // aparece quando a empresa demitir, investir ou quebrar.
+        const comprador = company.ownership.controllingShareholder;
+        if (comprador) {
+          process.log.push(
+            log(
+              rng,
+              state.month,
+              'Controle transferido',
+              `${comprador.name} assumiu o controle de ${company.name}. A empresa sai da carteira da União e passa a responder ao novo dono.`,
+            ),
+          );
+        }
+
         news.push(
           buildNews(rng, state, company, 'privatizacao', `União vende ${process.shareOffered.toFixed(1)}% de ${company.name}`,
-            `A operação levou R$ ${(process.proceeds / 1000).toFixed(1)} bi para o caixa federal. A participação da União cai para ${company.ownership.stateOwnership.toFixed(1)}%, e com ela o dividendo dos próximos anos.`,
+            comprador
+              ? `A operação levou R$ ${(process.proceeds / 1000).toFixed(1)} bi para o caixa federal e entregou o controle a ${comprador.name} — ${BUYER_POOL.find((buyer) => buyer.id === comprador.id)?.note ?? 'novo controlador da companhia'}. A União fica com ${company.ownership.stateOwnership.toFixed(1)}%, perde o dividendo dos próximos anos e deixa de responder pelo que acontecer lá dentro.`
+              : `A operação levou R$ ${(process.proceeds / 1000).toFixed(1)} bi para o caixa federal. A participação da União cai para ${company.ownership.stateOwnership.toFixed(1)}%, e com ela o dividendo dos próximos anos.`,
             0.4),
         );
         break;
@@ -324,7 +342,57 @@ export function advancePrivatizations(state: GameState, rng: Rng): CompanyNews[]
  * Efeito comum a toda venda de participação: dinheiro entra, participação cai,
  * dividendo futuro encolhe e o mercado reprecifica a empresa.
  */
-function applySale(state: GameState, company: Company, share: number, proceeds: number): void {
+/**
+ * Sorteia quem levou o ativo.
+ *
+ * Não é enfeite de manchete: o perfil escolhido aqui é quem vai decidir, mês a
+ * mês, se a empresa corta gente, aguenta prejuízo ou distribui lucro — e é a
+ * ele que a imprensa vai cobrar quando algo der errado, não mais ao presidente.
+ * Empresa listada com muito capital em circulação tende ao capital pulverizado;
+ * o resto atrai quem tem apetite pelo setor.
+ */
+function drawController(
+  state: GameState,
+  company: Company,
+  rng: Rng,
+  mode: SaleMode,
+): CompanyController {
+  // Leilão de bloco de controle tem vencedor com nome: alguém levou o lote e
+  // assinou o contrato. Já perder o controle vendendo fatia atrás de fatia no
+  // pregão termina no oposto disso — capital espalhado, sem ninguém para o
+  // presidente chamar ao Planalto. O caminho da venda é que decide qual dos
+  // dois aconteceu.
+  const candidatos =
+    mode === 'leilao'
+      ? BUYER_POOL.filter((buyer) => buyer.kind !== 'pulverizado')
+      : company.ownership.listed
+        ? BUYER_POOL
+        : BUYER_POOL.filter((buyer) => buyer.kind !== 'pulverizado');
+  const escolhido = rng.pick(candidatos.length > 0 ? candidatos : BUYER_POOL);
+
+  return {
+    id: escolhido.id,
+    name: escolhido.name,
+    kind: escolhido.kind,
+    sinceMonth: state.month,
+    costCutting: escolhido.costCutting,
+    capital: escolhido.capital,
+    dividend: escolhido.dividend,
+    moves: [],
+  };
+}
+
+/** Como a União perdeu o controle: leilão de bloco ou goteira no pregão. */
+type SaleMode = 'leilao' | 'mercado';
+
+function applySale(
+  state: GameState,
+  company: Company,
+  share: number,
+  proceeds: number,
+  rng?: Rng,
+  mode: SaleMode = 'mercado',
+): void {
   const eco = state.economy;
   const inBillions = proceeds / 1000;
 
@@ -332,11 +400,25 @@ function applySale(state: GameState, company: Company, share: number, proceeds: 
   company.ownership.privateOwnership = round(100 - company.ownership.stateOwnership, 2);
   company.ownership.freeFloat = round(clamp(company.ownership.freeFloat + share, 0, 100), 2);
   if (company.ownership.stateOwnership <= 50 && company.control === 'federal') {
-    // Perdeu o controle: a empresa deixa de ser estatal e passa a decidir
-    // sozinha o que fazer com o próprio lucro.
+    // Perdeu o controle: a empresa deixa de ser estatal, muda de aba e passa a
+    // ser problema de quem a comprou. O controlador não é decoração — é ele que
+    // vai bancar (ou não) o prejuízo dela daqui para a frente.
     company.control = 'privada';
     company.ownership.listed = true;
-    company.financials.dividendPayout = round(clamp(company.financials.dividendPayout, 0.2, 0.6), 2);
+    if (rng) company.ownership.controllingShareholder = drawController(state, company, rng, mode);
+    const controlador = company.ownership.controllingShareholder;
+    company.financials.dividendPayout = round(
+      clamp(controlador ? 0.2 + (controlador.dividend / 100) * 0.5 : 0.4, 0.2, 0.7),
+      2,
+    );
+
+    // O Estado larga as alavancas que só o dono tem. Subsídio e alívio dados
+    // enquanto era estatal não seguem com o comprador: se o governo quiser
+    // continuar ajudando, tem de decidir isso de novo, agora em público.
+    company.subsidyReceived = 0;
+    company.taxRelief = 0;
+    company.chargeRelief = 0;
+    company.inCrisis = false;
   }
 
   eco.treasuryCash = round(eco.treasuryCash + inBillions, 2);
@@ -383,7 +465,7 @@ export function sellStake(
   }
 
   const proceeds = round(valuationOf(company) * (offered / 100) * marketAppetite(state, company) * 0.96, 1);
-  applySale(state, company, offered, proceeds);
+  applySale(state, company, offered, proceeds, rng);
 
   if (company.ownership.listed) {
     // Oferta grande de papel derruba o preço: alguém precisa absorver o lote.
@@ -617,6 +699,109 @@ export function advanceAcquisitions(state: GameState, rng: Rng): CompanyNews[] {
   return news;
 }
 
+/**
+ * O DONO RESOLVE — OU NÃO
+ *
+ * Empresa privada em apuros não espera decisão do Planalto: quem decide é quem
+ * tem as ações. Esta função é a contrapartida da privatização — o Estado saiu,
+ * e com ele saiu a obrigação de socorrer. O que o controlador faz depende do
+ * perfil dele: quem tem capital banca o prejuízo, quem vive de corte demite,
+ * quem não tem nem uma coisa nem outra encolhe a operação.
+ *
+ * O país continua sentindo o resultado — demissão é desemprego, fábrica fechada
+ * é receita a menos —, mas a conta não sai mais do Tesouro, e a manchete tem
+ * outro nome nela.
+ */
+export function ownerCrisisResponse(state: GameState, company: Company, rng: Rng): CompanyNews | null {
+  if (company.control !== 'privada') return null;
+
+  const controlador = company.ownership.controllingShareholder;
+  const fin = company.financials;
+  // Sem controlador definido (empresa que sempre foi privada, ou capital
+  // pulverizado), quem decide é o mercado: a confiança do investidor faz as
+  // vezes de fôlego, e a pressão por margem faz as vezes de tesoura.
+  const capital = controlador?.capital ?? company.market.investorConfidence;
+  const corte = controlador?.costCutting ?? clamp100(70 - company.market.investorConfidence * 0.3);
+  const nome = controlador?.name ?? 'O controle privado';
+
+  const buraco = Math.max(fin.revenue * 0.05, Math.abs(Math.min(0, fin.profit)) * 0.7);
+
+  // Quem tem caixa próprio banca; quem não tem, corta. O empate vai para o
+  // corte, porque prejuízo com dono pobre acaba sempre em demissão.
+  const banca = capital >= 60 && rng.bool(clamp(capital / 140, 0.2, 0.8));
+  const registra = (label: string, detail: string) => {
+    if (!controlador) return;
+    controlador.moves = [{ month: state.month, label, detail }, ...controlador.moves].slice(0, 8);
+  };
+
+  if (banca) {
+    fin.cash = round(fin.cash + buraco, 1);
+    fin.debt = round(fin.debt + buraco * 0.55, 1);
+    company.crisisRisk = round(clamp100(company.crisisRisk - 13), 1);
+    company.monthsInLoss = Math.max(0, company.monthsInLoss - 2);
+    company.market.investorConfidence = round(clamp100(company.market.investorConfidence - 4), 1);
+    registra(
+      'Capitalizou a empresa',
+      `Aporte de R$ ${(buraco / 1000).toFixed(1)} bi feito pelo próprio controlador, metade em dívida nova.`,
+    );
+    return buildNews(
+      rng,
+      state,
+      company,
+      'parceria',
+      `${nome} capitaliza ${company.name} com R$ ${(buraco / 1000).toFixed(1)} bi`,
+      `O aporte saiu do bolso do controlador, não do Tesouro. ${company.name} ganha fôlego de caixa e fica mais endividada — e o governo assiste, porque não é mais sócio dela.`,
+      0.5,
+    );
+  }
+
+  if (corte >= 55) {
+    const antes = company.employees;
+    const fatia = clamp(0.03 + (corte / 100) * 0.05, 0.03, 0.09);
+    company.employees = Math.round(company.employees * (1 - fatia));
+    company.employeesBase = Math.round(company.employeesBase * (1 - fatia * 0.5));
+    fin.annualInvestment = round(fin.annualInvestment * 0.78, 1);
+    company.crisisRisk = round(clamp100(company.crisisRisk - 11), 1);
+    company.monthsInLoss = Math.max(0, company.monthsInLoss - 1);
+    company.politics.consumerConfidence = round(clamp100(company.politics.consumerConfidence - 5), 1);
+    company.expansionCapacity = round(clamp100(company.expansionCapacity - 8), 1);
+    const dispensados = antes - company.employees;
+    registra(
+      'Cortou quadro e investimento',
+      `${dispensados.toLocaleString('pt-BR')} demissões e 22% a menos de investimento para fechar a conta.`,
+    );
+    return buildNews(
+      rng,
+      state,
+      company,
+      'demissoes',
+      `${company.name} demite ${dispensados.toLocaleString('pt-BR')} sob o comando de ${nome}`,
+      `A decisão foi do controlador privado e não passou pelo governo. O desemprego que ela gera, porém, aparece no número do país — e a cobrança chega ao presidente mesmo sem ele ter assinado nada.`,
+      -1.3,
+    );
+  }
+
+  // Nem capital para bancar nem tesoura para cortar: vende ativo e encolhe.
+  const perdaReceita = round(fin.revenueBase * 0.05, 1);
+  fin.revenueBase = round(fin.revenueBase - perdaReceita, 1);
+  fin.cash = round(fin.cash + perdaReceita * 0.6, 1);
+  company.marketShare = round(clamp(company.marketShare * 0.94, 0, 100), 2);
+  company.crisisRisk = round(clamp100(company.crisisRisk - 7), 1);
+  registra(
+    'Vendeu ativos',
+    `Alienação de R$ ${(perdaReceita / 1000).toFixed(1)} bi em ativos para cobrir o caixa. A empresa fica menor.`,
+  );
+  return buildNews(
+    rng,
+    state,
+    company,
+    'crise',
+    `${nome} vende ativos de ${company.name} para tapar o caixa`,
+    'A operação encolhe de forma permanente. Quem comprou a empresa está resolvendo o problema dela do jeito mais barato para si — e o país fica com uma empresa menor.',
+    -0.6,
+  );
+}
+
 /** Paga a compra e move a participação. Sem caixa, vira dívida — com juro. */
 function applyPurchase(
   state: GameState,
@@ -633,6 +818,9 @@ function applyPurchase(
   company.ownership.freeFloat = round(clamp(company.ownership.freeFloat - share, 0, 100), 2);
   if (company.ownership.stateOwnership > 50) {
     company.control = 'federal';
+    // Estatizar é o caminho de volta: o controlador privado sai de cena e o
+    // problema da empresa volta a ser do Tesouro.
+    delete company.ownership.controllingShareholder;
     company.politics.governmentRelation = round(clamp(company.politics.governmentRelation + 18, -100, 100), 1);
   }
 
@@ -686,6 +874,19 @@ export function buySharesOnMarket(
   company.ownership.stateOwnership = round(clamp(company.ownership.stateOwnership + shareAcquired, 0, 100), 2);
   company.ownership.privateOwnership = round(100 - company.ownership.stateOwnership, 2);
   company.ownership.freeFloat = round(clamp(company.ownership.freeFloat - shareAcquired, 0, 100), 2);
+
+  // Comprar no pregão até passar da metade é estatizar pela porta do mercado:
+  // se acontecer, o controle volta para a União e o controlador privado sai da
+  // ficha. Sem isso, o governo podia ter 60% de uma empresa que a tela continuava
+  // chamando de privada — e continuar sem poder decidir nada dentro dela.
+  if (company.ownership.stateOwnership > 50 && company.control !== 'federal') {
+    company.control = 'federal';
+    delete company.ownership.controllingShareholder;
+    company.politics.governmentRelation = round(
+      clamp(company.politics.governmentRelation + 12, -100, 100),
+      1,
+    );
+  }
 
   state.economy.treasuryCash = round(state.economy.treasuryCash - amountInBillions, 2);
   state.companies.ledger.acquisitionSpending = round(
@@ -923,6 +1124,21 @@ export function resolveCompanyCrisis(
   const company = findCompany(state, companyId);
   if (!company) return { ok: false, message: 'Empresa não encontrada.' };
 
+  // Corte de despesa, demissão, fechamento de unidade e entrada de sócio são
+  // decisões de dono. Numa empresa que a União vendeu, quem toma essas decisões
+  // é quem a comprou — o governo só tem as ferramentas de governo: emprestar,
+  // socorrer, regular, estatizar de volta ou não fazer nada.
+  const decisaoDeDono: CrisisChoice[] = ['cortar_despesas', 'demitir', 'fechar_unidades', 'parceria_privada'];
+  if (decisaoDeDono.includes(choice) && company.ownership.stateOwnership < 50) {
+    const dono = company.ownership.controllingShareholder;
+    return {
+      ok: false,
+      message: dono
+        ? `${company.name} foi privatizada e quem decide o quadro de pessoal e o investimento dela é ${dono.name}. Ao governo restam socorro, crédito, regulação — ou retomar o controle.`
+        : `A União não controla ${company.name} e não decide o que acontece dentro dela. Ao governo restam socorro, crédito, regulação — ou comprar o controle.`,
+    };
+  }
+
   // O tamanho do socorro é o que falta para a empresa voltar a respirar.
   const need = Math.max(
     company.financials.revenue * 0.06,
@@ -995,7 +1211,7 @@ export function resolveCompanyCrisis(
       if (share <= 0) return { ok: false, message: 'Não há participação estatal para dividir com um sócio.' };
       const proceeds = round(valuationOf(company) * (share / 100) * marketAppetite(state, company) * 0.9, 1);
       company.financials.cash = round(company.financials.cash + proceeds * 0.5, 1);
-      applySale(state, company, share, proceeds * 0.5);
+      applySale(state, company, share, proceeds * 0.5, rng);
       company.expansionCapacity = round(clamp100(company.expansionCapacity + 10), 1);
       company.crisisRisk = round(clamp100(company.crisisRisk - 16), 1);
       return {

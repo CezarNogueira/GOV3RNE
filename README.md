@@ -151,6 +151,26 @@ Três coisas que o sistema deliberadamente **não** faz:
   deserto. A compra passa por análise do Tesouro, negociação e oferta, que pode
   ser recusada — e sem caixa vira dívida pública, com juro e risco-país junto.
 
+Quando a venda sai, ela sai de verdade. A empresa muda de aba, ganha um
+controlador com nome — fundo, grupo nacional, grupo estrangeiro ou capital
+pulverizado, cada um com apetite próprio para corte, para bancar prejuízo e para
+distribuir dividendo — e sai da responsabilidade do governo. Na prática:
+
+- as decisões de dono **somem da mesa do presidente**: demitir, cortar
+  investimento, fechar unidade e trazer sócio passam a ser de quem comprou. Ao
+  governo restam as ferramentas de governo — crédito, socorro, contrato,
+  regulação, investigação — ou recomprar o controle;
+- **a crise dela é resolvida por ela.** O controlador capitaliza, corta quadro
+  ou vende ativo conforme o perfil dele, e o país fica sabendo pelo jornal. Só
+  volta à mesa do presidente quando a empresa é sistêmica e a quebra passa a ser
+  problema do país inteiro;
+- subsídio, alívio tributário e alívio de encargos concedidos enquanto ela era
+  estatal **não seguem com o comprador**: ajudar a ex-estatal vira uma decisão
+  nova, tomada em público;
+- **o caminho de volta existe**: estatizar, ou comprar ações no pregão até passar
+  de 50%. Retomado o controle, o controlador privado sai da ficha e a conta
+  volta a ser do Tesouro.
+
 Duas formas de agir sobre uma empresa específica:
 
 1. **por medida escrita** — "privatizar os Correios" tramita como qualquer

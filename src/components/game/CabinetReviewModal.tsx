@@ -72,7 +72,7 @@ export function CabinetReviewModal({
   // Mostrá-la aqui é o que transforma "assinar e ver o que acontece" em uma
   // decisão informada: dá para ver quem ganha margem, quem demite e quanto o
   // Tesouro deixa de arrecadar antes de a caneta encostar no papel.
-  const companyImpact = readCompanyPolicy(`${analysis.title} ${analysis.summary}`);
+  const companyImpact = readCompanyPolicy(`${analysis.title} ${analysis.summary}`, state);
   const companyReactions = previewCompanyReactions(state, companyImpact);
 
   return (

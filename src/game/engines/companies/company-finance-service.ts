@@ -1,6 +1,7 @@
 import type {
   Company,
   CompanyAggregate,
+  CompanyNews,
   CorporatePolicyLevers,
   GameState,
 } from '../../types/index';
@@ -13,6 +14,7 @@ import {
   payrollFor,
   pretaxFromNet,
 } from './company-service';
+import { ownerCrisisResponse } from './company-ownership-service';
 import { Rng } from '../../utils/rng';
 import { approach, clamp, clamp100, round } from '../../utils/math';
 
@@ -87,6 +89,8 @@ export interface CompanyFinanceOutcome {
   confidenceDelta: number;
   /** Empresas que entraram em crise aberta neste mês. */
   newCrises: Company[];
+  /** O que os controladores privados fizeram com as empresas deles. */
+  ownerMoves: CompanyNews[];
 }
 
 /**
@@ -308,6 +312,7 @@ export function processCompanyFinances(state: GameState, rng: Rng): CompanyFinan
   let dividends = 0;
   let taxes = 0;
   const newCrises: Company[] = [];
+  const ownerMoves: CompanyNews[] = [];
 
   for (const company of companies) {
     const wasInCrisis = company.inCrisis;
@@ -316,10 +321,23 @@ export function processCompanyFinances(state: GameState, rng: Rng): CompanyFinan
     dividends += step.dividendToState;
     taxes += step.taxes;
 
-    // Crise aberta: prejuízo persistente sem caixa para aguentar. A empresa
-    // passa a pedir decisão ao presidente em vez de se resolver sozinha.
+    // Prejuízo persistente sem caixa para aguentar. O que acontece a partir daí
+    // depende de quem é o dono.
     const broke = company.monthsInLoss >= 4 && company.financials.cash <= company.financials.revenue * 0.02;
-    if (broke && !wasInCrisis) {
+
+    if (broke && company.control === 'privada') {
+      // Empresa privada resolve o problema dela com o dinheiro do dono dela. O
+      // presidente fica sabendo pelo jornal — e só é chamado a decidir quando a
+      // quebra é grande a ponto de virar problema do país inteiro.
+      const antesDoDono = company.employees;
+      const movimento = ownerCrisisResponse(state, company, rng);
+      jobsDelta += company.employees - antesDoDono;
+      if (movimento) ownerMoves.push(movimento);
+
+      const sistemica = company.politics.systemicImportance >= 70 && company.monthsInLoss >= 6;
+      company.inCrisis = sistemica;
+      if (sistemica && !wasInCrisis) newCrises.push(company);
+    } else if (broke && !wasInCrisis) {
       company.inCrisis = true;
       newCrises.push(company);
     } else if (company.inCrisis && company.monthsInLoss === 0) {
@@ -407,6 +425,7 @@ export function processCompanyFinances(state: GameState, rng: Rng): CompanyFinan
     investmentImpulse,
     confidenceDelta,
     newCrises,
+    ownerMoves,
   };
 }
 

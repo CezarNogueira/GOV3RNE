@@ -147,6 +147,30 @@ export interface CompanyOwnership {
   saleRequiresLaw: boolean;
   /** Empresa pode ser privatizada no jogo? Serviço de Estado não pode. */
   privatizable: boolean;
+  /**
+   * Quem assumiu o controle depois da venda. Existe só em empresa que já foi
+   * federal e saiu da mão do Estado: é a resposta à pergunta "e agora, quem
+   * resolve o problema dessa empresa?". Some quando a União retoma o controle.
+   */
+  controllingShareholder?: CompanyController;
+}
+
+/** O controlador privado de uma ex-estatal. */
+export interface CompanyController {
+  /** Id em BUYER_POOL. */
+  id: string;
+  name: string;
+  kind: 'fundo' | 'grupo_nacional' | 'grupo_estrangeiro' | 'pulverizado';
+  /** Mês em que assumiu, para a ficha contar a história. */
+  sinceMonth: number;
+  /** 0-100: disposição de cortar quadro e investimento atrás de margem. */
+  costCutting: number;
+  /** 0-100: fôlego para bancar prejuízo sem encolher a operação. */
+  capital: number;
+  /** 0-100: pressa em transformar lucro em dividendo. */
+  dividend: number;
+  /** O que ele já fez com a empresa, do mais recente para trás. */
+  moves: { month: number; label: string; detail: string }[];
 }
 
 /**

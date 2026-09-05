@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  BUYER_KIND_LABEL,
   COMMODITY_LABEL,
   COMPANY_HEALTH_LABEL,
   COMPANY_SECTOR_LABEL,
@@ -55,6 +56,7 @@ export function CompanyDetails({
   const fin = company.financials;
   const bi = (value: number) => `R$ ${(value / 1000).toFixed(1)} bi`;
   const controls = company.ownership.stateOwnership >= 50;
+  const controlador = company.ownership.controllingShareholder;
   // Só faz sentido incorporar outra estatal controlada pela União: fusão aqui é
   // decisão de acionista, não compra de concorrente.
   const mergeCandidates = state.companies.companies.filter(
@@ -192,6 +194,13 @@ export function CompanyDetails({
                 tone={company.ownership.stateOwnership > 0 ? 'pos' : 'flat'}
               />
               <StatRow label="Participação privada" value={`${company.ownership.privateOwnership.toFixed(1)}%`} />
+              {controlador && (
+                <StatRow
+                  label="Controlador"
+                  value={controlador.name}
+                  tip={`${BUYER_KIND_LABEL[controlador.kind]}. Assumiu o controle no mês ${controlador.sinceMonth} e responde pela empresa desde então.`}
+                />
+              )}
               <StatRow label="Valor da empresa" value={bi(valuationOf(company))} />
               {company.ownership.stateOwnership > 0 && (
                 <StatRow label="Valor da fatia da União" value={bi(stateStakeValue(company))} />
@@ -402,12 +411,16 @@ export function CompanyDetails({
               <p className="label mb-1 text-danger-400">Crise aberta: escolha o que fazer</p>
               <p className="mb-2 text-[12px] leading-snug text-neutral-400">
                 {company.monthsInLoss} meses de prejuízo e caixa de R$ {(fin.cash / 1000).toFixed(1)} bi.
-                {company.politics.systemicImportance >= 70
-                  ? ' Pelo tamanho, uma quebra aqui contamina crédito, emprego e fornecedor no país inteiro — o que não obriga o governo a salvá-la, só encarece a conta de não salvar.'
-                  : ' Nenhuma das saídas é limpa.'}
+                {controls
+                  ? company.politics.systemicImportance >= 70
+                    ? ' Pelo tamanho, uma quebra aqui contamina crédito, emprego e fornecedor no país inteiro — o que não obriga o governo a salvá-la, só encarece a conta de não salvar.'
+                    : ' Nenhuma das saídas é limpa.'
+                  : ` A empresa não é da União: quem decide demissão, investimento e fechamento de unidade é ${
+                      controlador ? controlador.name : 'o controlador privado'
+                    }. O que sobra ao governo é crédito, socorro, regulação — ou retomar o controle.`}
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {CRISIS_CHOICES.map((choice) => (
+                {CRISIS_CHOICES.filter((choice) => controls || !OWNER_ONLY.includes(choice.id)).map((choice) => (
                   <Action
                     key={choice.id}
                     label={choice.label}
@@ -462,6 +475,15 @@ export function CompanyDetails({
  * caixa, ou sai emprego da rua, ou sai patrimônio do Estado, ou a crise continua
  * correndo e cobra juros.
  */
+/**
+ * Escolhas que só o dono pode tomar.
+ *
+ * Demitir, cortar investimento, fechar unidade e trazer sócio são decisões de
+ * acionista controlador. Depois que a União vende a empresa, elas saem da mesa
+ * do presidente — ele continua sendo governo, não voltou a ser sócio.
+ */
+const OWNER_ONLY = ['cortar_despesas', 'demitir', 'fechar_unidades', 'parceria_privada'];
+
 const CRISIS_CHOICES: {
   id: 'injetar' | 'emprestar' | 'cortar_despesas' | 'demitir' | 'privatizar' | 'fechar_unidades' | 'parceria_privada' | 'nada';
   label: string;

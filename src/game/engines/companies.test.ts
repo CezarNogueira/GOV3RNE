@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   acquisitionCost,
   applyCompanyPolicy,
+  buySharesOnMarket,
   createGame,
   createPolicy,
   interpretLocally,
@@ -10,6 +11,7 @@ import {
   mergeCompanies,
   proposeAcquisition,
   proposePrivatization,
+  ownerCrisisResponse,
   resolveCompanyCrisis,
   readCompanyPolicy,
   revokePolicy,
@@ -380,6 +382,152 @@ describe('propriedade', () => {
     expect(outcome.ok).toBe(true);
     expect(outcome.process?.financing).toBe('divida');
     expect(outcome.process?.requiresLaw).toBe(true);
+  });
+});
+
+/**
+ * O QUE MUDA QUANDO A UNIÃO VENDE
+ *
+ * Privatizar não é só mexer num campo de participação: a empresa muda de aba,
+ * ganha um dono com nome e sai da responsabilidade do governo. Quem passa a
+ * lidar com os problemas dela é quem a comprou — e estes testes cobram
+ * exatamente isso, porque é a diferença entre vender uma empresa e apenas
+ * mudar uma etiqueta.
+ */
+describe('empresa privatizada sai da mão do governo', () => {
+  /**
+   * Leva um processo de desestatização até a venda concluída.
+   *
+   * O caminho normal passa por estudos, Congresso e leilão — e o leilão pode
+   * dar deserto, o que é justamente o que se quer preservar no jogo. Aqui o
+   * atalho é só de calendário: o teste repõe o ativo no pregão até alguém
+   * comprar, porque o que ele quer medir é o DEPOIS da venda.
+   */
+  function venderNoLeilao(state: GameState, companyId: string): Company {
+    const rng = new Rng(state.seed, state.rngCursor);
+    proposePrivatization(state, companyId, find(state, companyId).ownership.stateOwnership, rng);
+    state.rngCursor = rng.cursor;
+
+    let atual = state;
+    for (let tentativa = 0; tentativa < 12; tentativa += 1) {
+      const processo = atual.companies.privatizations.find((entry) => entry.companyId === companyId)!;
+      if (processo.stage === 'concluida') break;
+      processo.stage = 'leilao';
+      processo.stageEndsMonth = atual.month;
+      processo.investorInterest = 99;
+      atual = tickMonth(atual).state;
+    }
+
+    Object.assign(state, atual);
+    return find(state, companyId);
+  }
+
+  it('troca de aba e ganha um controlador com nome', () => {
+    const state = newGame();
+    const federaisAntes = state.companies.companies.filter((c) => c.control === 'federal').length;
+
+    const empresa = venderNoLeilao(state, 'correios');
+
+    expect(empresa.control).toBe('privada');
+    expect(state.companies.companies.filter((c) => c.control === 'federal')).toHaveLength(
+      federaisAntes - 1,
+    );
+    // Alguém comprou: a empresa não fica órfã depois do leilão.
+    const dono = empresa.ownership.controllingShareholder;
+    expect(dono).toBeTruthy();
+    expect(dono!.name.length).toBeGreaterThan(0);
+    expect(dono!.kind).not.toBe('pulverizado');
+    expect(dono!.sinceMonth).toBeGreaterThan(0);
+    expect(dono!.sinceMonth).toBeLessThanOrEqual(state.month);
+    // E a manchete diz quem levou.
+    expect(
+      state.companies.news.some(
+        (noticia) => noticia.companyId === 'correios' && noticia.body.includes(dono!.name),
+      ),
+    ).toBe(true);
+  });
+
+  it('tira do presidente as decisões que agora são do dono', () => {
+    const state = newGame();
+    venderNoLeilao(state, 'correios');
+    const rng = new Rng(11, 0);
+
+    for (const escolha of ['demitir', 'fechar_unidades', 'cortar_despesas', 'parceria_privada'] as const) {
+      const resultado = resolveCompanyCrisis(state, 'correios', escolha, rng);
+      expect(resultado.ok).toBe(false);
+      expect(resultado.message).toContain('Correios');
+    }
+
+    // O que é ferramenta de governo continua valendo: emprestar a uma empresa
+    // privada é decisão política legítima, e cara.
+    expect(resolveCompanyCrisis(state, 'correios', 'emprestar', rng).ok).toBe(true);
+  });
+
+  it('faz o dono resolver a crise dela, com a conta fora do Tesouro', () => {
+    const state = newGame();
+    const empresa = venderNoLeilao(state, 'correios');
+    empresa.financials.profit = -empresa.financials.revenue * 0.12;
+    empresa.financials.cash = 0;
+    empresa.monthsInLoss = 5;
+
+    const caixaDoGoverno = state.economy.treasuryCash;
+    const movimento = ownerCrisisResponse(state, empresa, new Rng(31, 0));
+
+    expect(movimento).toBeTruthy();
+    expect(movimento!.body.length).toBeGreaterThan(0);
+    // O controlador agiu e ficou registrado no histórico dele.
+    expect(empresa.ownership.controllingShareholder!.moves.length).toBeGreaterThan(0);
+    // E não saiu um centavo do caixa federal para isso.
+    expect(state.economy.treasuryCash).toBe(caixaDoGoverno);
+  });
+
+  it('deixa de aparecer como crise na mesa do presidente quando não é sistêmica', () => {
+    let state = newGame();
+    const empresa = venderNoLeilao(state, 'correios');
+    empresa.politics.systemicImportance = 40;
+    empresa.financials.profit = -empresa.financials.revenue * 0.15;
+    empresa.financials.cash = 0;
+    empresa.monthsInLoss = 5;
+
+    state = tickMonth(state).state;
+
+    // A empresa continua com problema — mas o problema é do dono dela.
+    expect(find(state, 'correios').inCrisis).toBe(false);
+    expect(
+      state.companies.news.some((noticia) => noticia.companyId === 'correios'),
+    ).toBe(true);
+  });
+
+  it('passa a ser alvo de estatização, e não de uma segunda privatização', () => {
+    const state = newGame();
+    venderNoLeilao(state, 'correios');
+
+    const estatizar = readCompanyPolicy('Estatizar os Correios', state);
+    expect(estatizar.nationalizeCompanyIds).toContain('correios');
+
+    const privatizarDeNovo = readCompanyPolicy('Privatizar os Correios', state);
+    expect(privatizarDeNovo.privatizeCompanyIds).toHaveLength(0);
+  });
+
+  it('devolve o problema ao Tesouro quando a União retoma o controle', () => {
+    const state = newGame();
+    const empresa = venderNoLeilao(state, 'correios');
+    expect(empresa.ownership.controllingShareholder).toBeTruthy();
+
+    // Recomprar no pregão até passar da metade é estatizar pela porta do
+    // mercado. Aqui o teste dá caixa ao Tesouro e compra a empresa de volta.
+    state.economy.treasuryCash = 900;
+    empresa.market.marketCap = 40_000;
+    empresa.ownership.freeFloat = 100;
+    const recompra = buySharesOnMarket(state, 'correios', 400);
+    expect(recompra.ok).toBe(true);
+
+    const retomada = find(state, 'correios');
+    expect(retomada.ownership.stateOwnership).toBeGreaterThan(50);
+    expect(retomada.control).toBe('federal');
+    // O dono anterior sai da ficha: a empresa voltou a ser problema da União.
+    expect(retomada.ownership.controllingShareholder).toBeUndefined();
+    expect(resolveCompanyCrisis(state, 'correios', 'cortar_despesas', new Rng(12, 0)).ok).toBe(true);
   });
 });
 

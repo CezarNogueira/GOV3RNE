@@ -355,6 +355,13 @@ function CompanyTable({
                 </td>
                 <td className="py-2 text-[11px] text-neutral-500">
                   {COMPANY_SECTOR_LABEL[company.sector]}
+                  {/* Ex-estatal carrega o nome de quem a comprou: é a resposta
+                      visível para "e agora, quem responde por ela?". */}
+                  {company.ownership.controllingShareholder && (
+                    <span className="block text-[10px] text-neutral-600">
+                      ex-estatal · {company.ownership.controllingShareholder.name}
+                    </span>
+                  )}
                 </td>
                 <td className="py-2 text-right font-mono text-[12px] text-neutral-300">
                   {(company.financials.revenue / 1000).toFixed(1)}

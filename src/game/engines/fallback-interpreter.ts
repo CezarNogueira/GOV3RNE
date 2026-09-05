@@ -334,7 +334,7 @@ export function interpretLocally(text: string, state: GameState): ProposalAnalys
   // alvo, e o alvo muda quem ganha, quem perde e quanto custa. A leitura
   // empresarial é feita pelo mesmo módulo que o motor usa depois de assinada,
   // então a ficha mostrada aqui é a que vai valer.
-  const companyImpact = readCompanyPolicy(text);
+  const companyImpact = readCompanyPolicy(text, state);
   const namedCompanies = companyImpact.targetCompanyIds
     .map((id) => COMPANY_BLUEPRINTS.find((entry) => entry.id === id))
     .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));

@@ -1,4 +1,4 @@
-import type { CompanyPolicyImpact, CompanySector } from '../../types/index';
+import type { CompanyPolicyImpact, CompanySector, GameState } from '../../types/index';
 import { COMPANY_ALIASES, COMPANY_BLUEPRINTS } from '../../data/companies/index';
 import {
   detectDirection,
@@ -231,7 +231,7 @@ function readMagnitude(normalized: string): number {
  * regulação ou privatização volta com o impacto vazio — e não deve produzir
  * efeito nenhum sobre as empresas. Sistema que reage a tudo não reage a nada.
  */
-export function readCompanyPolicy(text: string): CompanyPolicyImpact {
+export function readCompanyPolicy(text: string, state?: GameState): CompanyPolicyImpact {
   const normalized = normalize(text);
   const words = normalized.split(/[^a-z0-9]+/).filter(Boolean);
   const impact = emptyCompanyImpact();
@@ -299,18 +299,29 @@ export function readCompanyPolicy(text: string): CompanyPolicyImpact {
 
   // Privatizar e estatizar só valem quando a medida nomeia a empresa. "Vamos
   // privatizar" sem sujeito é discurso, não é ato.
+  // Quem é estatal hoje é pergunta para a PARTIDA, não para a tabela de origem:
+  // uma empresa vendida no ano passado não pode ser privatizada de novo, e passa
+  // a poder ser estatizada. Sem a partida em mãos (pré-visualização de texto
+  // solto), o cadastro original é a melhor aproximação disponível.
+  const controlDe = (id: string): 'federal' | 'privada' | undefined => {
+    const live = state?.companies.companies.find((entry) => entry.id === id);
+    if (live) return live.control;
+    return COMPANY_BLUEPRINTS.find((entry) => entry.id === id)?.control;
+  };
+  const podeVender = (id: string): boolean => {
+    const live = state?.companies.companies.find((entry) => entry.id === id);
+    if (live) return live.ownership.privatizable && live.ownership.stateOwnership > 0;
+    return COMPANY_BLUEPRINTS.find((entry) => entry.id === id)?.privatizable ?? false;
+  };
+
   if (PRIVATIZE.test(normalized)) {
-    impact.privatizeCompanyIds = impact.targetCompanyIds.filter((id) => {
-      const blueprint = COMPANY_BLUEPRINTS.find((entry) => entry.id === id);
-      return blueprint?.control === 'federal' && blueprint.privatizable;
-    });
+    impact.privatizeCompanyIds = impact.targetCompanyIds.filter(
+      (id) => controlDe(id) === 'federal' && podeVender(id),
+    );
     if (impact.privatizeCompanyIds.length > 0) readings.push('abre processo de privatização');
   }
   if (NATIONALIZE.test(normalized)) {
-    impact.nationalizeCompanyIds = impact.targetCompanyIds.filter((id) => {
-      const blueprint = COMPANY_BLUEPRINTS.find((entry) => entry.id === id);
-      return blueprint?.control === 'privada';
-    });
+    impact.nationalizeCompanyIds = impact.targetCompanyIds.filter((id) => controlDe(id) === 'privada');
     if (impact.nationalizeCompanyIds.length > 0) readings.push('abre processo de aquisição estatal');
   }
 

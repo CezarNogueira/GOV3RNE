@@ -8,6 +8,7 @@ export * from './federal-companies';
 export * from './private-companies';
 export * from './commodities';
 export * from './executives';
+export * from './buyers';
 
 /** Todas as empresas do jogo, federais primeiro. */
 export const COMPANY_BLUEPRINTS: readonly CompanyBlueprint[] = [

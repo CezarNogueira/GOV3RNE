@@ -54,7 +54,7 @@ export function PrivatizationModal({
       open={open}
       onClose={onClose}
       title={`Desestatização — ${company.name}`}
-      subtitle="Vender participação é dinheiro hoje, dividendo a menos amanhã e controle a menos para sempre."
+      subtitle="Vender participação é dinheiro hoje, dividendo a menos amanhã e controle a menos para sempre. Perdido o controle, a empresa passa para quem a comprou: os problemas dela deixam de ser seus, e as decisões dentro dela também."
       size="lg"
       footer={
         <>

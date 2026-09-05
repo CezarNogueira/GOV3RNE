@@ -194,12 +194,22 @@ export function processCompanies(state: GameState, rng: Rng): CompanyTickOutcome
   state.congress.goodwill = round(clamp100(state.congress.goodwill + pressure * 0.012), 1);
 
   // ------------------------------------------------------------ 9. Notícias
+  // O que os controladores privados fizeram entra no mesmo noticiário: o
+  // presidente fica sabendo do corte na ex-estatal como todo mundo fica, pelo
+  // jornal, porque a decisão não passou mais por ele.
+  companyNews.push(...finance.ownerMoves);
   companyNews.push(...generateCompanyNews(state, rng));
   state.companies.news = [...companyNews, ...state.companies.news].slice(0, 40);
 
+  for (const movimento of finance.ownerMoves) {
+    notes.push(`${movimento.headline}. A decisão foi do dono da empresa, não do governo.`);
+  }
+
   for (const crisis of finance.newCrises) {
     notes.push(
-      `${crisis.name} entrou em crise financeira aberta. O presidente vai ter de decidir o que fazer — inclusive decidir não fazer nada.`,
+      crisis.control === 'federal'
+        ? `${crisis.name} entrou em crise financeira aberta. Ela é da União: o presidente vai ter de decidir o que fazer — inclusive decidir não fazer nada.`
+        : `${crisis.name} entrou em crise aberta. A empresa é privada e quem decide é o controlador dela, mas o tamanho dela põe a questão na mesa do governo assim mesmo.`,
     );
   }
 
