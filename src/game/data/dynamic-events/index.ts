@@ -1,5 +1,6 @@
 import { registerAgendaEvents } from './registry';
 import { FAMILY_EVENTS } from './family';
+export { SPOUSE_BREAKDOWN_EVENTS, SPOUSE_BREAKDOWN_IDS } from './spouse-breakdown';
 import { GOVERNMENT_EVENTS } from './government';
 import { OPPOSITION_EVENTS } from './opposition';
 import { ECONOMY_EVENTS } from './economy';

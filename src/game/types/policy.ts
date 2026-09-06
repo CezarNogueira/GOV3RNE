@@ -356,6 +356,7 @@ export type AgendaActionId =
   | 'viagem_internacional'
   | 'visita_regional'
   | 'descansar'
+  | 'noite_com_conjuge'
   | 'nada';
 
 export interface AgendaAction {

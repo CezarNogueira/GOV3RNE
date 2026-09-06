@@ -563,6 +563,51 @@ registerAgendaEvent({
 
 Nada mais precisa ser tocado.
 
+### Quem mora com o presidente
+
+O cargo tem duas pessoas dentro e só uma foi eleita. Quem mora no Palácio tem um
+medidor de estresse próprio, em
+[`personal.ts`](src/game/engines/personal.ts), e ele sobe todo mês — inclusive
+em mês calmo, porque o cargo cobra sozinho. Sobe mais com presidente esgotado,
+com viagem de Estado, com crise grave na agenda, com guerra, com estado de
+exceção e com exposição pública alta.
+
+Existe uma única forma deliberada de derrubá-lo: **reservar a noite**, uma ação
+de agenda que custa **2 pontos** e devolve de **15 a 30 pontos** do medidor. A
+segunda noite do mesmo mês vale um terço — o que faltou foi o mês, não a noite.
+
+Em **100 não há mais aviso**: a pessoa faz algo que o país inteiro vê, e aquilo
+entra na agenda de governo como qualquer outra crise, com as mesmas opções e o
+mesmo custo de decidir — uma entrevista ao vivo dizendo o que pensa do governo,
+uma saída do Palácio na madrugada, uma entrevista contando o que se fala no
+jantar. Nenhuma saída é limpa: acolher em público humaniza e confirma um
+presidente que não dá conta; blindar fecha o assunto no oficial e deixa a
+interpretação para quem quiser fazer; anunciar a separação encerra a crise e
+encerra a relação. Numa partida sem nenhum cuidado, o medidor estoura por volta
+do vigésimo mês.
+
+Quem **entra solteiro** no Planalto não fica solteiro por decreto: eventos de
+agenda apresentam alguém, e assumir a relação coloca outra pessoa dentro do
+cargo — com medidor, exposição e tudo o que vem junto.
+
+### De onde vem quem você convida
+
+Vice e ministros são listados por **origem**, e a divisão não é cosmética:
+
+| divisão | traz | cobra |
+| --- | --- | --- |
+| **Quadros de partido** (por legenda) | bancada para a base antes da posse | cargo, emenda e espaço |
+| **Técnicos de carreira** | competência | nada ao Congresso — e o Congresso não deve nada a eles |
+| **Independentes** | credibilidade emprestada de quem não é político mas é ouvido | some quando o governo desaponta |
+| **Famosos** | audiência no dia do anúncio | holofote em cada erro, e a menor experiência de gestão da lista |
+
+A troca aparece na largada. Chapa e gabinete montados com quadros partidários
+começam com **405 deputados** de base e 53,6% de aprovação; a mesma partida com
+um vice famoso e um gabinete sem nenhum partido começa com **17 deputados** e
+56,1% — popular e sem conseguir aprovar nada. O peso pessoal do nome também
+passou a valer: "traz 22 deputados" na tela de montagem agora soma ao apoio do
+bloco daquela legenda, em vez de ser um número decorativo.
+
 ### Devolutiva de cada decisão
 
 Nenhuma ação do presidente termina em silêncio.

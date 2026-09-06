@@ -3,6 +3,7 @@ import type {
   DynamicEventDefinition,
   EventConditions,
   EventDiplomaticEffect,
+  EventFamilyEffect,
   EventOption,
   GameEventDefinition,
   GameState,
@@ -180,7 +181,7 @@ function dynamicWeight(state: GameState, definition: DynamicEventDefinition): nu
  * Constrói o evento dinâmico. Devolve `null` quando não havia com quem montá-lo
  * — sem ministro, sem estatal, sem país parceiro —, e o motor segue adiante.
  */
-function buildDynamic(
+export function buildDynamic(
   state: GameState,
   definition: DynamicEventDefinition,
   rng: Rng,
@@ -380,11 +381,65 @@ export function resolveEvent(
 
   // Efeito diplomático: muda a relação com AQUELE país, não um número solto.
   if (option.diplomacy) applyDiplomaticEffect(state, option.diplomacy);
+  // Efeito familiar: muda a vida de quem mora com o presidente, que é onde
+  // esse tipo de decisão realmente cai.
+  if (option.family) applyFamilyEffect(state, option.family, rng);
 
   event.resolvedOptionId = optionId;
   event.resolution = option.warning;
 
   return { ok: true, message: option.warning };
+}
+
+/**
+ * Leva o efeito de um evento para dentro da casa do presidente.
+ *
+ * É por aqui que uma relação começa no meio do mandato, que ela termina e que o
+ * medidor de estresse de quem mora ali sobe ou desce por decisão do jogador.
+ */
+function applyFamilyEffect(state: GameState, effect: EventFamilyEffect, rng: Rng): void {
+  const spouse = state.family.find((member) => member.kind === 'conjuge');
+
+  if (effect.startRelationship && !spouse) {
+    const pessoa = effect.startRelationship;
+    state.family = [
+      {
+        id: makeId('fam', rng),
+        name: pessoa.name,
+        kind: 'conjuge',
+        age: pessoa.age,
+        occupation: pessoa.occupation,
+        approval: 56,
+        influence: 22,
+        // Relação que começa dentro do cargo começa leve e sob holofote: o
+        // estresse é baixo agora e a exposição já nasce alta.
+        stress: 10,
+        stance: 'fora_dos_holofotes',
+        exposure: 45,
+        sinceMonth: state.month,
+      },
+      ...state.family,
+    ];
+    return;
+  }
+
+  if (!spouse) return;
+
+  if (effect.endRelationship) {
+    state.family = state.family.filter((member) => member.id !== spouse.id);
+    // Separação no meio do mandato não é neutra para quem ficou.
+    state.president.stress = round(clamp100(state.president.stress + 8), 1);
+    state.president.mood = round(clamp100(state.president.mood - 12), 1);
+    return;
+  }
+
+  if (effect.spouseStressDelta !== undefined) {
+    spouse.stress = round(clamp100(spouse.stress + effect.spouseStressDelta), 1);
+  }
+  if (effect.exposureDelta !== undefined) {
+    spouse.exposure = round(clamp100(spouse.exposure + effect.exposureDelta), 1);
+  }
+  if (effect.stance) spouse.stance = effect.stance;
 }
 
 /** Leva o efeito de um evento internacional para o país envolvido. */

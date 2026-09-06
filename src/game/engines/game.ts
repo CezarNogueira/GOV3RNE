@@ -27,7 +27,7 @@ import { processPolicies } from './policy';
 import { generatePublicReaction } from './legislative';
 import { processMinisters, pressureMinister } from './government';
 import { processDiplomacy, runScheduledVisit } from './diplomacy';
-import { processPersonalLife, rest } from './personal';
+import { nightWithSpouse, processPersonalLife, rest, spouseBreakdown } from './personal';
 import { generateNews, generatePosts } from './news';
 import { processPromises } from './promises';
 import { processImpeachment } from './impeachment';
@@ -223,6 +223,10 @@ export function tickMonth(input: GameState): TickOutcome {
 
   // ---------------------------------------------------------------- 8. Pessoal
   const personalEntries = processPersonalLife(state, rng);
+  // Quem mora com o presidente também tem limite, e ele é medido. Batido o
+  // teto, o que acontece entra na agenda de governo como qualquer outra crise.
+  const rompimento = spouseBreakdown(state, rng);
+  if (rompimento) personalEntries.push(rompimento);
 
   // ---------------------------------------------------------------- 9. Aprovação
   const approvalDelta = calculateApproval(state, rng);
@@ -572,6 +576,13 @@ export function runAgendaAction(
 
     case 'descansar': {
       message = rest(state);
+      break;
+    }
+
+    case 'noite_com_conjuge': {
+      const noite = nightWithSpouse(state, rng);
+      if (!noite.ok) return { ok: false, message: noite.message, state: input };
+      message = noite.message;
       break;
     }
 

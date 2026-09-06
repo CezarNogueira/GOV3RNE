@@ -48,10 +48,41 @@ export interface Minister {
   appointmentKind: 'politico' | 'tecnico' | 'independente' | 'internet';
 }
 
+/**
+ * De onde vem quem o presidente convida.
+ *
+ * A origem não é rótulo: ela muda o que a pessoa entrega. Quem vem de partido
+ * traz bancada e cobra em cargo; quem vem de carreira traz competência e não
+ * traz voto nenhum; quem vem de fora da política traz credibilidade emprestada
+ * e some quando o governo desaponta; quem vem da fama traz audiência e traz o
+ * risco que vem junto com ela.
+ */
+export type CandidateOrigin = 'partido' | 'tecnico' | 'independente' | 'famoso';
+
+export const CANDIDATE_ORIGIN_LABEL: Record<CandidateOrigin, string> = {
+  partido: 'Quadros de partido',
+  tecnico: 'Técnicos de carreira',
+  independente: 'Independentes',
+  famoso: 'Famosos',
+};
+
+export const CANDIDATE_ORIGIN_NOTE: Record<CandidateOrigin, string> = {
+  partido:
+    'Trazem bancada para a base antes da posse e cobram em cargo, emenda e espaço depois dela.',
+  tecnico:
+    'Entregam competência e não entregam voto. O Congresso não deve nada a eles — e eles não devem nada ao Congresso.',
+  independente:
+    'Não são políticos, mas falam de política e são ouvidos. Emprestam credibilidade ao governo enquanto ele merecer, e a retiram em público quando não merecer mais.',
+  famoso:
+    'Trazem audiência no dia do anúncio. Também trazem holofote em cima de cada erro e a menor experiência de gestão da lista.',
+};
+
 export interface CandidateProfile {
   id: string;
   name: string;
   party: string;
+  /** De onde a pessoa vem. Decide em que divisão ela aparece na chapa. */
+  origin: CandidateOrigin;
   role: string;
   alignment: number;
   competence: number;

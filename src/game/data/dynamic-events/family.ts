@@ -1,4 +1,5 @@
 import type { DynamicEventDefinition } from '../../types/index';
+import { FIRST_NAMES, LAST_NAMES } from '../people';
 import {
   economicWeight,
   fill,
@@ -408,6 +409,155 @@ export const FAMILY_EVENTS: readonly DynamicEventDefinition[] = [
             approvalDelta: -2.6,
             congressDelta: -4,
             stressDelta: 16,
+          },
+        ],
+      };
+    },
+  },
+  // -------------------------------------------------------------------------
+  // QUEM CHEGA DEPOIS
+  //
+  // Presidente que assume solteiro não fica solteiro por decreto. Estes três
+  // eventos só existem para quem não tem cônjuge, e cada um oferece a mesma
+  // escolha por um caminho diferente: assumir em público, viver escondido ou
+  // não começar. Assumir é o único caminho que coloca outra pessoa dentro do
+  // cargo — com tudo o que o medidor de estresse dela vai cobrar depois.
+  // -------------------------------------------------------------------------
+  {
+    id: 'dyn_conhecer_alguem_jantar',
+    category: 'pessoal',
+    severity: 'rotina',
+    weight: 11,
+    tags: ['institucional'],
+    cooldownMonths: 10,
+    canGenerate: (state) => !state.family.some((member) => member.kind === 'conjuge'),
+    pressure: (state) => 1 + Math.max(0, state.president.mood - 55) / 60,
+    build: (state, rng) => {
+      const nome = `${rng.pick(FIRST_NAMES)} ${rng.pick(LAST_NAMES)}`;
+      const idade = Math.max(28, state.president.age - rng.int(2, 12));
+      // A área não flexiona em gênero, e o jogo não sabe o de quem chegou: é
+      // isso que evita "Tarcísio, veterinária" na primeira linha do evento.
+      const oficio = rng.pick([
+        'saúde pública',
+        'ensino universitário',
+        'arquitetura',
+        'direito trabalhista',
+        'medicina veterinária',
+        'agronomia',
+      ]);
+
+      return {
+        title: 'Alguém sentou do seu lado no jantar oficial',
+        brief: `O protocolo colocou ${nome}, ${idade} anos, da área de ${oficio}, na cadeira ao seu lado no jantar de encerramento. Vocês conversaram por três horas sobre tudo, menos governo. Ela não pediu nada, não tirou foto e foi embora antes da sobremesa. Você tem o telefone dela e a decisão de usá-lo ou não.`,
+        options: [
+          {
+            id: 'assumir',
+            label: 'Ligar e assumir em público',
+            description: 'Começar a relação sem esconder: agenda oficial, foto, entrevista curta.',
+            warning: 'Você ganha companhia e o cargo ganha mais uma pessoa para desgastar.',
+            cost: 0,
+            impacts: {},
+            groupImpacts: [
+              { groupId: 'mulheres', delta: 1.4, reason: 'Presidente assumiu a relação sem esconder.' },
+            ],
+            approvalDelta: 0.8,
+            congressDelta: 0,
+            stressDelta: -4,
+            family: { startRelationship: { name: nome, age: idade, occupation: oficio } },
+          },
+          {
+            id: 'discreto',
+            label: 'Ligar e manter fora dos holofotes',
+            description: 'Encontros sem agenda oficial e sem confirmação a ninguém.',
+            warning: 'Funciona até a primeira foto vazar — e ela sempre vaza.',
+            cost: 0,
+            impacts: {},
+            groupImpacts: [
+              { groupId: 'imprensa', delta: -0.8, reason: 'Planalto escondeu a relação do presidente.' },
+            ],
+            approvalDelta: 0,
+            congressDelta: 0,
+            stressDelta: -2,
+            family: { startRelationship: { name: nome, age: idade, occupation: oficio } },
+          },
+          {
+            id: 'nao',
+            label: 'Não ligar',
+            description: 'Guardar o telefone e voltar para a agenda de segunda-feira.',
+            warning: 'Nada muda. Talvez seja exatamente isso que você queria.',
+            cost: 0,
+            impacts: {},
+            groupImpacts: [],
+            approvalDelta: 0,
+            congressDelta: 0,
+            stressDelta: 2,
+          },
+        ],
+      };
+    },
+  },
+  {
+    id: 'dyn_conhecer_alguem_antigo',
+    category: 'pessoal',
+    severity: 'rotina',
+    weight: 9,
+    tags: ['institucional'],
+    cooldownMonths: 12,
+    canGenerate: (state) => !state.family.some((member) => member.kind === 'conjuge'),
+    pressure: (state) => 1 + Math.max(0, 60 - state.president.mood) / 70,
+    build: (state, rng) => {
+      const nome = `${rng.pick(FIRST_NAMES)} ${rng.pick(LAST_NAMES)}`;
+      const idade = Math.max(30, state.president.age - rng.int(0, 6));
+      const oficio = rng.pick([
+        'hotelaria no litoral',
+        'ensino de história',
+        'jornalismo de economia',
+        'medicina de família',
+        'serviço público estadual',
+      ]);
+
+      return {
+        title: 'Uma mensagem de alguém de antes de tudo isso',
+        brief: `${nome}, ${idade} anos, da área de ${oficio}, mandou uma mensagem de três linhas parabenizando por uma decisão sua e lembrando de uma conversa de quinze anos atrás. Vocês se conheceram muito antes do primeiro mandato de qualquer coisa. O GSI já avisou que qualquer reaproximação vira pauta em uma semana.`,
+        options: [
+          {
+            id: 'assumir',
+            label: 'Responder e reatar sem esconder',
+            description: 'Retomar a relação com agenda oficial e sem fingir que não existe.',
+            warning: 'A história bonita rende uma semana de manchete boa e quatro anos de exposição.',
+            cost: 0,
+            impacts: {},
+            groupImpacts: [
+              { groupId: 'classe_media', delta: 1.2, reason: 'História pessoal do presidente comoveu.' },
+            ],
+            approvalDelta: 1.2,
+            congressDelta: 0,
+            stressDelta: -6,
+            family: { startRelationship: { name: nome, age: idade, occupation: oficio } },
+          },
+          {
+            id: 'amizade',
+            label: 'Responder e deixar como amizade',
+            description: 'Agradecer, conversar de vez em quando e não transformar em nada além disso.',
+            warning: 'Você ganha alguém para telefonar às onze da noite e não ganha companhia.',
+            cost: 0,
+            impacts: {},
+            groupImpacts: [],
+            approvalDelta: 0,
+            congressDelta: 0,
+            stressDelta: -3,
+          },
+          {
+            id: 'ignorar',
+            label: 'Não responder',
+            description: 'Arquivar a mensagem e seguir o expediente.',
+            warning: 'O cargo agradece. O resto, não.',
+            cost: 0,
+            impacts: {},
+            groupImpacts: [],
+            approvalDelta: 0,
+            congressDelta: 0,
+            stressDelta: 3,
           },
         ],
       };

@@ -111,9 +111,23 @@ export interface FamilyMember {
   occupation?: string;
   approval: number;
   influence: number;
-  friction: number;
+  /**
+   * 0-100. Quanto a vida no Palácio está pesando sobre esta pessoa.
+   *
+   * Não é humor nem novela: é a conta de morar com segurança na porta, de
+   * aparecer em jornal sem ter se candidatado a nada e de dividir a casa com
+   * alguém que trabalha dezoito horas por dia. Em 100 a pessoa não aguenta mais
+   * e faz algo que o país inteiro vê — e aí vira problema de governo.
+   */
+  stress: number;
   stance?: SpouseStance;
   exposure: number;
+  /** Mês da última noite reservada para a relação. Alimenta os retornos decrescentes. */
+  lastNightMonth?: number;
+  /** Quantas noites foram marcadas no mês corrente. */
+  nightsThisMonth?: number;
+  /** Mês em que a relação começou, quando ela nasceu durante o mandato. */
+  sinceMonth?: number;
 }
 
 export interface PartyProfile {

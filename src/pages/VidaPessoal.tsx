@@ -22,6 +22,8 @@ export function VidaPessoal() {
   const { president } = state;
   const spouse = state.family.find((member) => member.kind === 'conjuge');
   const children = state.family.filter((member) => member.kind === 'filho');
+  const agendaPoints = state.agenda.points;
+  const primeiroNome = spouse?.name.split(' ')[0] ?? '';
   const multiplier = physicalMultiplier(state);
 
   return (
@@ -162,7 +164,9 @@ export function VidaPessoal() {
             <Section title="Primeiro-cônjuge">
               {!spouse ? (
                 <Empty>
-                  Você entrou solteiro no Planalto. Uma manchete a menos e um palanque a menos.
+                  Você entrou solteiro no Planalto. Uma manchete a menos e um palanque a menos — e,
+                  se aparecer alguém no meio do mandato, a decisão de começar alguma coisa vai
+                  chegar como evento na sua agenda.
                 </Empty>
               ) : (
                 <>
@@ -175,7 +179,7 @@ export function VidaPessoal() {
                         {spouse.age} anos · {spouse.occupation}
                       </p>
                     </div>
-                    <Badge tone={spouse.friction > 60 ? 'danger' : spouse.friction > 35 ? 'warn' : 'gov'}>
+                    <Badge tone={spouse.stress > 75 ? 'danger' : spouse.stress > 45 ? 'warn' : 'gov'}>
                       {STANCE_LABEL[spouse.stance ?? 'fora_dos_holofotes']}
                     </Badge>
                   </div>
@@ -183,18 +187,49 @@ export function VidaPessoal() {
                   <div className="mt-3 grid gap-3 sm:grid-cols-3">
                     <Gauge label="Aprovação" value={spouse.approval} tone="gov" />
                     <Gauge label="Influência" value={spouse.influence} tone="info" />
-                    <Gauge label="Atrito" value={spouse.friction} tone="danger" />
+                    <Gauge label="Estresse" value={spouse.stress} tone="danger" />
                   </div>
 
                   <p className="mt-3 border-l-2 border-l-ink-600 pl-2.5 text-[12px] leading-relaxed text-neutral-500">
                     {STANCE_TEXT[spouse.stance ?? 'fora_dos_holofotes']}
                   </p>
 
-                  {spouse.friction > 60 && (
-                    <p className="mt-2 border-l-2 border-l-warn-500 bg-warn-900/15 p-2 text-[12px] leading-snug text-warn-400">
-                      O atrito em casa passou de 60. Isso já está aparecendo no seu estresse todo
-                      mês — e estresse alto derruba votação em plenário.
+                  {/* A noite reservada é a única coisa que derruba esse medidor
+                      de propósito. Custa dois pontos porque é isso que ela é:
+                      tempo que não vira medida nem voto. */}
+                  <div className="mt-3 border border-ink-700 bg-ink-900/40 p-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="label-strong">Reservar a noite</p>
+                      <span className="label">2 pontos de agenda</span>
+                    </div>
+                    <p className="mt-1 text-[12px] leading-snug text-neutral-500">
+                      Jantar sem assessor e telefone no silencioso. Derruba de 15 a 30 pontos do
+                      estresse {primeiroNome ? `de ${primeiroNome}` : 'dela'}. A segunda noite no
+                      mesmo mês vale um terço — o que faltou foi o mês, não a noite.
                     </p>
+                    <button
+                      type="button"
+                      className="btn-primary mt-2 px-3 py-1.5 text-[12px]"
+                      disabled={agendaPoints < 2}
+                      onClick={() => runAction('noite_com_conjuge')}
+                    >
+                      {agendaPoints < 2 ? 'Sem pontos de agenda este mês' : 'Passar a noite juntos'}
+                    </button>
+                  </div>
+
+                  {spouse.stress >= 85 ? (
+                    <p className="mt-2 border-l-2 border-l-danger-500 bg-danger-900/15 p-2 text-[12px] leading-snug text-danger-400">
+                      Estresse em {spouse.stress.toFixed(0)}. Em 100 não há mais aviso: a pessoa faz
+                      alguma coisa que o país inteiro vê, e aquilo entra na sua agenda de governo
+                      como qualquer outra crise. Ainda dá tempo.
+                    </p>
+                  ) : (
+                    spouse.stress > 55 && (
+                      <p className="mt-2 border-l-2 border-l-warn-500 bg-warn-900/15 p-2 text-[12px] leading-snug text-warn-400">
+                        Estresse acima de 55. Já está pesando no seu próprio estresse todo mês — e
+                        estresse alto derruba votação em plenário.
+                      </p>
+                    )
                   )}
                 </>
               )}

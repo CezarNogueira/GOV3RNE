@@ -30,6 +30,7 @@ import { PROMISE_CATALOG } from '../data/promises';
 import {
   CHAMBER_SPEAKERS,
   MINISTER_POOL,
+  type MinisterCandidate,
   OPPOSITION_LEADERS,
   SENATE_SPEAKERS,
   VICE_POOL,
@@ -82,7 +83,29 @@ export function createGame(input: NewGameInput): GameState {
   const government = buildGovernment(rng, input, party);
   const diplomacy = buildDiplomacy();
   const promises = buildPromises(input.promises);
-  const approval = buildApproval(preset.startingApproval, states, socialGroups, congress);
+  // Quem não traz bancada traz gente: um vice conhecido do país inteiro e um
+  // gabinete popular entram na largada como aprovação, que é a moeda que esse
+  // tipo de nome realmente carrega. É a contrapartida de não ter deputado
+  // nenhum atrás de si.
+  const vice = VICE_POOL.find((candidate) => candidate.id === input.viceId);
+  const gabinete = Object.values(input.cabinet)
+    .map((candidateId) => MINISTER_POOL.find((m) => m.id === candidateId))
+    .filter((candidate): candidate is MinisterCandidate => Boolean(candidate));
+  const popularidadeMedia =
+    gabinete.length > 0
+      ? gabinete.reduce((total, candidate) => total + candidate.popularity, 0) / gabinete.length
+      : 50;
+  const bonusDeFama = round(
+    ((vice?.popularity ?? 50) - 50) * 0.06 + (popularidadeMedia - 50) * 0.05,
+    2,
+  );
+
+  const approval = buildApproval(
+    clamp(preset.startingApproval + bonusDeFama, 20, 80),
+    states,
+    socialGroups,
+    congress,
+  );
 
   return {
     id: makeId('game', rng),
@@ -248,7 +271,7 @@ function buildFamily(input: NewGameInput, rng: Rng): FamilyMember[] {
       occupation: draft.spouseOccupation || 'Sem ocupação declarada',
       approval: 53,
       influence: 48,
-      friction: 0,
+      stress: 12,
       stance: draft.spouseStance ?? 'fora_dos_holofotes',
       exposure: draft.spouseStance === 'palanque_permanente' ? 60 : 20,
     });
@@ -262,7 +285,7 @@ function buildFamily(input: NewGameInput, rng: Rng): FamilyMember[] {
       age: rng.int(6, 42),
       approval: 50,
       influence: 12,
-      friction: 0,
+      stress: 8,
       exposure: 15,
     });
   }
@@ -441,10 +464,22 @@ function buildCongress(rng: Rng, party: PartyProfile, input: NewGameInput): Cong
       Math.abs(p.ideology.social - party.ideology.social) * 0.25 +
       Math.abs(p.ideology.institutional - party.ideology.institutional) * 0.15;
 
+    // O peso PESSOAL de quem foi convidado, além do cargo entregue à legenda.
+    // Chamar o líder que arrasta 22 deputados não é a mesma coisa que chamar um
+    // deputado de primeiro mandato do mesmo partido, e o número mostrado na
+    // tela de montagem passa a valer aqui.
+    const pesoPessoal =
+      (isVice ? (vice?.seatsBrought ?? 0) : 0) +
+      Object.values(input.cabinet)
+        .map((candidateId) => MINISTER_POOL.find((m) => m.id === candidateId))
+        .filter((candidate) => candidate?.party === p.id)
+        .reduce((total, candidate) => total + (candidate?.seatsBrought ?? 0), 0);
+
     let support = 30 - ideologicalDistance * 0.55;
     if (isPresidentParty) support = 92;
     if (hasCabinet) support += 34;
     if (isVice) support += 22;
+    support += pesoPessoal * 0.6;
 
     return {
       partyId: p.id,

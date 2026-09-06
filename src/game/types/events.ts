@@ -1,5 +1,6 @@
 import type { PolicyCategory } from './common';
 import type { PolicyImpact, GroupImpact } from './policy';
+import type { SpouseStance } from './president';
 
 export type EventCategory =
   | 'economico'
@@ -49,6 +50,28 @@ export interface EventOption {
    * visita e o próximo acordo vão encontrar.
    */
   diplomacy?: EventDiplomaticEffect;
+  /**
+   * Efeito sobre a família do presidente.
+   *
+   * Existe pela mesma razão que o efeito diplomático existe: quem mora com o
+   * presidente não cabe nos indicadores nacionais. É por aqui que uma escolha
+   * alivia (ou piora) o estresse de quem está em casa, que uma relação começa
+   * durante o mandato e que ela termina.
+   */
+  family?: EventFamilyEffect;
+}
+
+export interface EventFamilyEffect {
+  /** Muda o estresse do cônjuge, em pontos. Negativo alivia. */
+  spouseStressDelta?: number;
+  /** Muda a exposição pública do cônjuge, em pontos. */
+  exposureDelta?: number;
+  /** Redefine a postura pública do cônjuge. */
+  stance?: SpouseStance;
+  /** Começa uma relação: entra um cônjuge na família do presidente. */
+  startRelationship?: { name: string; age: number; occupation: string };
+  /** Encerra a relação em curso. O cônjuge sai da família. */
+  endRelationship?: boolean;
 }
 
 export interface EventDiplomaticEffect {

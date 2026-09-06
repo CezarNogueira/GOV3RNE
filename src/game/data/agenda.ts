@@ -72,6 +72,16 @@ export const AGENDA_ACTIONS: readonly AgendaAction[] = [
     consequence: 'Reduz estresse e devolve energia para o mês seguinte.',
   },
   {
+    id: 'noite_com_conjuge',
+    label: 'Reservar a noite para quem mora com você',
+    description:
+      'Jantar sem assessor, telefone no silencioso, nenhuma pauta. Duas horas que não viram medida nem voto.',
+    cost: 2,
+    energyCost: 2,
+    category: 'pessoal',
+    consequence: 'Derruba de 15 a 30 pontos do estresse do cônjuge — e a segunda noite do mesmo mês vale bem menos.',
+  },
+  {
     id: 'nada',
     label: 'Não fazer nada este mês',
     description: 'O mês passa, a crise anda sozinha e a sua caneta fica guardada.',

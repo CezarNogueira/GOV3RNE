@@ -74,6 +74,17 @@ function isGameStateShape(value: unknown): value is GameState {
 export function migrate(state: GameState): GameState {
   const migrated: GameState = { ...state };
 
+  // Saves anteriores ao medidor de estresse do cônjuge: o campo se chamava
+  // `friction` e media a mesma coisa por outro nome. A conversão é direta, e
+  // quem não tinha nem um nem outro começa em zero.
+  for (const member of migrated.family ?? []) {
+    const legado = member as unknown as { friction?: number };
+    if (typeof member.stress !== 'number') {
+      member.stress = typeof legado.friction === 'number' ? legado.friction : 0;
+    }
+    delete legado.friction;
+  }
+
   if (!migrated.consequences) migrated.consequences = [];
   if (!migrated.posts) migrated.posts = [];
   // Saves anteriores ao registro de decisões: a lista começa vazia e passa a

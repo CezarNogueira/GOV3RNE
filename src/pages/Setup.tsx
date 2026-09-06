@@ -12,6 +12,8 @@ import {
   HAIR_COLORS,
   HAIR_STYLES,
   MAX_PROMISES,
+  CANDIDATE_ORIGIN_LABEL,
+  CANDIDATE_ORIGIN_NOTE,
   MINISTER_POOL,
   MINISTRIES,
   MINISTRY_IDS,
@@ -23,6 +25,8 @@ import {
   SOCIAL_GROUPS,
   STATES,
   VICE_POOL,
+  type CandidateOrigin,
+  type CandidateProfile,
   createSeed,
   formatBRL,
   newGameSchema,
@@ -947,8 +951,63 @@ function StepTicket({
         2030.
       </p>
 
-      <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
-        {VICE_POOL.map((candidate) => (
+      {/* A lista vem dividida por origem, e a divisão não é cosmética: cada
+          grupo entrega uma coisa diferente e cobra outra. Dentro dos quadros de
+          partido, ainda são separados por legenda — é a bancada de cada uma que
+          está sendo comprada ali. */}
+      {VICE_ORIGINS.map((origin) => {
+        const grupo = VICE_POOL.filter((candidate) => candidate.origin === origin);
+        if (grupo.length === 0) return null;
+
+        return (
+          <div key={origin} className="mt-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <p className="label-strong text-gov-400">{CANDIDATE_ORIGIN_LABEL[origin]}</p>
+              <span className="label">{grupo.length} nomes</span>
+            </div>
+            <p className="mt-0.5 text-[11px] leading-snug text-neutral-600">
+              {CANDIDATE_ORIGIN_NOTE[origin]}
+            </p>
+
+            {origin === 'partido'
+              ? partiesOf(grupo).map((party) => (
+                  <div key={party} className="mt-2">
+                    <p className="label">{party}</p>
+                    <ViceGrid
+                      candidates={grupo.filter((candidate) => candidate.party === party)}
+                      draft={draft}
+                      update={update}
+                    />
+                  </div>
+                ))
+              : <ViceGrid candidates={grupo} draft={draft} update={update} />}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+/** As origens na ordem em que aparecem na chapa. */
+const VICE_ORIGINS: readonly CandidateOrigin[] = ['partido', 'independente', 'famoso'];
+
+/** Legendas presentes num grupo, na ordem em que aparecem. */
+function partiesOf(candidates: readonly CandidateProfile[]): string[] {
+  return [...new Set(candidates.map((candidate) => candidate.party))];
+}
+
+function ViceGrid({
+  candidates,
+  draft,
+  update,
+}: {
+  candidates: readonly CandidateProfile[];
+  draft: Draft;
+  update: <K extends keyof Draft>(key: K, value: Draft[K]) => void;
+}) {
+  return (
+      <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
+        {candidates.map((candidate) => (
           <button
             key={candidate.id}
             type="button"
@@ -980,7 +1039,6 @@ function StepTicket({
           </button>
         ))}
       </div>
-    </section>
   );
 }
 
@@ -1082,8 +1140,23 @@ function StepCabinet({
                   <p className="mb-2 text-[11px] leading-snug text-neutral-500">
                     {ministry.description}
                   </p>
+                  {/* Mesma divisão da chapa: quadros de partido primeiro,
+                      depois carreira, independentes e famosos. Dentro dos
+                      quadros de partido, um bloco por legenda. */}
+                  {CABINET_ORIGINS.map((origin) => {
+                    const grupo = MINISTER_POOL.filter((candidate) => candidate.origin === origin);
+                    if (grupo.length === 0) return null;
+
+                    return (
+                      <div key={origin} className="mb-3">
+                        <p className="label-strong text-gov-400">
+                          {CANDIDATE_ORIGIN_LABEL[origin]}
+                        </p>
+                        <p className="mb-1.5 mt-0.5 text-[11px] leading-snug text-neutral-600">
+                          {CANDIDATE_ORIGIN_NOTE[origin]}
+                        </p>
                   <div className="grid gap-1.5 sm:grid-cols-2">
-                    {MINISTER_POOL.map((candidate) => {
+                    {grupo.map((candidate) => {
                       const heldBy = takenBy(candidate.id);
                       const unavailable = heldBy !== undefined && heldBy !== ministry.id;
                       const fits = candidate.fits.length === 0 || candidate.fits.includes(ministry.id);
@@ -1145,6 +1218,9 @@ function StepCabinet({
                       );
                     })}
                   </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </li>
@@ -1154,6 +1230,14 @@ function StepCabinet({
     </section>
   );
 }
+
+/** As origens na ordem em que aparecem no gabinete. */
+const CABINET_ORIGINS: readonly CandidateOrigin[] = [
+  'partido',
+  'tecnico',
+  'independente',
+  'famoso',
+];
 
 const KIND_LABEL: Record<string, string> = {
   tecnico: 'Técnico',
