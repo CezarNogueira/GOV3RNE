@@ -8,6 +8,10 @@ import type { Ministry, MinistryId } from '../types/index';
 export const MINISTRIES: readonly Ministry[] = [
   {
     id: 'casa_civil',
+    tier: 'nucleo',
+    discricionario: 20,
+    capilaridade: 30,
+    moedaDeCoalizao: false,
     name: 'Casa Civil',
     shortName: 'Casa Civil',
     weight: 10,
@@ -18,7 +22,26 @@ export const MINISTRIES: readonly Ministry[] = [
       'Coordena o governo inteiro e filtra o que chega até você. Um titular fraco aqui trava as outras nove pastas.',
   },
   {
+    id: 'sri',
+    tier: 'nucleo',
+    discricionario: 14,
+    capilaridade: 44,
+    moedaDeCoalizao: false,
+    name: 'Secretaria de Relações Institucionais',
+    shortName: 'SRI',
+    weight: 9,
+    budget: 3,
+    dirty: false,
+    categories: ['institucional'],
+    description:
+      'A pasta que conversa com o Congresso todo dia. Orçamento quase nenhum e a maior alavanca do governo: é aqui que emenda vira voto. Titular fraco aqui faz cada votação custar mais caro em dinheiro e em cargo.',
+  },
+  {
     id: 'fazenda',
+    tier: 'nucleo',
+    discricionario: 42,
+    capilaridade: 24,
+    moedaDeCoalizao: false,
     name: 'Ministério da Fazenda',
     shortName: 'Fazenda',
     weight: 10,
@@ -30,6 +53,10 @@ export const MINISTRIES: readonly Ministry[] = [
   },
   {
     id: 'justica',
+    tier: 'estado',
+    discricionario: 40,
+    capilaridade: 52,
+    moedaDeCoalizao: false,
     name: 'Ministério da Justiça e Segurança Pública',
     shortName: 'Justiça',
     weight: 10,
@@ -41,6 +68,10 @@ export const MINISTRIES: readonly Ministry[] = [
   },
   {
     id: 'saude',
+    tier: 'moeda',
+    discricionario: 96,
+    capilaridade: 98,
+    moedaDeCoalizao: true,
     name: 'Ministério da Saúde',
     shortName: 'Saúde',
     weight: 10,
@@ -52,6 +83,10 @@ export const MINISTRIES: readonly Ministry[] = [
   },
   {
     id: 'educacao',
+    tier: 'moeda',
+    discricionario: 88,
+    capilaridade: 94,
+    moedaDeCoalizao: true,
     name: 'Ministério da Educação',
     shortName: 'Educação',
     weight: 9,
@@ -63,6 +98,10 @@ export const MINISTRIES: readonly Ministry[] = [
   },
   {
     id: 'defesa',
+    tier: 'estado',
+    discricionario: 56,
+    capilaridade: 22,
+    moedaDeCoalizao: false,
     name: 'Ministério da Defesa',
     shortName: 'Defesa',
     weight: 9,
@@ -74,6 +113,10 @@ export const MINISTRIES: readonly Ministry[] = [
   },
   {
     id: 'infraestrutura',
+    tier: 'moeda',
+    discricionario: 82,
+    capilaridade: 88,
+    moedaDeCoalizao: true,
     name: 'Ministério da Infraestrutura, Transportes e Energia',
     shortName: 'Infraestrutura',
     weight: 9,
@@ -85,6 +128,10 @@ export const MINISTRIES: readonly Ministry[] = [
   },
   {
     id: 'desenvolvimento_social',
+    tier: 'moeda',
+    discricionario: 92,
+    capilaridade: 96,
+    moedaDeCoalizao: true,
     name: 'Ministério do Desenvolvimento Social e Trabalho',
     shortName: 'Desenvolvimento Social',
     weight: 9,
@@ -96,6 +143,10 @@ export const MINISTRIES: readonly Ministry[] = [
   },
   {
     id: 'agricultura',
+    tier: 'estado',
+    discricionario: 62,
+    capilaridade: 70,
+    moedaDeCoalizao: true,
     name: 'Ministério da Agricultura e Meio Ambiente',
     shortName: 'Agricultura e Meio Ambiente',
     weight: 8,
@@ -107,6 +158,10 @@ export const MINISTRIES: readonly Ministry[] = [
   },
   {
     id: 'relacoes_exteriores',
+    tier: 'estado',
+    discricionario: 14,
+    capilaridade: 6,
+    moedaDeCoalizao: false,
     name: 'Ministério das Relações Exteriores',
     shortName: 'Relações Exteriores',
     weight: 8,
@@ -125,6 +180,7 @@ export const MINISTRY_BY_ID: Record<MinistryId, Ministry> = Object.fromEntries(
 /** Tupla literal: z.enum precisa de tupla, e isso preserva os tipos no schema. */
 export const MINISTRY_IDS = [
   'casa_civil',
+  'sri',
   'fazenda',
   'justica',
   'saude',

@@ -131,6 +131,22 @@ export interface FamilyMember {
 }
 
 export interface PartyProfile {
+  /** Federação partidária a que a legenda pertence, quando houver. */
+  federacao?: string | null;
+  /**
+   * 0-100: o quanto o apoio é comprável com cargo, emenda e obra em vez de
+   * convergência programática. Alto = vende caro e vende sempre.
+   *
+   * Não é o inverso da disciplina: o PT é disciplinado e pouco fisiológico; o
+   * PP é indisciplinado e muito fisiológico; o NOVO é disciplinado e quase
+   * incomprável. São dois eixos, e a negociação usa os dois.
+   */
+  fisiologia?: number;
+  /**
+   * Integra o bloco do centro que controla a Mesa, as comissões e as
+   * relatorias. Sem esses, nada anda; com esses, tudo tem preço.
+   */
+  centrao?: boolean;
   id: string;
   name: string;
   acronym: string;

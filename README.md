@@ -608,6 +608,40 @@ um vice famoso e um gabinete sem nenhum partido começa com **17 deputados** e
 passou a valer: "traz 22 deputados" na tela de montagem agora soma ao apoio do
 bloco daquela legenda, em vez de ser um número decorativo.
 
+### O Congresso como tabuleiro de negociação
+
+Três peças que trabalham juntas.
+
+**A SRI.** A Secretaria de Relações Institucionais é a pasta que conversa com o
+Congresso todo dia, e entrou no gabinete jogável como a 11ª: orçamento de R$ 3
+bi, peso político 9. O titular dela decide quanto uma emenda rende em voto —
+`articulationMultiplier()` em [`congress.ts`](src/game/engines/congress.ts) vai
+de **0,7** (pasta vazia, ninguém sabendo negociar) a **1,35** (quem conhece o
+corredor pelo nome), e multiplica tanto a conversão de emenda em apoio quanto o
+desgaste mensal da base. Os mesmos R$ 14 bi renderam 3,9 pontos de apoio com um
+articulador e 3,2 com um nome sem trânsito; sem titular, o multiplicador cai
+para 0,85 e o governo negocia pior sem parar de negociar.
+
+**Fisiologia e disciplina são dois eixos, não um.** Cada legenda tem os dois: o
+PT é disciplinado (92) e pouco comprável (24); o PP é indisciplinado (40) e
+muito comprável (88); o NOVO é disciplinado (86) e quase incomprável (6). Isso
+decide três coisas ao mesmo tempo — quanto um ministério compra de apoio
+(`12 + fisiologia × 0,34`), quanto custa o voto daquela bancada, e quanto uma
+emenda rende nela. Entregar uma pasta ao PP move a bancada inteira; entregar ao
+PSOL quase não move, porque o apoio deles nunca foi sobre cargo.
+
+**Pasta é moeda com denominação.** Cada ministério tem `tier`, orçamento
+discricionário, capilaridade e `moedaDeCoalizao`. Saúde alcança 98% dos
+municípios e tem dinheiro solto; o Itamaraty alcança 6% e não tem. É por isso
+que o Centrão pede Saúde e nunca pede Cultura — e por que núcleo e pastas de
+agenda não compram apoio nenhum: entregar o núcleo gera desconfiança, entregar a
+de agenda gera revolta na própria base.
+
+**Uma correção que veio junto:** as duas tabelas de bancada somadas davam 90
+senadores e 516 deputados. Um Congresso maior que o Congresso aprova PEC com
+gente que não existe. As cadeiras agora são normalizadas por maiores sobras para
+as 81 e as 513 reais, preservando a ordem de tamanho das bancadas.
+
 ### Devolutiva de cada decisão
 
 Nenhuma ação do presidente termina em silêncio.

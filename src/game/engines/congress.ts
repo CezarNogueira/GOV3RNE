@@ -159,6 +159,28 @@ export function plenaryMultiplier(state: GameState): number {
  * foi efetivamente gasto — não dá para comprar mais apoio do que o Congresso
  * está disposto a vender neste mês.
  */
+/**
+ * A SECRETARIA DE RELAÇÕES INSTITUCIONAIS
+ *
+ * É a pasta que fala com o Congresso todo dia, e o titular dela decide quanto
+ * uma emenda rende em voto. Um articulador experiente entrega o mesmo apoio com
+ * menos dinheiro; um titular desgastado, sem trânsito ou sem pasta ocupada faz
+ * cada votação custar mais caro — em caixa, em cargo e em paciência.
+ *
+ * O multiplicador vai de 0,7 (ninguém sabendo negociar) a 1,35 (quem conhece o
+ * corredor pelo nome). Não é um bônus: é a diferença entre governar com o
+ * Congresso e comprar o Congresso.
+ */
+export function articulationMultiplier(state: GameState): number {
+  const sri = state.government.ministers.find((minister) => minister.ministryId === 'sri');
+  if (!sri) return 0.85;
+
+  const forca =
+    sri.competence * 0.4 + sri.influence * 0.35 + sri.experience * 0.25 - sri.wear * 0.3;
+
+  return round(clamp(0.7 + (forca / 100) * 0.6, 0.7, 1.35), 3);
+}
+
 export function workTheVotes(state: GameState, budget: number, rng: Rng): {
   spent: number;
   gained: number;
@@ -180,6 +202,9 @@ export function workTheVotes(state: GameState, budget: number, rng: Rng): {
     .sort((a, b) => b.chamberSeats - a.chamberSeats)
     .slice(0, 6);
 
+  // Quem senta na SRI decide quanto cada real rende em voto.
+  const articulacao = articulationMultiplier(state);
+
   let spent = 0;
   let gained = 0;
 
@@ -187,7 +212,16 @@ export function workTheVotes(state: GameState, budget: number, rng: Rng): {
     if (spent >= available) break;
     const slice = Math.min(available - spent, bloc.chamberSeats * 0.22 * preset.congressPrice);
     // Retorno decrescente: o segundo bilhão compra menos que o primeiro.
-    const conversion = (slice / (bloc.price / 10 + 1)) * (bloc.discipline / 100) * 2.4;
+    // Dinheiro rende voto onde o apoio é comprável. Numa bancada programática,
+    // a emenda entra e o voto não vem junto — e é isso que faz do PSOL e do
+    // NOVO um problema diferente do PP.
+    const fisiologia = PARTY_BY_ID[bloc.partyId]?.fisiologia ?? 50;
+    const conversion =
+      (slice / (bloc.price / 10 + 1)) *
+      (bloc.discipline / 100) *
+      (0.55 + fisiologia / 125) *
+      2.4 *
+      articulacao;
     const before = bloc.support;
     bloc.support = clamp(bloc.support + conversion + rng.noise(1.2), -100, 100);
     gained += bloc.support - before;
@@ -208,7 +242,13 @@ export function workTheVotes(state: GameState, budget: number, rng: Rng): {
       spent > 0
         ? `R$ ${spent.toFixed(1)} bi em emendas liberados para ${targets.length} bancadas. O apoio subiu ${gained.toFixed(
             1,
-          )} pontos e o Congresso já sabe qual é o seu preço.`
+          )} pontos${
+            articulacao >= 1.15
+              ? ', com a SRI fazendo o dinheiro render mais do que ele vale'
+              : articulacao <= 0.9
+                ? ' — menos do que deveria, porque a articulação com o Congresso está entregue a quem não conhece o corredor'
+                : ''
+          }, e o Congresso já sabe qual é o seu preço.`
         : 'As lideranças ouviram e não se comprometeram.',
   };
 }
@@ -218,9 +258,13 @@ export function processCongress(state: GameState, rng: Rng): number {
   const before = state.congress.goodwill;
   const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
 
+  // A SRI trabalhando segura parte do desgaste natural: é o telefonema que
+  // ninguém vê e que evita a bancada acordar contra o governo.
+  const articulacao = articulationMultiplier(state);
+
   for (const bloc of state.congress.blocs) {
     // Apoio decai naturalmente: o que foi pago no mês passado não vale hoje.
-    const decay = bloc.inGovernment ? 0.6 : 1.4;
+    const decay = (bloc.inGovernment ? 0.6 : 1.4) / articulacao;
     const popularityPull = (state.approval.overall - 48) * 0.09;
     bloc.support = clamp(
       bloc.support - decay * preset.congressPrice + popularityPull + rng.noise(1.1),
@@ -234,7 +278,13 @@ export function processCongress(state: GameState, rng: Rng): number {
   const approvalPull = (state.approval.overall - 48) * 0.14;
 
   state.congress.goodwill = round(
-    clamp100(state.congress.goodwill - 0.8 * preset.congressPrice + approvalPull - pendingPenalty + rng.noise(1)),
+    clamp100(
+      state.congress.goodwill -
+        (0.8 * preset.congressPrice) / articulacao +
+        approvalPull -
+        pendingPenalty +
+        rng.noise(1),
+    ),
     1,
   );
 

@@ -22,7 +22,7 @@ import type {
 import type { NewGameInput } from '../schemas/setup';
 import { MACRO_BASELINE } from '../data/generated/baseline';
 import { STATES, STATE_PROFILE } from '../data/states';
-import { PARTIES, PARTY_BY_ID, TOTAL_CHAMBER_SEATS, TOTAL_SENATE_SEATS } from '../data/parties';
+import { PARTIES, PARTY_BY_ID, TOTAL_CHAMBER_SEATS, TOTAL_SENATE_SEATS, partyKey } from '../data/parties';
 import { MINISTRIES, MINISTRY_IDS } from '../data/ministries';
 import { SOCIAL_GROUPS } from '../data/social-groups';
 import { COUNTRIES, DIPLOMATIC_BLOCS } from '../data/countries';
@@ -445,12 +445,15 @@ function originAffinity(president: President, groupId: string): number {
 function buildCongress(rng: Rng, party: PartyProfile, input: NewGameInput): CongressState {
   const preset = DIFFICULTY_PRESETS[input.difficulty];
   const vice = VICE_POOL.find((candidate) => candidate.id === input.viceId);
-  const viceParty = vice?.party ?? null;
+  const viceParty = partyKey(vice?.party);
 
   // Cargos entregues a partidos na formação do gabinete compram bancada.
-  const cabinetParties = new Set(
+  // O banco de nomes tipa o partido como sigla conhecida; os blocos do
+  // Congresso são indexados por string. O conjunto guarda string para os dois
+  // lados se encontrarem.
+  const cabinetParties = new Set<string>(
     Object.values(input.cabinet)
-      .map((candidateId) => MINISTER_POOL.find((m) => m.id === candidateId)?.party)
+      .map((candidateId) => partyKey(MINISTER_POOL.find((m) => m.id === candidateId)?.party))
       .filter((value): value is string => Boolean(value)),
   );
 
@@ -475,10 +478,16 @@ function buildCongress(rng: Rng, party: PartyProfile, input: NewGameInput): Cong
         .filter((candidate) => candidate?.party === p.id)
         .reduce((total, candidate) => total + (candidate?.seatsBrought ?? 0), 0);
 
+    // Cargo compra apoio na proporção da fisiologia da legenda. Entregar um
+    // ministério ao PP move a bancada inteira; entregar ao PSOL move quase
+    // nada, porque o apoio deles nunca foi sobre cargo. Os dois recebem alguma
+    // coisa: estar no governo é estar no governo.
+    const fisiologia = p.fisiologia ?? 50;
+
     let support = 30 - ideologicalDistance * 0.55;
     if (isPresidentParty) support = 92;
-    if (hasCabinet) support += 34;
-    if (isVice) support += 22;
+    if (hasCabinet) support += 12 + fisiologia * 0.34;
+    if (isVice) support += 8 + fisiologia * 0.2;
     support += pesoPessoal * 0.6;
 
     return {
@@ -487,8 +496,16 @@ function buildCongress(rng: Rng, party: PartyProfile, input: NewGameInput): Cong
       senateSeats: isPresidentParty && party.founded ? party.senateSeats : p.senateSeats,
       support: clamp(support, -100, 100),
       // Partido indisciplinado cobra mais caro por voto: o líder não entrega sozinho.
+      // Preço do voto: indisciplina encarece (o líder não entrega sozinho),
+      // fisiologia encarece (vende porque vender é o negócio) e estar no bloco
+      // do centro encarece mais ainda, porque quem controla a Mesa cobra pela
+      // Mesa.
       price: clamp(
-        (100 - p.discipline) * 0.5 + (isPresidentParty ? -30 : 18) * 1 + p.influence * 0.25,
+        (100 - p.discipline) * 0.5 +
+          (isPresidentParty ? -30 : 18) * 1 +
+          p.influence * 0.25 +
+          fisiologia * 0.25 +
+          (p.centrao ? 8 : 0),
         5,
         95,
       ) * preset.congressPrice,
@@ -655,6 +672,9 @@ function buildBudget(): BudgetLine[] {
 
 function mandatoryShareFor(ministryId: MinistryId): number {
   switch (ministryId) {
+    // Quase tudo discricionário: é orçamento de gabinete, não de programa.
+    case 'sri':
+      return 0.3;
     case 'desenvolvimento_social':
       return 0.94;
     case 'saude':

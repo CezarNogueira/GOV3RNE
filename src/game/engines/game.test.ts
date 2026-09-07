@@ -11,8 +11,9 @@ import { resolveEvent } from './events';
 import { evaluateMandate, snapshotInauguration } from './evaluation';
 import { deserialize, serialize } from './save';
 import { DEFAULT_AVATAR } from '../data/avatar';
-import { MINISTRY_IDS } from '../data/ministries';
+
 import { MINISTER_POOL } from '../data/people';
+import { MINISTRY_IDS } from '../data/ministries';
 import { Rng } from '../utils/rng';
 
 /**
@@ -66,7 +67,7 @@ describe('criação de partida', () => {
     expect(state.party.acronym).toBe('PSD');
     expect(state.states).toHaveLength(27);
     expect(state.socialGroups).toHaveLength(17);
-    expect(state.government.ministers).toHaveLength(10);
+    expect(state.government.ministers).toHaveLength(MINISTRY_IDS.length);
     expect(state.promises).toHaveLength(5);
     expect(state.programs.length).toBeGreaterThan(0);
   });

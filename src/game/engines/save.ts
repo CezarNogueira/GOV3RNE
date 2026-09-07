@@ -1,3 +1,4 @@
+import { MINISTRY_BY_ID } from '../data/ministries';
 import type { GameState, SaveSlotMeta } from '../types/index';
 import { GAME_STATE_VERSION } from './setup';
 import { INSTRUMENT_RULES } from './policy';
@@ -83,6 +84,26 @@ export function migrate(state: GameState): GameState {
       member.stress = typeof legado.friction === 'number' ? legado.friction : 0;
     }
     delete legado.friction;
+  }
+
+  // A SRI entrou depois: save antigo tem dez pastas e nenhuma articulação
+  // formal com o Congresso. A pasta é criada vazia — sem titular, ela vale o
+  // multiplicador mínimo, que é exatamente o que um governo sem articulador
+  // deve sentir até nomear alguém.
+  if (migrated.budget && !migrated.budget.some((line) => line.ministryId === 'sri')) {
+    const pasta = MINISTRY_BY_ID.sri;
+    migrated.budget = [
+      ...migrated.budget,
+      {
+        id: 'budget_sri',
+        ministryId: 'sri',
+        label: pasta.shortName,
+        allocated: pasta.budget,
+        mandatoryShare: 0.3,
+        execution: 0,
+        origin: 'estimado' as const,
+      },
+    ];
   }
 
   if (!migrated.consequences) migrated.consequences = [];

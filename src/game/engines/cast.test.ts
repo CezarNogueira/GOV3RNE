@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, type GameState } from './index';
-import { MINISTER_POOL, VICE_POOL } from '../data/people';
+import { CAUCUSES, MINISTER_POOL, VICE_POOL } from '../data/people';
+import { PARTY_BY_ID, partyKey } from '../data/parties';
+import { MINISTRY_IDS } from '../data/ministries';
 import { newGameSchema } from '../schemas/setup';
 import { MINISTRY_IDS } from '../data/ministries';
 import { DEFAULT_AVATAR } from '../data/avatar';
@@ -108,5 +110,70 @@ describe('a escolha custa alguma coisa', () => {
     } else {
       expect(apoio(comPesado, pesado.party)).toBeGreaterThan(apoio(comLeve, pesado.party));
     }
+  });
+});
+
+/**
+ * O BANCO DE NOMES E O TABULEIRO PRECISAM FALAR A MESMA LÍNGUA
+ *
+ * Quem escreve o banco de nomes escreve a sigla como ela é falada; o Congresso
+ * do jogo usa a chave que já estava lá. Quando as duas divergem, nada quebra e
+ * nada avisa: o vice entra na chapa, a tela mostra a bancada que ele traz, e na
+ * largada nenhum bloco recebe apoio nenhum. Este teste é o alarme que faltava.
+ */
+describe('siglas do banco de nomes batem com os blocos do Congresso', () => {
+  it('resolve o partido de todo vice em um bloco existente', () => {
+    for (const candidate of VICE_POOL) {
+      if (candidate.origin !== 'partido') continue;
+      const chave = partyKey(candidate.party);
+      expect(
+        PARTY_BY_ID[chave ?? ''],
+        `${candidate.name} é do ${candidate.party}, que não existe no Congresso do jogo`,
+      ).toBeTruthy();
+    }
+  });
+
+  it('resolve o partido de todo ministro partidário', () => {
+    for (const candidate of MINISTER_POOL) {
+      if (!candidate.party) continue;
+      const chave = partyKey(candidate.party);
+      expect(
+        PARTY_BY_ID[chave ?? ''],
+        `${candidate.name} é do ${candidate.party}, que não existe no Congresso do jogo`,
+      ).toBeTruthy();
+    }
+  });
+
+  it('não deixa ninguém prometer mais bancada do que a legenda tem', () => {
+    for (const candidate of VICE_POOL) {
+      const bloco = PARTY_BY_ID[partyKey(candidate.party) ?? ''];
+      if (!bloco) continue;
+      // Ninguém entrega o partido inteiro: o nome traz o grupo que responde a
+      // ele, e esse grupo cabe dentro da bancada da legenda.
+      expect(candidate.seatsBrought).toBeLessThanOrEqual(bloco.chamberSeats);
+      expect(candidate.senateSeatsBrought ?? 0).toBeLessThanOrEqual(bloco.senateSeats);
+    }
+  });
+
+  it('só cita frentes parlamentares que existem', () => {
+    const conhecidas = new Set(CAUCUSES.map((frente) => frente.id));
+    for (const candidate of VICE_POOL) {
+      for (const frente of candidate.caucuses ?? []) {
+        expect(conhecidas.has(frente)).toBe(true);
+      }
+    }
+  });
+
+  it('só oferece a ministros pastas que o gabinete jogável realmente monta', () => {
+    // A Esplanada ampliada tem 33 pastas; o gabinete que o jogo monta tem dez.
+    // Um nome cujo `fits` só aponta para pastas fora dessas dez nunca aparece
+    // recomendado em lugar nenhum — o que é aceitável, mas não pode ser
+    // acidente: aqui fica registrado quantos são.
+    const jogaveis = new Set<string>(MINISTRY_IDS);
+    const semPastaJogavel = MINISTER_POOL.filter(
+      (candidate) =>
+        candidate.fits.length > 0 && !candidate.fits.some((pasta) => jogaveis.has(pasta)),
+    );
+    expect(semPastaJogavel.length).toBeLessThan(MINISTER_POOL.length);
   });
 });

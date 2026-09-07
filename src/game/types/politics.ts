@@ -1,6 +1,19 @@
 import type { IdeologyVector, PolicyCategory, Region } from './common';
 
+/**
+ * As pastas que existem no jogo.
+ *
+ * A união é maior do que o gabinete que o motor simula. As dez primeiras são as
+ * pastas que o presidente monta, que têm linha de orçamento e que o resto da
+ * simulação lê; as demais existem porque a NEGOCIAÇÃO com o Congresso acontece
+ * sobre a Esplanada inteira — é a diferença entre pedir "um ministério" e pedir
+ * Cidades, que é onde mora a emenda. Ver ESPLANADA, em `data/people.ts`.
+ *
+ * Enquanto o gabinete jogável não for ampliado, uma pasta fora das dez pode ser
+ * moeda de negociação e alvo de indicação, mas não vira linha de orçamento.
+ */
 export type MinistryId =
+  // --- Gabinete jogável: têm orçamento, titular e efeito na simulação --------
   | 'casa_civil'
   | 'fazenda'
   | 'justica'
@@ -10,7 +23,63 @@ export type MinistryId =
   | 'infraestrutura'
   | 'desenvolvimento_social'
   | 'agricultura'
-  | 'relacoes_exteriores';
+  | 'relacoes_exteriores'
+  // --- Núcleo de poder ------------------------------------------------------
+  | 'planejamento'
+  | 'sri'
+  | 'secom'
+  | 'gsi'
+  // --- Estado ---------------------------------------------------------------
+  | 'agu'
+  | 'cgu'
+  // --- Sociais --------------------------------------------------------------
+  | 'trabalho'
+  | 'previdencia'
+  // --- Máquina de obra e emenda ---------------------------------------------
+  | 'transportes'
+  | 'cidades'
+  | 'integracao_regional'
+  | 'minas_energia'
+  | 'portos_aeroportos'
+  | 'comunicacoes'
+  // --- Setoriais ------------------------------------------------------------
+  | 'desenvolvimento_agrario'
+  | 'meio_ambiente'
+  | 'mdic'
+  | 'ciencia_tecnologia'
+  | 'turismo'
+  | 'cultura'
+  | 'esporte'
+  // --- Pastas de agenda -----------------------------------------------------
+  | 'direitos_humanos'
+  | 'igualdade_racial'
+  | 'mulheres'
+  | 'povos_indigenas';
+
+/**
+ * Frentes parlamentares.
+ *
+ * Cortam os partidos na transversal: a ruralista tem mais deputados que
+ * qualquer legenda e eles estão espalhados por todas elas, inclusive dentro da
+ * base do governo. Ver CAUCUSES, em `data/people.ts`.
+ */
+export type CaucusId =
+  | 'ruralista'
+  | 'evangelica'
+  | 'bala'
+  | 'saude'
+  | 'sindical'
+  | 'empresarial';
+
+/**
+ * O que a pasta é numa negociação.
+ *
+ *   nucleo   entregar a um partido é perder o controle do governo;
+ *   estado   exige nome de currículo, e errar aqui custa caro;
+ *   moeda    orçamento e capilaridade — é o que o Centrão vem buscar;
+ *   agenda   orçamento pequeno e custo simbólico alto nos dois sentidos.
+ */
+export type MinistryTier = 'nucleo' | 'estado' | 'moeda' | 'agenda';
 
 export interface Ministry {
   id: MinistryId;
@@ -24,6 +93,27 @@ export interface Ministry {
   dirty: boolean;
   categories: PolicyCategory[];
   description: string;
+
+  /** O que a pasta representa numa negociação com o Congresso. */
+  tier: MinistryTier;
+  /**
+   * Volume de recurso DISCRICIONÁRIO, 0-100.
+   *
+   * Não é o mesmo que `budget`: uma pasta pode ter orçamento gigante e quase
+   * nada de discricionário, porque tudo já está carimbado. O que se negocia é
+   * a parte que sobra, e é por ela que os partidos brigam.
+   */
+  discricionario: number;
+  /** Capilaridade: quantos municípios a pasta alcança diretamente, 0-100. */
+  capilaridade: number;
+  /**
+   * Entregar esta pasta a um partido compra apoio de verdade?
+   *
+   * Pasta de núcleo e de agenda não compram: entregar o núcleo gera
+   * desconfiança, e entregar a de agenda gera revolta na própria base. É por
+   * isso que o Centrão pede Saúde e Cidades, e nunca pede Cultura.
+   */
+  moedaDeCoalizao: boolean;
 }
 
 export interface Minister {
@@ -91,8 +181,17 @@ export interface CandidateProfile {
   ambitious: boolean;
   bio: string;
   hook: string;
-  /** Bancada que o nome arrasta para a base. */
+  /**
+   * Bancada que o nome arrasta pessoalmente para a base, na Câmara.
+   *
+   * Não é a bancada da legenda: é o grupo que responde a esta pessoa dentro
+   * dela. Ninguém entrega o partido inteiro.
+   */
   seatsBrought: number;
+  /** O mesmo, no Senado. */
+  senateSeatsBrought?: number;
+  /** Frentes parlamentares em que este nome tem trânsito. */
+  caucuses?: readonly CaucusId[];
 }
 
 export type ChamberId = 'camara' | 'senado';

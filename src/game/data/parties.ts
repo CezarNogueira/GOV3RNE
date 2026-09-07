@@ -1,5 +1,6 @@
 import type { PartyProfile, PolicyCategory, Region } from '../types/index';
 import { PARTY_SEATS } from './generated/baseline';
+import { PARTIES as CONGRESS_PARTIES } from './people';
 
 /**
  * AVISO IMPORTANTE
@@ -413,34 +414,135 @@ const SEEDS: readonly PartySeed[] = [
   },
 ];
 
-export const PARTIES: readonly PartyProfile[] = SEEDS.map((seed) => ({
-  id: seed.key,
-  name: seed.name,
-  acronym: seed.acronym,
-  color: seed.color,
-  ideology: {
-    economic: seed.economic,
-    social: seed.social,
-    institutional: seed.institutional,
-  },
-  chamberSeats: PARTY_SEATS[seed.key] ?? 0,
-  senateSeats: seed.senateSeats,
-  influence: seed.influence,
-  popularity: seed.popularity,
-  discipline: seed.discipline,
-  socialBase: seed.socialBase,
-  priorities: seed.priorities,
-  regionalStrength: seed.regionalStrength,
-  founded: false,
-  description: seed.description,
-}));
+export const TOTAL_CHAMBER_SEATS = 513;
+export const TOTAL_SENATE_SEATS = 81;
+
+/**
+ * CONCILIAÇÃO DE SIGLAS
+ *
+ * O banco de nomes escreve a sigla como ela é falada; os blocos do Congresso
+ * usam a chave que já estava no jogo. Onde as duas divergem, o vice do União
+ * Brasil entraria na chapa sem que bloco nenhum recebesse o apoio dele — o
+ * ganho apareceria na tela de montagem e sumiria na largada.
+ *
+ * Este mapa é o ponto único onde as duas grafias se encontram. Sigla que não
+ * está aqui já bate.
+ */
+const PARTY_ALIASES: Readonly<Record<string, string>> = {
+  UNIAO: 'UNIÃO',
+  PODEMOS: 'PODE',
+  PCDOB: 'PCdoB',
+};
+
+/** A chave do bloco no Congresso para uma sigla escrita em qualquer grafia. */
+export function partyKey(acronym: string | null | undefined): string | null {
+  if (!acronym) return null;
+  return PARTY_ALIASES[acronym] ?? acronym;
+}
+
+/**
+ * O PERFIL DE NEGOCIAÇÃO, VINDO DO BANCO DE BANCADAS
+ *
+ * `people.ts` guarda a leitura da 57ª legislatura: federação, disciplina,
+ * fisiologia e quem está no bloco do centro. Aqui essas colunas se juntam à
+ * tabela de simulação que já existia, em vez de virarem um segundo cadastro de
+ * partidos discordando do primeiro.
+ *
+ * O encontro é pela sigla, com `partyKey` conciliando as duas grafias.
+ */
+const NEGOTIATION_PROFILE = new Map(
+  CONGRESS_PARTIES.map((party) => [partyKey(party.id) ?? party.id, party]),
+);
+
+/**
+ * CADEIRAS NORMALIZADAS PARA AS CASAS QUE EXISTEM
+ *
+ * As duas tabelas juntas somavam 90 senadores e 516 deputados: uma conta o
+ * senador pela legenda dele, a outra pelo registro na Casa, e três legendas só
+ * existem em uma delas. Somadas, produziam um Congresso maior que o Congresso.
+ *
+ * Sem esta normalização, a base do governo podia passar do tamanho da Casa — e
+ * uma PEC seria aprovada por parlamentares que não existem.
+ */
+function apportion(
+  values: readonly { key: string; valor: number }[],
+  total: number,
+): Record<string, number> {
+  const soma = values.reduce((acumulado, entrada) => acumulado + entrada.valor, 0);
+  if (soma === 0) return {};
+
+  // Maiores sobras: cada legenda fica com a parte inteira e as cadeiras que
+  // sobram vão para quem tem a maior fração, na ordem.
+  const escalado = values.map((entrada) => {
+    const exato = (entrada.valor * total) / soma;
+    const inteiro = Math.floor(exato);
+    return { key: entrada.key, inteiro, resto: exato - inteiro };
+  });
+
+  let distribuidas = escalado.reduce((acumulado, entrada) => acumulado + entrada.inteiro, 0);
+  const porResto = [...escalado].sort((a, b) => b.resto - a.resto);
+  let indice = 0;
+  while (distribuidas < total && porResto.length > 0) {
+    const alvo = porResto[indice % porResto.length]!;
+    alvo.inteiro += 1;
+    distribuidas += 1;
+    indice += 1;
+  }
+
+  return Object.fromEntries(escalado.map((entrada) => [entrada.key, entrada.inteiro]));
+}
+
+const SENATE_BY_KEY = apportion(
+  SEEDS.map((seed) => ({
+    key: seed.key,
+    valor: NEGOTIATION_PROFILE.get(seed.key)?.seatsSenado ?? seed.senateSeats,
+  })),
+  TOTAL_SENATE_SEATS,
+);
+
+const CHAMBER_BY_KEY = apportion(
+  SEEDS.map((seed) => ({
+    key: seed.key,
+    valor: NEGOTIATION_PROFILE.get(seed.key)?.seatsCamara ?? PARTY_SEATS[seed.key] ?? 0,
+  })),
+  TOTAL_CHAMBER_SEATS,
+);
+
+export const PARTIES: readonly PartyProfile[] = SEEDS.map((seed) => {
+  const perfil = NEGOTIATION_PROFILE.get(seed.key);
+
+  return {
+    id: seed.key,
+    name: seed.name,
+    acronym: seed.acronym,
+    color: seed.color,
+    ideology: {
+      economic: seed.economic,
+      social: seed.social,
+      institutional: seed.institutional,
+    },
+    chamberSeats: CHAMBER_BY_KEY[seed.key] ?? 0,
+    senateSeats: SENATE_BY_KEY[seed.key] ?? seed.senateSeats,
+    influence: seed.influence,
+    popularity: seed.popularity,
+    discipline: perfil?.disciplina ?? seed.discipline,
+    // Legenda fora do banco de bancadas cai num meio-termo: nem programática
+    // nem vendida, que é o mais honesto a dizer sobre quem não foi medido.
+    fisiologia: perfil?.fisiologia ?? 50,
+    centrao: perfil?.centrao ?? false,
+    federacao: perfil?.federacao ?? null,
+    socialBase: seed.socialBase,
+    priorities: seed.priorities,
+    regionalStrength: seed.regionalStrength,
+    founded: false,
+    description: seed.description,
+  };
+});
 
 export const PARTY_BY_ID: Record<string, PartyProfile> = Object.fromEntries(
   PARTIES.map((party) => [party.id, party]),
 );
 
-export const TOTAL_CHAMBER_SEATS = 513;
-export const TOTAL_SENATE_SEATS = 81;
 
 /** Paleta oferecida a quem funda o próprio partido. */
 export const PARTY_COLOR_OPTIONS: readonly string[] = [
