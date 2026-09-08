@@ -157,8 +157,13 @@ export function Nacao() {
               </Section>
 
               <Section title="Ranking estadual" dense>
-                <p className="py-2 text-[11px] text-neutral-600">
-                  Ordenado por aprovação do governo federal.
+                <p className="py-2 text-[11px] leading-snug text-neutral-600">
+                  Ordenado por aprovação do governo federal. A aprovação nacional de{' '}
+                  <span className="font-mono text-neutral-400">
+                    {state.approval.overall.toFixed(1)}%
+                  </span>{' '}
+                  é a média destes 27 números ponderada por população — São Paulo e Roraima não
+                  pesam igual. Estado acima da linha nacional aparece em verde.
                 </p>
                 {[...state.states]
                   .sort((a, b) => b.approval - a.approval)
@@ -182,14 +187,17 @@ export function Nacao() {
                           animate={false}
                         />
                       </span>
+                      {/* A cor compara com o PAÍS, não com uma régua fixa: 46%
+                          num governo de 40% é um bom estado, e num governo de
+                          55% é um problema. */}
                       <span
                         className={cx(
                           'w-9 shrink-0 text-right font-mono text-[11px]',
-                          unit.approval >= 55
+                          unit.approval >= state.approval.overall + 1
                             ? 'text-gov-400'
-                            : unit.approval >= 42
-                              ? 'text-warn-400'
-                              : 'text-danger-400',
+                            : unit.approval <= state.approval.overall - 1
+                              ? 'text-danger-400'
+                              : 'text-neutral-400',
                         )}
                       >
                         {unit.approval.toFixed(0)}%

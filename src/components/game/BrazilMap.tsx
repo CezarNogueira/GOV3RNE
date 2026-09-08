@@ -91,6 +91,24 @@ function colorFor(value: number, metric: MapMetric): string {
   return RAMP[index] as string;
 }
 
+/**
+ * A MÉDIA QUE O MAPA MOSTRA.
+ *
+ * Ponderada por população, porque é assim que a aprovação nacional é formada:
+ * São Paulo e Roraima não pesam igual numa pesquisa. É esta conta que faz o
+ * número do mapa e o número da manchete serem o mesmo número — sem ela, o
+ * jogador via 27 estados acima de 50 e uma média nacional de 39 sem nenhuma
+ * explicação possível.
+ */
+function nationalAverage(states: FederalUnit[], metric: MapMetric): number {
+  const population = states.reduce((total, unit) => total + unit.population, 0);
+  if (population === 0) return 0;
+  return (
+    states.reduce((total, unit) => total + readMetric(unit, metric) * unit.population, 0) /
+    population
+  );
+}
+
 export function BrazilMap({
   states,
   metric = 'approval',
@@ -108,6 +126,7 @@ export function BrazilMap({
 }) {
   const [hovered, setHovered] = useState<FederalUnit | null>(null);
   const config = METRIC_CONFIG[metric];
+  const national = useMemo(() => nationalAverage(states, metric), [states, metric]);
 
   const byId = useMemo(
     () => Object.fromEntries(states.map((unit) => [unit.id, unit])),
@@ -198,12 +217,28 @@ export function BrazilMap({
               <p className="font-mono text-sm text-neutral-100">
                 {config.format(readMetric(hovered, metric))}
               </p>
+              {/* Um número sozinho não se lê: o que importa é a distância dele
+                  para o país. */}
+              <p
+                className={cx(
+                  'font-mono text-[11px]',
+                  gapTone(readMetric(hovered, metric) - national, config.lowerIsBetter),
+                )}
+              >
+                {formatGap(readMetric(hovered, metric) - national)} vs. país
+              </p>
             </div>
           </>
         ) : (
-          <p className="text-[12px] text-neutral-600">
-            Passe o cursor sobre um estado{onSelect ? ' ou clique para ver o painel completo' : ''}.
-          </p>
+          <>
+            <p className="text-[12px] text-neutral-600">
+              Passe o cursor sobre um estado{onSelect ? ' ou clique para ver o painel completo' : ''}.
+            </p>
+            <div className="shrink-0 text-right">
+              <p className="label">Média do país</p>
+              <p className="font-mono text-sm text-neutral-100">{config.format(national)}</p>
+            </div>
+          </>
         )}
       </div>
 
@@ -229,6 +264,18 @@ function MapLegend({ metric }: { metric: MapMetric }) {
       </span>
     </div>
   );
+}
+
+/** "+3,2 p.p." / "-1,8 p.p." — sempre com sinal, para ler de relance. */
+function formatGap(gap: number): string {
+  if (Math.abs(gap) < 0.05) return 'na média';
+  return `${gap > 0 ? '+' : '−'}${Math.abs(gap).toFixed(1)} p.p.`;
+}
+
+function gapTone(gap: number, lowerIsBetter?: boolean): string {
+  if (Math.abs(gap) < 0.05) return 'text-neutral-500';
+  const good = lowerIsBetter ? gap < 0 : gap > 0;
+  return good ? 'text-gov-400' : 'text-danger-400';
 }
 
 export const MAP_METRICS: { id: MapMetric; label: string }[] = [

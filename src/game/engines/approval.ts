@@ -2,6 +2,7 @@ import type { GameState, Region } from '../types/index';
 import { REGIONS } from '../types/common';
 import { DIFFICULTY_PRESETS } from '../data/difficulty';
 import { TOTAL_CHAMBER_SEATS } from '../data/parties';
+import { spreadApproval } from './social';
 import { Rng } from '../utils/rng';
 import { approach, clamp, clamp100, round, weightedAverage } from '../utils/math';
 
@@ -79,25 +80,66 @@ export function calculateApproval(state: GameState, rng: Rng): number {
   state.president.personalApproval = state.approval.personal;
 
   // ---------------------------------------------------- 7. Por região
-  for (const region of REGIONS) {
+  // A região é a aprovação NACIONAL vista de perto, não uma segunda medição.
+  // Cada uma desvia do país pela realidade dela — pobreza, desemprego e o
+  // quanto o gasto social chega ali —, e os desvios são recentrados por
+  // população para somarem zero. É esse recentramento que mantém a média
+  // ponderada das regiões igual ao número nacional em vez de deixar as duas
+  // contas correrem soltas uma da outra.
+  const socialSpend = state.programs
+    .filter((program) => program.active && program.category === 'social')
+    .reduce((total, program) => total + program.monthlyCost, 0);
+
+  const tilts = REGIONS.map((region) => {
+    const regionStates = state.states.filter((unit) => unit.region === region);
+    if (regionStates.length === 0) return { region, tilt: 0, population: 0 };
+
+    const population = regionStates.reduce((total, unit) => total + unit.population, 0);
+    const povertyAverage =
+      regionStates.reduce((total, unit) => total + unit.poverty, 0) / regionStates.length;
+    const unemploymentAverage =
+      regionStates.reduce((total, unit) => total + unit.unemployment, 0) / regionStates.length;
+
+    return {
+      region,
+      population,
+      // Região pobre sente mais o programa social; região com desemprego acima
+      // do país cobra mais caro do governo.
+      tilt:
+        ((povertyAverage - 27) / 12) * (socialSpend - 18) * 0.09 -
+        (unemploymentAverage - state.economy.unemployment) * 1.1,
+    };
+  });
+
+  const totalPopulation = tilts.reduce((total, entry) => total + entry.population, 0);
+  const meanTilt =
+    totalPopulation > 0
+      ? tilts.reduce((total, entry) => total + entry.tilt * entry.population, 0) / totalPopulation
+      : 0;
+
+  for (const { region, tilt } of tilts) {
     const regionStates = state.states.filter((unit) => unit.region === region);
     if (regionStates.length === 0) continue;
 
-    const localAverage =
-      regionStates.reduce((total, unit) => total + unit.approval, 0) / regionStates.length;
-    // Região mais pobre sente mais o programa social e menos o juro.
-    const povertyAverage =
-      regionStates.reduce((total, unit) => total + unit.poverty, 0) / regionStates.length;
-    const socialSpend = state.programs
-      .filter((program) => program.active && program.category === 'social')
-      .reduce((total, program) => total + program.monthlyCost, 0);
-    const socialTilt = ((povertyAverage - 27) / 12) * (socialSpend - 18) * 0.09;
+    // O desvio é que se move devagar, não o nível: quando a aprovação nacional
+    // cai, as cinco regiões caem junto no mesmo mês, mantendo entre si a
+    // distância que a realidade local justifica.
+    //
+    // O desvio é medido contra a aprovação de ONTEM, não contra a de hoje. Com
+    // a de hoje, a queda do mês entrava no desvio e só era devolvida a 30% ao
+    // mês — um governo perdendo dois pontos por mês estabilizava com as
+    // regiões seis pontos abaixo do país sem que nada regional tivesse
+    // acontecido. Era daí que vinha o mapa inteiro discordando da manchete.
+    const previous = state.approval.byRegion[region] - before;
+    const deviation = approach(previous, tilt - meanTilt, 0.3);
 
-    state.approval.byRegion[region] = round(
-      clamp100(approach(state.approval.byRegion[region], localAverage + socialTilt, 0.3)),
-      1,
-    );
+    state.approval.byRegion[region] = round(clamp100(state.approval.overall + deviation), 1);
   }
+
+  // Com a régua nacional e as regionais fechadas, os 27 estados se posicionam
+  // dentro delas. A ordem importa: país, região, estado — nessa direção, e não
+  // cada um por si.
+  spreadApproval(state, rng);
 
   // ---------------------------------------------------- 8. Por grupo
   for (const group of state.socialGroups) {
@@ -145,8 +187,16 @@ export function nudgeApproval(state: GameState, delta: number, regionBias?: Regi
   state.approval.overall = round(clamp100(state.approval.overall + capped), 1);
   state.approval.personal = round(clamp100(state.approval.personal + capped * 0.7), 1);
 
+  // Viés regional REDISTRIBUI o efeito, não o encolhe. Os pesos precisam somar
+  // o número de regiões: com 1,8 na região visada e 0,5 nas outras quatro, a
+  // média dava 0,76 e cada evento com endereço deixava as cinco regiões um
+  // pouco abaixo do número nacional. Repetido por um mandato, era o buraco de
+  // nove pontos entre o mapa e a manchete.
+  const focused = 1.8;
+  const others = (REGIONS.length - focused) / (REGIONS.length - 1);
+
   for (const region of REGIONS) {
-    const weight = regionBias ? (region === regionBias ? 1.8 : 0.5) : 1;
+    const weight = regionBias ? (region === regionBias ? focused : others) : 1;
     state.approval.byRegion[region] = round(
       clamp100(state.approval.byRegion[region] + capped * weight),
       1,

@@ -1,4 +1,5 @@
 import type { GameState, SocialGroup, SocialSensitivity } from '../types/index';
+import { REGIONS } from '../types/common';
 import { DIFFICULTY_PRESETS } from '../data/difficulty';
 import { Rng } from '../utils/rng';
 import { approach, clamp, clamp100, round } from '../utils/math';
@@ -228,6 +229,63 @@ export function processNation(state: GameState, rng: Rng): void {
   );
 }
 
+/**
+ * A APROVAÇÃO NACIONAL VISTA DE PERTO
+ *
+ * O número do país e o número do mapa mediam a mesma coisa por dois caminhos
+ * que não se falavam: o nacional saía da média dos grupos sociais, e o estadual
+ * perseguia a média regional, que por sua vez perseguia a média dos estados.
+ * Dois laços fechados, cada um com equilíbrio próprio — dava para ter os 27
+ * estados acima de 50 e uma média nacional de 39, o que não é leitura difícil,
+ * é leitura errada.
+ *
+ * Agora existe uma hierarquia só: o país define o nível, a região desvia dele
+ * pela realidade regional e o estado desvia da região pela realidade local. Os
+ * desvios são RECENTRADOS, ponderados por população, para somarem zero dentro
+ * de cada região — é isso que garante que a média ponderada dos 27 estados
+ * volte a ser a aprovação nacional, e não um segundo número solto.
+ */
+export function spreadApproval(state: GameState, rng: Rng): void {
+  const eco = state.economy;
+
+  for (const region of REGIONS) {
+    const units = state.states.filter((unit) => unit.region === region);
+    if (units.length === 0) continue;
+
+    const regional = state.approval.byRegion[region];
+
+    // Desvio bruto de cada estado em relação à própria região: desemprego e
+    // pobreza acima da média do país puxam para baixo, governador aliado puxa
+    // para cima.
+    const desvios = units.map((unit) => ({
+      unit,
+      valor:
+        -((unit.unemployment - eco.unemployment) * 1.2) -
+        (unit.poverty - state.nation.povertyRate) * 0.18 +
+        (unit.governorRelation - 50) * 0.08,
+    }));
+
+    // Recentragem: a soma ponderada dos desvios dentro da região é zero. Sem
+    // ela, um mês em que todos os governadores estivessem bem com o Planalto
+    // levantaria os 27 estados de uma vez sem levantar o país.
+    const populacao = units.reduce((total, unit) => total + unit.population, 0);
+    const media =
+      populacao > 0
+        ? desvios.reduce((total, entrada) => total + entrada.valor * entrada.unit.population, 0) /
+          populacao
+        : 0;
+
+    for (const { unit, valor } of desvios) {
+      const alvo = regional + (valor - media);
+      // Pesquisa estadual demora mais que a nacional, mas não pode demorar
+      // meio mandato: a 0,22 o mapa levava cinco meses para alcançar uma
+      // virada do país e o jogador via os dois números discordando o tempo
+      // todo. A 0,38 ele acompanha em dois meses e ainda parece pesquisa.
+      unit.approval = round(clamp100(approach(unit.approval, alvo, 0.38) + rng.noise(0.5)), 1);
+    }
+  }
+}
+
 /** Propaga os indicadores nacionais para as 27 unidades da federação. */
 export function processStates(state: GameState, rng: Rng): void {
   const eco = state.economy;
@@ -259,15 +317,6 @@ export function processStates(state: GameState, rng: Rng): void {
       clamp100(
         approach(unit.infrastructure, state.nation.infrastructureIndex * (unit.infrastructure / 55), 0.04),
       ),
-      1,
-    );
-
-    // Aprovação estadual: aprovação nacional corrigida pela realidade local.
-    const regionalApproval = state.approval.byRegion[unit.region];
-    const localPenalty = (unit.unemployment - eco.unemployment) * 1.2 + (unit.poverty - state.nation.povertyRate) * 0.18;
-    const governorEffect = (unit.governorRelation - 50) * 0.08;
-    unit.approval = round(
-      clamp100(approach(unit.approval, regionalApproval - localPenalty + governorEffect, 0.22) + rng.noise(0.8)),
       1,
     );
 
