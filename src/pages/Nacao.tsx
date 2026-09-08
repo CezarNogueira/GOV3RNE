@@ -5,6 +5,7 @@ import {
   REGION_LABEL,
   formatCompact,
   type FederalUnit,
+  type GameState,
 } from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader, TabBar } from '@/components/layout/PageHeader';
@@ -148,9 +149,13 @@ export function Nacao() {
                   </div>
                 }
               >
+                {/* Cada métrica tem um número nacional oficial em outro lugar
+                    da interface. O mapa mostra AQUELE número, para as duas
+                    telas nunca contarem histórias diferentes. */}
                 <BrazilMap
                   states={state.states}
                   metric={metric}
+                  reference={nationalReference(state, metric)}
                   onSelect={setSelected}
                   selectedId={selected?.id ?? null}
                 />
@@ -548,3 +553,25 @@ const TONE_BADGE: Record<string, 'gov' | 'warn' | 'danger' | 'neutral'> = {
   neutra: 'neutral',
   critica: 'danger',
 };
+
+/**
+ * O número nacional de cada métrica, na fonte onde ele já existe.
+ *
+ * A aprovação vem do motor de aprovação; desemprego, da economia; pobreza e IDH,
+ * dos indicadores nacionais. A insatisfação não tem número nacional próprio —
+ * ali a média dos estados é a melhor resposta, e o mapa a calcula sozinho.
+ */
+function nationalReference(state: GameState, metric: MapMetric): number | undefined {
+  switch (metric) {
+    case 'approval':
+      return state.approval.overall;
+    case 'unemployment':
+      return state.economy.unemployment;
+    case 'poverty':
+      return state.nation.povertyRate;
+    case 'hdi':
+      return state.nation.hdi;
+    default:
+      return undefined;
+  }
+}

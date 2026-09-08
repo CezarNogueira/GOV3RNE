@@ -112,6 +112,7 @@ function nationalAverage(states: FederalUnit[], metric: MapMetric): number {
 export function BrazilMap({
   states,
   metric = 'approval',
+  reference,
   onSelect,
   selectedId,
   showLabels = true,
@@ -119,6 +120,16 @@ export function BrazilMap({
 }: {
   states: FederalUnit[];
   metric?: MapMetric;
+  /**
+   * O número nacional daquela métrica, vindo de quem manda nele.
+   *
+   * O mapa sabe calcular a média dos 27 estados, e a calcula quando ninguém
+   * informa nada. Mas quando existe um número oficial na tela — a aprovação do
+   * governo no topo do painel, por exemplo — é ELE que aparece aqui. Dois
+   * números para a mesma coisa, cada um com a sua conta, é como o painel
+   * marcava 39% com o mapa dizendo 53%.
+   */
+  reference?: number;
   onSelect?: (state: FederalUnit) => void;
   selectedId?: string | null;
   showLabels?: boolean;
@@ -126,7 +137,8 @@ export function BrazilMap({
 }) {
   const [hovered, setHovered] = useState<FederalUnit | null>(null);
   const config = METRIC_CONFIG[metric];
-  const national = useMemo(() => nationalAverage(states, metric), [states, metric]);
+  const computed = useMemo(() => nationalAverage(states, metric), [states, metric]);
+  const national = reference ?? computed;
 
   const byId = useMemo(
     () => Object.fromEntries(states.map((unit) => [unit.id, unit])),

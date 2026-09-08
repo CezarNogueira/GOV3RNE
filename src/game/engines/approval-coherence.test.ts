@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, nudgeApproval, tickMonth, type GameState } from './index';
+import { createGame, migrate, nudgeApproval, tickMonth, type GameState } from './index';
 import { MINISTER_POOL } from '../data/people';
 import { MINISTRY_IDS } from '../data/ministries';
 import { REGIONS } from '../types/common';
@@ -148,5 +148,37 @@ describe('aprovacao nacional e o mapa', () => {
     // sobe mais que as outras, mas ninguem perde o que o pais ganhou.
     expect(state.approval.overall - nacionalAntes).toBeCloseTo(10, 0);
     expect(mediaDepois - mediaAntes).toBeCloseTo(10, 0);
+  });
+});
+
+describe('saves feitos quando as duas contas divergiam', () => {
+  it('reconcilia o mapa com a manchete ao carregar, sem esperar um mes', () => {
+    const state = newGame(12);
+
+    // O save da captura do jogador: aprovacao do governo em 39, estados todos
+    // em torno de 53. Duas contas diferentes para a mesma coisa.
+    state.approval.overall = 39;
+    for (const unit of state.states) unit.approval = 53;
+
+    const migrado = migrate(state);
+
+    expect(mapAverage(migrado)).toBeCloseTo(39, 0);
+    for (const region of REGIONS) {
+      const units = migrado.states.filter((unit) => unit.region === region);
+      const menor = Math.min(...units.map((unit) => unit.approval));
+      const maior = Math.max(...units.map((unit) => unit.approval));
+      expect(migrado.approval.byRegion[region]).toBeGreaterThanOrEqual(menor - 0.2);
+      expect(migrado.approval.byRegion[region]).toBeLessThanOrEqual(maior + 0.2);
+    }
+  });
+
+  it('nao mexe em save que ja estava coerente', () => {
+    let state = newGame(12);
+    state = tickMonth(state).state;
+    const antes = state.states.map((unit) => unit.approval);
+
+    const migrado = migrate(state);
+
+    expect(migrado.states.map((unit) => unit.approval)).toEqual(antes);
   });
 });

@@ -511,7 +511,15 @@ export function Painel() {
               </p>
 
               <div className="mt-3">
-                <BrazilMap states={state.states} metric="approval" showLabels={false} />
+                {/* A referência é a MESMA aprovação mostrada logo acima: o
+                    mapa é a decomposição daquele número, não uma segunda
+                    medição dele. */}
+                <BrazilMap
+                  states={state.states}
+                  metric="approval"
+                  reference={state.approval.overall}
+                  showLabels={false}
+                />
               </div>
             </section>
 

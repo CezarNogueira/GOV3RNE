@@ -1,4 +1,5 @@
 import { MINISTRY_BY_ID } from '../data/ministries';
+import { REGIONS } from '../types/common';
 import type { GameState, SaveSlotMeta } from '../types/index';
 import { GAME_STATE_VERSION } from './setup';
 import { INSTRUMENT_RULES } from './policy';
@@ -104,6 +105,40 @@ export function migrate(state: GameState): GameState {
         origin: 'estimado' as const,
       },
     ];
+  }
+
+  // Save feito quando o mapa e a manchete eram duas contas diferentes: os
+  // estados podiam estar todos em torno de 53 com a aprovação do governo em 39.
+  // A aprovação nacional é a autoridade — é ela que decide eleição e
+  // impeachment —, então os 27 estados deslizam em bloco até a média deles bater
+  // com ela, e as regiões são recalculadas a partir dos estados. Sem isto, a
+  // incoerência ficaria na tela até o jogador avançar um mês.
+  if (migrated.states && migrated.states.length > 0 && migrated.approval) {
+    const populacao = migrated.states.reduce((total, unit) => total + unit.population, 0);
+    if (populacao > 0) {
+      const media =
+        migrated.states.reduce((total, unit) => total + unit.approval * unit.population, 0) /
+        populacao;
+      const correcao = migrated.approval.overall - media;
+
+      if (Math.abs(correcao) > 0.5) {
+        for (const unit of migrated.states) {
+          unit.approval = Math.max(0, Math.min(100, Number((unit.approval + correcao).toFixed(1))));
+        }
+      }
+
+      for (const region of REGIONS) {
+        const units = migrated.states.filter((unit) => unit.region === region);
+        if (units.length === 0) continue;
+        const populacaoRegional = units.reduce((total, unit) => total + unit.population, 0);
+        migrated.approval.byRegion[region] = Number(
+          (
+            units.reduce((total, unit) => total + unit.approval * unit.population, 0) /
+            populacaoRegional
+          ).toFixed(1),
+        );
+      }
+    }
   }
 
   if (!migrated.consequences) migrated.consequences = [];
