@@ -18,10 +18,17 @@ Banco Central, Câmara dos Deputados) e, a partir do primeiro mês jogado, passa
 a ser produzidos pelo motor de simulação — **não representam a realidade e não
 devem ser lidos como previsão**.
 
-Políticos, ministros, jornalistas, veículos de imprensa e empresas do jogo são
-**fictícios**. Siglas partidárias reais aparecem com atributos de simulação
-atribuídos pelo jogo (ideologia, disciplina, preço da negociação), que **não
-correspondem a posições oficiais de nenhuma legenda**.
+Políticos, parlamentares, governadores, jornalistas, veículos de imprensa e
+empresas do jogo são **fictícios**. Siglas partidárias reais aparecem com
+atributos de simulação atribuídos pelo jogo (ideologia, disciplina, preço da
+negociação), que **não correspondem a posições oficiais de nenhuma legenda**.
+
+A divisão **famosos** da chapa e do gabinete escala **pessoas públicas reais**,
+cada uma com o ofício que ela de fato tem. Os números ao lado do nome —
+competência, lealdade, risco de escândalo, popularidade — são **parâmetro de
+simulação inventado para o jogo funcionar**: não são avaliação, opinião nem
+afirmação de fato sobre ninguém, e os acontecimentos que a partida gera a partir
+deles são ficção do mesmo tipo que o resto do jogo.
 
 ---
 
@@ -598,8 +605,7 @@ Vice e ministros são listados por **origem**, e a divisão não é cosmética:
 | --- | --- | --- |
 | **Quadros de partido** (por legenda) | bancada para a base antes da posse | cargo, emenda e espaço |
 | **Técnicos de carreira** | competência | nada ao Congresso — e o Congresso não deve nada a eles |
-| **Independentes** | credibilidade emprestada de quem não é político mas é ouvido | some quando o governo desaponta |
-| **Famosos** | audiência no dia do anúncio | holofote em cada erro, e a menor experiência de gestão da lista |
+| **Famosos** (pessoas reais) | audiência no dia do anúncio | holofote em cada erro, e a menor experiência de gestão da lista |
 
 A troca aparece na largada. Chapa e gabinete montados com quadros partidários
 começam com **405 deputados** de base e 53,6% de aprovação; a mesma partida com

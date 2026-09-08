@@ -989,7 +989,7 @@ function StepTicket({
 }
 
 /** As origens na ordem em que aparecem na chapa. */
-const VICE_ORIGINS: readonly CandidateOrigin[] = ['partido', 'independente', 'famoso'];
+const VICE_ORIGINS: readonly CandidateOrigin[] = ['partido', 'famoso'];
 
 /** Legendas presentes num grupo, na ordem em que aparecem. */
 function partiesOf(candidates: readonly CandidateProfile[]): string[] {
@@ -1232,12 +1232,7 @@ function StepCabinet({
 }
 
 /** As origens na ordem em que aparecem no gabinete. */
-const CABINET_ORIGINS: readonly CandidateOrigin[] = [
-  'partido',
-  'tecnico',
-  'independente',
-  'famoso',
-];
+const CABINET_ORIGINS: readonly CandidateOrigin[] = ['partido', 'tecnico', 'famoso'];
 
 const KIND_LABEL: Record<string, string> = {
   tecnico: 'Técnico',

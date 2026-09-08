@@ -7,20 +7,30 @@ import type {
 } from '../types/index';
 
 /**
- * PESSOAS FICTÍCIAS, INSTITUIÇÕES REAIS.
+ * QUEM É FICTÍCIO E QUEM NÃO É.
  *
- * Nenhum nome, biografia ou fala deste arquivo corresponde a pessoa real, viva
- * ou morta. Coincidência de nome é acaso da combinatória de nomes comuns no
- * Brasil.
+ * FICTÍCIOS: todos os políticos, parlamentares, governadores, jornalistas e
+ * veículos de imprensa. Coincidência de nome é acaso da combinatória de nomes
+ * comuns no Brasil.
  *
- * O que É real: os partidos, o tamanho das bancadas na Câmara e no Senado, os
- * quóruns constitucionais, a estrutura da Esplanada dos Ministérios e a lógica
- * de barganha do presidencialismo de coalizão. Os números de bancada refletem a
+ * REAIS: as pessoas públicas escaladas como candidatas a vice e a ministro na
+ * divisão "famosos" — artistas, criadores de conteúdo, atletas e jornalistas
+ * conhecidos do país. Cada uma aparece com o ofício que ela realmente tem.
+ *
+ * Os atributos numéricos delas — competência, lealdade, risco de escândalo,
+ * popularidade — são PARÂMETRO DE SIMULAÇÃO inventado para o jogo funcionar.
+ * Não são avaliação, opinião nem afirmação de fato sobre ninguém, e os eventos
+ * que a partida gera a partir deles são ficção do mesmo tipo que o resto do
+ * jogo. Isto é uma partida particular, não um retrato de pessoa nenhuma.
+ *
+ * O que também É real: os partidos, o tamanho das bancadas na Câmara e no
+ * Senado, os quóruns constitucionais, a estrutura da Esplanada e a lógica de
+ * barganha do presidencialismo de coalizão. Os números de bancada refletem a
  * 57ª legislatura (2023–2027) na véspera da eleição de outubro de 2026.
  */
 
 export const FICTION_DISCLAIMER =
-  'Os partidos, ministérios e o tamanho das bancadas são reais. Todas as pessoas — políticos, ministros, jornalistas e veículos de imprensa — são fictícias.';
+  'Os partidos, ministérios e bancadas são reais. Políticos, parlamentares, jornalistas e veículos de imprensa são fictícios. As figuras públicas escaladas como vice ou ministro existem de verdade, mas os atributos e os acontecimentos da partida são simulação — não descrevem essas pessoas.';
 
 // ===========================================================================
 // 1. CONGRESSO: os números que governam tudo
@@ -395,116 +405,81 @@ export const VICE_POOL: readonly CandidateProfile[] = [
   },
 
   // -------------------------------------------------------------------------
-  // Independentes: não são políticos, mas falam de política e são ouvidos.
-  // Nenhum deles traz bancada. O que trazem é credibilidade emprestada — e
-  // empréstimo se cobra.
+  // FAMOSOS
+  //
+  // Gente real, conhecida do país inteiro, sem mandato nenhum. Não trazem
+  // bancada: trazem audiência no dia do anúncio e holofote em cima de cada
+  // erro depois dele. Os atributos abaixo são PARÂMETRO DE JOGO — competência,
+  // lealdade e risco de escândalo servem para a simulação funcionar e não
+  // descrevem ninguém.
   // -------------------------------------------------------------------------
   {
-    id: 'vp_indep_carvalho',
-    name: 'Beatriz Carvalho',
-    party: 'sem partido',
-    origin: 'independente',
-    role: 'Economista e colunista',
-    alignment: 44,
-    competence: 86,
-    popularity: 58,
-    loyalty: 52,
-    ambitious: false,
-    bio: 'Escreve há doze anos sobre contas públicas e virou a pessoa que o país lê quando não entende o próprio orçamento.',
-    hook: 'O mercado acredita no ajuste no dia do anúncio. O Congresso não deve nada a ela e ela não deve nada a ele.',
-    seatsBrought: 0,
-    senateSeatsBrought: 0,
-    caucuses: [],
-  },
-  {
-    id: 'vp_indep_ostrowski',
-    name: 'Ismael Ostrowski',
-    party: 'sem partido',
-    origin: 'independente',
-    role: 'Médico sanitarista e divulgador',
-    alignment: 58,
-    competence: 82,
-    popularity: 71,
-    loyalty: 60,
-    ambitious: false,
-    bio: 'Ficou conhecido explicando epidemia em rede nacional sem assustar ninguém e sem mentir para ninguém.',
-    hook: 'Aprovação alta e nenhuma experiência de bastidor. Na primeira crise política, ele vai descobrir o que é uma emboscada.',
-    seatsBrought: 0,
-    senateSeatsBrought: 0,
-    caucuses: ['saude'],
-  },
-  {
-    id: 'vp_indep_uchoa',
-    name: 'Nadir Uchôa',
-    party: 'sem partido',
-    origin: 'independente',
-    role: 'Jurista e comentarista',
-    alignment: 40,
-    competence: 88,
-    popularity: 42,
-    loyalty: 46,
-    ambitious: false,
-    bio: 'Deu parecer contra dois governos seguidos e ficou de pé nos dois. Não fala em nome de ninguém e por isso é ouvida.',
-    hook: 'Blindagem institucional de graça — enquanto você fizer o que ela considera constitucional.',
-    seatsBrought: 0,
-    senateSeatsBrought: 0,
-    caucuses: [],
-  },
-
-  // -------------------------------------------------------------------------
-  // Famosos: trazem audiência no dia do anúncio e holofote em cima de cada
-  // erro depois dele. Popularidade alta, experiência baixa, lealdade incerta.
-  // -------------------------------------------------------------------------
-  {
-    id: 'vp_famoso_junqueira',
-    name: 'Vanessa Junqueira',
+    id: 'vp_gusttavo_lima',
+    name: 'Gusttavo Lima',
     party: 'sem partido',
     origin: 'famoso',
-    role: 'Apresentadora de televisão',
-    alignment: 52,
-    competence: 48,
+    role: 'Cantor sertanejo',
+    alignment: 62,
+    competence: 44,
     popularity: 88,
-    loyalty: 54,
+    loyalty: 58,
     ambitious: true,
-    bio: 'Vinte anos no horário nobre e um índice de reconhecimento que nenhum político deste país alcança.',
-    hook: 'Você ganha o país inteiro sabendo quem é o seu vice. E ela também ganha.',
+    bio: 'Um dos maiores nomes do sertanejo, com público em todo o interior do país e alcance que nenhuma legenda compra.',
+    hook: 'O interior inteiro sabe quem é o seu vice. Palanque cheio e nenhum voto no Congresso.',
     seatsBrought: 0,
     senateSeatsBrought: 0,
-    caucuses: [],
+    caucuses: ['ruralista'],
   },
   {
-    id: 'vp_famoso_bittencourt',
-    name: 'Wagner Bittencourt',
+    id: 'vp_luciano_huck',
+    name: 'Luciano Huck',
     party: 'sem partido',
     origin: 'famoso',
-    role: 'Ex-jogador e comentarista esportivo',
-    alignment: 60,
-    competence: 40,
+    role: 'Apresentador de televisão',
+    alignment: 40,
+    competence: 66,
     popularity: 84,
-    loyalty: 70,
-    ambitious: false,
-    bio: 'Ídolo de uma geração inteira, fala como quem nunca leu um decreto e é entendido por quem também nunca leu.',
-    hook: 'Popularidade que nenhum programa de governo compra. Numa reunião de crise, ele é o mais perdido da sala.',
-    seatsBrought: 0,
-    senateSeatsBrought: 0,
-    caucuses: [],
-  },
-  {
-    id: 'vp_famoso_malheiros',
-    name: 'Gisele Malheiros',
-    party: 'sem partido',
-    origin: 'famoso',
-    role: 'Empresária e investidora',
-    alignment: 34,
-    competence: 74,
-    popularity: 66,
-    loyalty: 44,
+    loyalty: 48,
     ambitious: true,
-    bio: 'Construiu uma empresa de tecnologia do zero e passou a dar palpite sobre o país em todo palco que aceita.',
-    hook: 'Confiança empresarial sobe na hora. Ela não recebe ordem de ninguém, inclusive de você.',
+    bio: 'Décadas no horário nobre da TV aberta e trânsito no empresariado. Nome citado em toda eleição sem nunca ter disputado uma.',
+    hook: 'Aprovação e mercado no mesmo pacote. Ambição própria também vem no pacote.',
     seatsBrought: 0,
     senateSeatsBrought: 0,
     caucuses: ['empresarial'],
+  },
+  {
+    id: 'vp_nando_moura',
+    name: 'Nando Moura',
+    party: 'sem partido',
+    origin: 'famoso',
+    role: 'Youtuber e músico',
+    alignment: 78,
+    competence: 38,
+    popularity: 58,
+    loyalty: 40,
+    ambitious: false,
+    bio: 'Guitarrista que virou comentarista político no YouTube, com público fiel e vocabulário de briga.',
+    hook: 'Mobiliza a base mais barulhenta da internet e afasta todo o centro na mesma semana.',
+    seatsBrought: 0,
+    senateSeatsBrought: 0,
+    caucuses: [],
+  },
+  {
+    id: 'vp_william_bonner',
+    name: 'William Bonner',
+    party: 'sem partido',
+    origin: 'famoso',
+    role: 'Jornalista',
+    alignment: 46,
+    competence: 74,
+    popularity: 72,
+    loyalty: 62,
+    ambitious: false,
+    bio: 'Apresentador do principal telejornal do país por décadas. A voz que o Brasil associa a notícia.',
+    hook: 'Credibilidade emprestada de graça — e uma imprensa inteira perguntando de quem é a isenção agora.',
+    seatsBrought: 0,
+    senateSeatsBrought: 0,
+    caucuses: [],
   },
 ];
 
@@ -684,44 +659,233 @@ export const MINISTER_POOL: readonly MinisterCandidate[] = [
     bio: 'Ex-secretária de Fazenda de estado grande num partido que já foi grande. Currículo maior que a bancada que representa.',
   },
 
-  // --- Independentes / mídia ---
-  {
-    id: 'min_i1', name: 'Renata Escobar', party: null, kind: 'independente', origin: 'independente',
-    competence: 78, loyalty: 58, popularity: 74, influence: 56, experience: 52, scandalRisk: 18,
-    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['empresarial'], fits: [],
-    bio: 'Executiva que virou nome nacional depois de reconstruir uma estatal quebrada em dois anos.',
-  },
-  {
-    id: 'min_i2', name: 'Danilo Peixoto', party: null, kind: 'internet', origin: 'famoso',
-    competence: 52, loyalty: 64, popularity: 82, influence: 48, experience: 30, scandalRisk: 56,
-    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['secom', 'esporte', 'cultura'],
-    bio: 'Doze milhões de seguidores e nenhuma experiência de gestão. Traz manchete e traz problema.',
-  },
-  {
-    id: 'min_i3', name: 'Aline Sarmento', party: null, kind: 'independente', origin: 'independente',
-    competence: 80, loyalty: 62, popularity: 60, influence: 50, experience: 68, scandalRisk: 16,
-    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['meio_ambiente', 'povos_indigenas', 'desenvolvimento_agrario'],
-    bio: 'Dirigiu a maior ONG ambiental do país e ainda assim é ouvida por parte do agro. Nomeá-la para Meio Ambiente custa votos na frente ruralista — 303 deputados.',
-  },
-  {
-    id: 'min_i4', name: 'Hélio Zamboni', party: null, kind: 'independente', origin: 'independente',
-    competence: 84, loyalty: 56, popularity: 44, influence: 62, experience: 76, scandalRisk: 20,
-    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['empresarial'], fits: ['fazenda', 'casa_civil', 'planejamento'],
-    bio: 'Ex-presidente de banco central de outro país emergente. Fala inglês melhor do que política.',
-  },
 
-  // --- Famosos: audiência no anúncio, holofote em cada erro depois ---
+  // -------------------------------------------------------------------------
+  // FAMOSOS
+  //
+  // Gente real, conhecida do país inteiro, sem experiência de gestão pública.
+  // Trazem audiência no dia do anúncio e holofote em cima de cada erro depois
+  // dele. Os atributos são PARÂMETRO DE JOGO — competência, lealdade e risco de
+  // escândalo existem para a simulação funcionar e não descrevem ninguém.
+  //
+  // Cada nome serve na pasta em que foi escalado e em nenhuma outra: fora dela,
+  // a ficha avisa que a competência cai.
+  // -------------------------------------------------------------------------
   {
-    id: 'min_f2', name: 'Vanessa Junqueira', party: null, kind: 'internet', origin: 'famoso',
-    competence: 50, loyalty: 60, popularity: 86, influence: 58, experience: 26, scandalRisk: 44,
-    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['secom', 'cultura', 'turismo'],
-    bio: 'Vinte anos no horário nobre. Sabe falar com o país inteiro e nunca precisou negociar uma emenda.',
+    id: 'min_casimiro', name: 'Casimiro Miguel', party: null, kind: 'internet', origin: 'famoso',
+    competence: 58, loyalty: 72, popularity: 88, influence: 74, experience: 18, scandalRisk: 20,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['casa_civil'],
+    bio: 'Maior streamer do país. Reúne centenas de milhares de pessoas ao vivo sem esforço e comenta tudo o que vê pela frente.',
   },
   {
-    id: 'min_f3', name: 'Gisele Malheiros', party: null, kind: 'internet', origin: 'famoso',
-    competence: 72, loyalty: 46, popularity: 64, influence: 66, experience: 44, scandalRisk: 38,
-    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['empresarial'], fits: ['mdic', 'ciencia_tecnologia', 'comunicacoes'],
-    bio: 'Construiu uma empresa de tecnologia do zero e trata ministério como se fosse uma delas. Às vezes funciona.',
+    id: 'min_tata_werneck', name: 'Tatá Werneck', party: null, kind: 'internet', origin: 'famoso',
+    competence: 54, loyalty: 66, popularity: 86, influence: 68, experience: 22, scandalRisk: 26,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['casa_civil'],
+    bio: 'Humorista e apresentadora com alcance nacional. Desarma qualquer sala e não deixa reunião terminar séria.',
+  },
+  {
+    id: 'min_igor3k', name: 'Igor3K', party: null, kind: 'internet', origin: 'famoso',
+    competence: 50, loyalty: 64, popularity: 72, influence: 58, experience: 14, scandalRisk: 28,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['casa_civil'],
+    bio: 'Streamer e criador de conteúdo com público jovem e fiel. Coordenar ministério seria a primeira agenda dele fora da internet.',
+  },
+  {
+    id: 'min_thiago_nigro', name: 'Thiago Nigro', party: null, kind: 'internet', origin: 'famoso',
+    competence: 72, loyalty: 58, popularity: 78, influence: 72, experience: 40, scandalRisk: 34,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['empresarial'], fits: ['fazenda'],
+    bio: 'Criador do maior canal de finanças pessoais do país. Fala de juro e investimento para milhões de pessoas todo dia.',
+  },
+  {
+    id: 'min_pablo_marcal', name: 'Pablo Marçal', party: null, kind: 'internet', origin: 'famoso',
+    competence: 52, loyalty: 40, popularity: 74, influence: 76, experience: 30, scandalRisk: 62,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['empresarial'], fits: ['fazenda'],
+    bio: 'Empresário e coach com público enorme e histórico de polêmica. Promete resultado rápido em qualquer coisa que assuma.',
+  },
+  {
+    id: 'min_nathalia_arcuri', name: 'Nathalia Arcuri', party: null, kind: 'internet', origin: 'famoso',
+    competence: 74, loyalty: 64, popularity: 76, influence: 66, experience: 42, scandalRisk: 22,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['empresarial'], fits: ['fazenda'],
+    bio: 'Jornalista que virou a maior educadora financeira do Brasil. Explica orçamento para quem nunca teve um.',
+  },
+  {
+    id: 'min_jojo_todynho', name: 'Jojo Todynho', party: null, kind: 'internet', origin: 'famoso',
+    competence: 44, loyalty: 62, popularity: 80, influence: 64, experience: 16, scandalRisk: 48,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['justica'],
+    bio: 'Cantora e apresentadora de fala direta, sem filtro e sem medo de confronto público.',
+  },
+  {
+    id: 'min_monark', name: 'Monark', party: null, kind: 'internet', origin: 'famoso',
+    competence: 40, loyalty: 38, popularity: 66, influence: 62, experience: 20, scandalRisk: 72,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['justica'],
+    bio: 'Podcaster de grande audiência e histórico de declarações que viraram crise. Traz palco e traz problema.',
+  },
+  {
+    id: 'min_anderson_daronco', name: 'Anderson Daronco', party: null, kind: 'internet', origin: 'famoso',
+    competence: 68, loyalty: 70, popularity: 70, influence: 56, experience: 52, scandalRisk: 18,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['bala'], fits: ['justica'],
+    bio: 'Árbitro de futebol conhecido por não voltar atrás numa decisão, com 90 mil pessoas gritando o contrário.',
+  },
+  {
+    id: 'min_renato_cariani', name: 'Renato Cariani', party: null, kind: 'internet', origin: 'famoso',
+    competence: 56, loyalty: 58, popularity: 74, influence: 62, experience: 34, scandalRisk: 56,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['saude'],
+    bio: 'Químico e influenciador fitness com público enorme na área de treino e suplementação.',
+  },
+  {
+    id: 'min_boca_rosa', name: 'Boca Rosa', party: null, kind: 'internet', origin: 'famoso',
+    competence: 52, loyalty: 60, popularity: 82, influence: 70, experience: 30, scandalRisk: 26,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['saude'],
+    bio: 'Bianca Andrade construiu uma marca de cosméticos do zero e fala com milhões de mulheres todo dia.',
+  },
+  {
+    id: 'min_paulo_muzy', name: 'Paulo Muzy', party: null, kind: 'internet', origin: 'famoso',
+    competence: 80, loyalty: 66, popularity: 72, influence: 60, experience: 64, scandalRisk: 20,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['saude'], fits: ['saude'],
+    bio: 'Médico ortopedista e divulgador científico. Conhece o sistema de saúde por dentro e sabe explicá-lo por fora.',
+  },
+  {
+    id: 'min_felipe_neto', name: 'Felipe Neto', party: null, kind: 'internet', origin: 'famoso',
+    competence: 58, loyalty: 52, popularity: 86, influence: 80, experience: 26, scandalRisk: 58,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['educacao'],
+    bio: 'Um dos maiores youtubers do mundo em português, com público jovem e posição política declarada.',
+  },
+  {
+    id: 'min_manuel_gomes', name: 'Manuel Gomes', party: null, kind: 'internet', origin: 'famoso',
+    competence: 34, loyalty: 74, popularity: 62, influence: 44, experience: 10, scandalRisk: 16,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['educacao'],
+    bio: 'Cantor que virou fenômeno nacional com uma canção sobre uma caneta azul. Ninguém no país deixou de ouvir.',
+  },
+  {
+    id: 'min_rezendeevil', name: 'Rezendeevil', party: null, kind: 'internet', origin: 'famoso',
+    competence: 48, loyalty: 66, popularity: 78, influence: 64, experience: 20, scandalRisk: 22,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['educacao'],
+    bio: 'Youtuber de games com uma geração inteira de crianças assistindo há mais de uma década.',
+  },
+  {
+    id: 'min_prof_noslen', name: 'Prof. Noslen', party: null, kind: 'internet', origin: 'famoso',
+    competence: 82, loyalty: 72, popularity: 70, influence: 58, experience: 66, scandalRisk: 12,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['educacao'],
+    bio: 'Professor de português que ensina milhões de estudantes pela internet e conhece a sala de aula real.',
+  },
+  {
+    id: 'min_sophia_espanha', name: 'Sophia Espanha', party: null, kind: 'internet', origin: 'famoso',
+    competence: 46, loyalty: 62, popularity: 64, influence: 52, experience: 16, scandalRisk: 24,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['defesa'],
+    bio: 'Criadora de conteúdo e streamer com público grande no cenário de jogos competitivos.',
+  },
+  {
+    id: 'min_fallen', name: 'FalleN', party: null, kind: 'internet', origin: 'famoso',
+    competence: 74, loyalty: 76, popularity: 76, influence: 66, experience: 58, scandalRisk: 14,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['defesa'],
+    bio: 'Gabriel Toledo é o maior capitão da história do Counter-Strike brasileiro. Formou time, base e escola inteira.',
+  },
+  {
+    id: 'min_aspas', name: 'Aspas', party: null, kind: 'internet', origin: 'famoso',
+    competence: 62, loyalty: 68, popularity: 70, influence: 54, experience: 32, scandalRisk: 18,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['defesa'],
+    bio: 'Erick Santos é campeão mundial de Valorant. Sabe decidir sob pressão com o mundo assistindo.',
+  },
+  {
+    id: 'min_cellbit', name: 'Cellbit', party: null, kind: 'internet', origin: 'famoso',
+    competence: 60, loyalty: 58, popularity: 80, influence: 70, experience: 28, scandalRisk: 30,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['defesa'],
+    bio: 'Streamer e roteirista de jogos de investigação, com público enorme e talento para montar cenário complexo.',
+  },
+  {
+    id: 'min_luva_de_pedreiro', name: 'Luva de Pedreiro', party: null, kind: 'internet', origin: 'famoso',
+    competence: 36, loyalty: 70, popularity: 84, influence: 66, experience: 12, scandalRisk: 20,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['infraestrutura'],
+    bio: 'Iran Ferreira saiu do interior da Bahia para virar fenômeno mundial com um celular na mão. Receba.',
+  },
+  {
+    id: 'min_diogo_defante', name: 'Diogo Defante', party: null, kind: 'internet', origin: 'famoso',
+    competence: 50, loyalty: 56, popularity: 74, influence: 60, experience: 24, scandalRisk: 44,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['infraestrutura'],
+    bio: 'Humorista e repórter de rua que entrevista o Brasil real onde ele está, sem produção no meio.',
+  },
+  {
+    id: 'min_enaldinho', name: 'Enaldinho', party: null, kind: 'internet', origin: 'famoso',
+    competence: 44, loyalty: 64, popularity: 72, influence: 56, experience: 18, scandalRisk: 22,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['infraestrutura'],
+    bio: 'Youtuber de desafios e construções absurdas, com audiência infantil gigantesca.',
+  },
+  {
+    id: 'min_mc_pipokinha', name: 'MC Pipokinha', party: null, kind: 'internet', origin: 'famoso',
+    competence: 32, loyalty: 48, popularity: 76, influence: 62, experience: 10, scandalRisk: 78,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['infraestrutura'],
+    bio: 'Cantora de funk com público enorme e presença garantida em qualquer manchete que ela decidir gerar.',
+  },
+  {
+    id: 'min_whindersson_nunes', name: 'Whindersson Nunes', party: null, kind: 'internet', origin: 'famoso',
+    competence: 56, loyalty: 68, popularity: 88, influence: 76, experience: 28, scandalRisk: 26,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['desenvolvimento_social'],
+    bio: 'Humorista piauiense, um dos maiores nomes da internet brasileira, com histórico de ação social direta.',
+  },
+  {
+    id: 'min_virginia_fonseca', name: 'Virginia Fonseca', party: null, kind: 'internet', origin: 'famoso',
+    competence: 50, loyalty: 60, popularity: 86, influence: 74, experience: 24, scandalRisk: 38,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['desenvolvimento_social'],
+    bio: 'Influenciadora e empresária com uma das maiores audiências femininas do país.',
+  },
+  {
+    id: 'min_carlinhos_maia', name: 'Carlinhos Maia', party: null, kind: 'internet', origin: 'famoso',
+    competence: 48, loyalty: 58, popularity: 82, influence: 70, experience: 22, scandalRisk: 46,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['desenvolvimento_social'],
+    bio: 'Humorista alagoano com alcance imenso no Nordeste e fila na porta de casa todo dia.',
+  },
+  {
+    id: 'min_capaceti', name: 'Capaceti', party: null, kind: 'internet', origin: 'famoso',
+    competence: 42, loyalty: 62, popularity: 64, influence: 50, experience: 14, scandalRisk: 32,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['desenvolvimento_social'],
+    bio: 'Criador de conteúdo com público fiel e linguagem que chega onde a comunicação oficial não chega.',
+  },
+  {
+    id: 'min_richard_rasmussen', name: 'Richard Rasmussen', party: null, kind: 'internet', origin: 'famoso',
+    competence: 78, loyalty: 66, popularity: 74, influence: 62, experience: 60, scandalRisk: 20,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['ruralista'], fits: ['agricultura'],
+    bio: 'Biólogo e apresentador. Passou a carreira em campo, entre fauna, conservação e produtor rural.',
+  },
+  {
+    id: 'min_ana_castela', name: 'Ana Castela', party: null, kind: 'internet', origin: 'famoso',
+    competence: 44, loyalty: 70, popularity: 84, influence: 66, experience: 14, scandalRisk: 18,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['ruralista'], fits: ['agricultura'],
+    bio: 'A Boiadeira. Cantora sertaneja com o agro do lado dela e público em todo o Centro-Oeste.',
+  },
+  {
+    id: 'min_ze_felipe', name: 'Zé Felipe', party: null, kind: 'internet', origin: 'famoso',
+    competence: 40, loyalty: 64, popularity: 80, influence: 62, experience: 16, scandalRisk: 30,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: ['ruralista'], fits: ['agricultura'],
+    bio: 'Cantor sertanejo de família do ramo, com público grande no interior e nas redes.',
+  },
+  {
+    id: 'min_luisa_mell', name: 'Luisa Mell', party: null, kind: 'internet', origin: 'famoso',
+    competence: 58, loyalty: 54, popularity: 72, influence: 64, experience: 38, scandalRisk: 42,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['agricultura'],
+    bio: 'Ativista da causa animal e apresentadora. Entra em conflito aberto com o agro por princípio, não por acaso.',
+  },
+  {
+    id: 'min_ronaldinho_gaucho', name: 'Ronaldinho Gaúcho', party: null, kind: 'internet', origin: 'famoso',
+    competence: 52, loyalty: 64, popularity: 92, influence: 84, experience: 44, scandalRisk: 40,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['relacoes_exteriores'],
+    bio: 'Bicampeão do mundo e um dos rostos mais reconhecidos do planeta. Abre qualquer porta com um sorriso.',
+  },
+  {
+    id: 'min_anitta', name: 'Anitta', party: null, kind: 'internet', origin: 'famoso',
+    competence: 66, loyalty: 58, popularity: 88, influence: 82, experience: 40, scandalRisk: 34,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['relacoes_exteriores'],
+    bio: 'Maior artista pop brasileira em circulação internacional, com trânsito real fora do país.',
+  },
+  {
+    id: 'min_xuxa', name: 'Xuxa', party: null, kind: 'internet', origin: 'famoso',
+    competence: 62, loyalty: 70, popularity: 84, influence: 72, experience: 56, scandalRisk: 16,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['relacoes_exteriores'],
+    bio: 'Rainha dos Baixinhos, com carreira consolidada na América Latina inteira e décadas de vida pública.',
+  },
+  {
+    id: 'min_sabrina_sato', name: 'Sabrina Sato', party: null, kind: 'internet', origin: 'famoso',
+    competence: 58, loyalty: 68, popularity: 82, influence: 68, experience: 42, scandalRisk: 20,
+    seatsBrought: 0, senateSeatsBrought: 0, caucuses: [], fits: ['relacoes_exteriores'],
+    bio: 'Apresentadora com trânsito no Brasil e no Japão, e o raro talento de deixar qualquer sala confortável.',
   },
 ];
 

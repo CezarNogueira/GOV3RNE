@@ -162,9 +162,9 @@ export const CANDIDATE_ORIGIN_NOTE: Record<CandidateOrigin, string> = {
   tecnico:
     'Entregam competência e não entregam voto. O Congresso não deve nada a eles — e eles não devem nada ao Congresso.',
   independente:
-    'Não são políticos, mas falam de política e são ouvidos. Emprestam credibilidade ao governo enquanto ele merecer, e a retiram em público quando não merecer mais.',
+    'Fora da política e fora da fama: nome que empresta credibilidade sem trazer plateia. Divisão vazia nesta partida.',
   famoso:
-    'Trazem audiência no dia do anúncio. Também trazem holofote em cima de cada erro e a menor experiência de gestão da lista.',
+    'Pessoas públicas reais: artistas, criadores de conteúdo, atletas e jornalistas. Trazem audiência no dia do anúncio, holofote em cima de cada erro e a menor experiência de gestão da lista. Os números ao lado do nome são parâmetro de jogo, não avaliação de ninguém.',
 };
 
 export interface CandidateProfile {

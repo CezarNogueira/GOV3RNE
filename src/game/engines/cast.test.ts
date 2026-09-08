@@ -47,14 +47,40 @@ describe('divisoes de quem pode ser convidado', () => {
     for (const candidate of MINISTER_POOL) expect(candidate.origin).toBeTruthy();
   });
 
-  it('tem tres independentes e tres famosos nas duas listas', () => {
+  it('tem famosos nas duas listas e nenhum independente sobrando', () => {
     const contar = (pool: readonly { origin: string }[], origin: string) =>
       pool.filter((candidate) => candidate.origin === origin).length;
 
-    expect(contar(VICE_POOL, 'independente')).toBeGreaterThanOrEqual(3);
-    expect(contar(VICE_POOL, 'famoso')).toBeGreaterThanOrEqual(3);
-    expect(contar(MINISTER_POOL, 'independente')).toBeGreaterThanOrEqual(3);
-    expect(contar(MINISTER_POOL, 'famoso')).toBeGreaterThanOrEqual(3);
+    expect(contar(VICE_POOL, 'famoso')).toBeGreaterThanOrEqual(4);
+    expect(contar(MINISTER_POOL, 'famoso')).toBeGreaterThanOrEqual(30);
+
+    // A divisão de independentes foi retirada das duas listas. Se alguém
+    // reaparecer com essa origem, ele fica visível na tela de montagem sem
+    // seção própria explicando o que ele é.
+    expect(contar(VICE_POOL, 'independente')).toBe(0);
+    expect(contar(MINISTER_POOL, 'independente')).toBe(0);
+  });
+
+  it('escala cada famoso numa pasta que o gabinete realmente monta', () => {
+    const jogaveis = new Set<string>(MINISTRY_IDS);
+
+    for (const candidate of MINISTER_POOL) {
+      if (candidate.origin !== 'famoso') continue;
+      // Famoso escalado para uma pasta que não existe no gabinete nunca
+      // aparece recomendado em lugar nenhum — some da partida sem avisar.
+      expect(candidate.fits.length).toBeGreaterThan(0);
+      expect(candidate.fits.every((pasta) => jogaveis.has(pasta))).toBe(true);
+    }
+  });
+
+  it('cobre todas as pastas do gabinete com pelo menos um famoso', () => {
+    for (const ministryId of MINISTRY_IDS) {
+      if (ministryId === 'sri') continue; // a SRI é negociação pura, sem famosos
+      const disponiveis = MINISTER_POOL.filter(
+        (candidate) => candidate.origin === 'famoso' && candidate.fits.includes(ministryId),
+      );
+      expect(disponiveis.length, `nenhum famoso serve em ${ministryId}`).toBeGreaterThan(0);
+    }
   });
 
   it('cobre mais de um partido entre os quadros partidarios', () => {

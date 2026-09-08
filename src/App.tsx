@@ -64,8 +64,10 @@ function FictionFooter() {
       <p className="text-[11px] leading-snug text-neutral-700">
         GOV3RNE é uma obra de ficção. Indicadores partem de dados públicos do IBGE, do Banco Central
         e da Câmara dos Deputados e, a partir do primeiro mês jogado, passam a ser produzidos pelo
-        motor de simulação — não representam a realidade. Políticos, ministros, jornalistas e
-        veículos de imprensa do jogo são fictícios.
+        motor de simulação — não representam a realidade. Políticos, parlamentares, jornalistas e
+        veículos de imprensa do jogo são fictícios. Figuras públicas reais podem ser escaladas como
+        vice ou ministro: os atributos e os acontecimentos da partida são simulação inventada e não
+        descrevem essas pessoas.
       </p>
     </footer>
   );
