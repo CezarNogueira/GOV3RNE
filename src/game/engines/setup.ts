@@ -28,6 +28,8 @@ import { SOCIAL_GROUPS } from '../data/social-groups';
 import { COUNTRIES, DIPLOMATIC_BLOCS } from '../data/countries';
 import { PROMISE_CATALOG } from '../data/promises';
 import {
+  candidateFitsMinistry,
+  outOfFieldIn,
   CHAMBER_SPEAKERS,
   MINISTER_POOL,
   type MinisterCandidate,
@@ -563,14 +565,17 @@ function buildGovernment(rng: Rng, input: NewGameInput, party: PartyProfile): Go
     const candidateId = input.cabinet[ministryId];
     const candidate = MINISTER_POOL.find((m) => m.id === candidateId);
     if (!candidate) throw new Error(`Nomeação inválida para a pasta ${ministryId}`);
-    const fitsPortfolio = candidate.fits.length === 0 || candidate.fits.includes(ministryId);
+    if (!candidateFitsMinistry(candidate, ministryId)) {
+      throw new Error(`${candidate.name} não pode assumir a pasta ${ministryId}.`);
+    }
+    const outOfField = outOfFieldIn(candidate, ministryId);
 
     return {
       id: makeId('min', rng),
       name: candidate.name,
       ministryId,
       party: candidate.party,
-      competence: clamp100(candidate.competence + (fitsPortfolio ? 6 : -14)),
+      competence: clamp100(candidate.competence + (outOfField ? -14 : 6)),
       loyalty: candidate.loyalty,
       popularity: candidate.popularity,
       influence: candidate.influence,

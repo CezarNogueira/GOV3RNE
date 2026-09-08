@@ -17,6 +17,7 @@ import {
   type NewGameInput,
   type Policy,
 } from '@/game';
+import { defaultCabinet } from '@/game';
 import { useGame } from '@/state/game-store';
 import { repository } from '@/state/repository';
 
@@ -36,10 +37,7 @@ import { EventCard } from './EventCard';
  * `legislative.test.ts`.
  */
 function buildInput(): NewGameInput {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return newGameSchema.parse({
     president: {

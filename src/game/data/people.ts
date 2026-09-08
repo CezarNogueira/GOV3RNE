@@ -1012,3 +1012,63 @@ export function coalitionFriction(parties: readonly PartyId[]): number {
   const spread = Math.max(...ideologies) - Math.min(...ideologies);
   return Math.round(Math.min(100, (spread / 170) * 100));
 }
+
+/**
+ * QUEM PODE ASSUMIR QUAL PASTA
+ *
+ * Quadro de partido e técnico de carreira servem em qualquer pasta: fora da
+ * área deles a competência cai, e essa é a consequência — não a proibição.
+ *
+ * Famoso é diferente. Ele foi escalado para uma pasta específica porque é o que
+ * ele de fato faz na vida, e não existe leitura em que um goleiro assuma a
+ * Fazenda. Aqui a regra é dura: fora da pasta dele, o nome nem aparece na
+ * lista.
+ */
+export function candidateFitsMinistry(
+  candidate: MinisterCandidate,
+  ministryId: MinistryId,
+): boolean {
+  if (candidate.origin === 'famoso') return candidate.fits.includes(ministryId);
+  return candidate.fits.length === 0 || candidate.fits.includes(ministryId);
+}
+
+/** true quando estar nesta pasta cobra competência do titular. */
+export function outOfFieldIn(candidate: MinisterCandidate, ministryId: MinistryId): boolean {
+  if (candidate.origin === 'famoso') return false;
+  return candidate.fits.length > 0 && !candidate.fits.includes(ministryId);
+}
+
+/**
+ * Um gabinete válido, montado por afinidade.
+ *
+ * Preenche todas as pastas com nomes que podem de fato assumi-las, sem repetir
+ * ninguém. Serve ao botão "montar por afinidade" da tela de criação e a
+ * qualquer lugar que precise de um gabinete pronto — os testes, por exemplo,
+ * que antes montavam a lista por índice e passaram a escalar goleiro na
+ * Fazenda quando a regra apertou.
+ */
+export function defaultCabinet(ministryIds: readonly MinistryId[]): Record<string, string> {
+  const cabinet: Record<string, string> = {};
+  const usados = new Set<string>();
+
+  for (const ministryId of ministryIds) {
+    const preferido = MINISTER_POOL.find(
+      (candidate) =>
+        !usados.has(candidate.id) &&
+        candidate.fits.includes(ministryId) &&
+        candidateFitsMinistry(candidate, ministryId),
+    );
+    const escolhido =
+      preferido ??
+      MINISTER_POOL.find(
+        (candidate) => !usados.has(candidate.id) && candidateFitsMinistry(candidate, ministryId),
+      );
+
+    if (escolhido) {
+      cabinet[ministryId] = escolhido.id;
+      usados.add(escolhido.id);
+    }
+  }
+
+  return cabinet;
+}

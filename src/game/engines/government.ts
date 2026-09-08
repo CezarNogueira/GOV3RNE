@@ -1,6 +1,6 @@
 import type { GameState, Minister, MinistryId, OppositionState } from '../types/index';
 import { MINISTRY_BY_ID } from '../data/ministries';
-import { MINISTER_POOL } from '../data/people';
+import { candidateFitsMinistry, outOfFieldIn, MINISTER_POOL } from '../data/people';
 import { Rng } from '../utils/rng';
 import { approach, clamp, clamp100, round } from '../utils/math';
 import { makeId } from '../utils/id';
@@ -185,14 +185,19 @@ export function appointMinister(
   if (index === -1) return { ok: false, message: 'Pasta inexistente.' };
 
   const outgoing = state.government.ministers[index];
-  const fits = candidate.fits.length === 0 || candidate.fits.includes(ministryId);
+  // Famoso escalado para uma pasta é escalado para AQUELA pasta. Trocar por
+  // decreto o que a lista não oferece seria burlar a própria regra.
+  if (!candidateFitsMinistry(candidate, ministryId)) {
+    return { ok: false, message: `${candidate.name} não tem o que fazer nesta pasta.` };
+  }
+  const outOfField = outOfFieldIn(candidate, ministryId);
 
   const minister: Minister = {
     id: makeId('min', rng),
     name: candidate.name,
     ministryId,
     party: candidate.party,
-    competence: clamp100(candidate.competence + (fits ? 6 : -14)),
+    competence: clamp100(candidate.competence + (outOfField ? -14 : 6)),
     loyalty: candidate.loyalty,
     popularity: candidate.popularity,
     influence: candidate.influence,
@@ -227,7 +232,7 @@ export function appointMinister(
   return {
     ok: true,
     message: `${candidate.name} assume ${MINISTRY_BY_ID[ministryId].shortName}${
-      fits ? '' : ' — fora da área de formação, o que a imprensa vai notar antes do primeiro mês'
+      outOfField ? ' — fora da área de formação, o que a imprensa vai notar antes do primeiro mês' : ''
     }.`,
     minister,
   };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, migrate, nudgeApproval, tickMonth, type GameState } from './index';
-import { MINISTER_POOL } from '../data/people';
+import { MINISTER_POOL, defaultCabinet } from '../data/people';
 import { MINISTRY_IDS } from '../data/ministries';
 import { REGIONS } from '../types/common';
 import { newGameSchema } from '../schemas/setup';
@@ -19,10 +19,7 @@ import { DEFAULT_AVATAR } from '../data/avatar';
  * niveis, que e o que o jogador le na tela.
  */
 function newGame(seed = 4242): GameState {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return createGame(
     newGameSchema.parse({

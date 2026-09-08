@@ -11,7 +11,7 @@ import {
 import { newGameSchema } from '../schemas/setup';
 import { DEFAULT_AVATAR } from '../data/avatar';
 import { MINISTRY_IDS } from '../data/ministries';
-import { MINISTER_POOL } from '../data/people';
+import { MINISTER_POOL, defaultCabinet } from '../data/people';
 import { RELATION_TIERS, relationTier } from '../data/relations';
 import { TREATY_BY_ID, TREATY_CATALOG } from '../data/treaties';
 import { COUNTRIES } from '../data/countries';
@@ -26,10 +26,7 @@ import type { GameState, TreatyCategoryId } from '../types/index';
  * geopolítico com o rival do parceiro.
  */
 function buildState(): GameState {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return createGame(
     newGameSchema.parse({

@@ -11,6 +11,7 @@ import {
   serialize,
   type GameState,
 } from '@/game';
+import { defaultCabinet } from '@/game';
 import { useGame } from '@/state/game-store';
 import { repository } from '@/state/repository';
 
@@ -23,10 +24,7 @@ import { DecisionFeedback } from './DecisionFeedback';
  * inclusive quando a resposta honesta é que nada mudou ainda.
  */
 function newGame(): GameState {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return createGame(
     newGameSchema.parse({

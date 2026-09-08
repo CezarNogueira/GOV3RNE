@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { articulationMultiplier, createGame, workTheVotes, type GameState } from './index';
-import { MINISTER_POOL } from '../data/people';
+import { MINISTER_POOL, defaultCabinet } from '../data/people';
 import { MINISTRY_BY_ID, MINISTRY_IDS } from '../data/ministries';
 import { PARTIES, TOTAL_CHAMBER_SEATS, TOTAL_SENATE_SEATS } from '../data/parties';
 import { Rng } from '../utils/rng';
@@ -16,10 +16,7 @@ import { DEFAULT_AVATAR } from '../data/avatar';
  * Cultura. Estes testes cobram que as tres facam diferenca de verdade.
  */
 function newGame(sriId?: string): GameState {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
   if (sriId) cabinet['sri'] = sriId;
 
   return createGame(

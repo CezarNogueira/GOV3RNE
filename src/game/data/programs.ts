@@ -11,7 +11,7 @@ import type { GovernmentProgram } from '../types/index';
 export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'>[] = [
   {
     id: 'renda_base',
-    name: 'Renda Base Nacional',
+    name: 'Bolsa Família',
     ministryId: 'desenvolvimento_social',
     category: 'social',
     monthlyCost: 14.2,
@@ -22,16 +22,16 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     active: true,
     impacts: { poverty: -0.09, approval: 0.22, primaryBalance: -14.2, hdi: 0.0004 },
     groupImpacts: [
-      { groupId: 'baixa_renda', delta: 0.9, reason: 'Transferência direta chega todo dia 20.' },
-      { groupId: 'mercado_financeiro', delta: -0.25, reason: 'Gasto obrigatório sem contrapartida.' },
+      { groupId: 'baixa_renda', delta: 0.9, reason: 'Transferência direta chega todo dia 20' },
+      { groupId: 'mercado_financeiro', delta: -0.25, reason: 'Gasto obrigatório sem contrapartida' },
     ],
     description:
-      'Transferência direta para 21 milhões de famílias. É o programa mais caro e o mais popular do governo — cortar aqui aparece na pesquisa em três semanas.',
+      'Transferência direta para 21 milhões de famílias',
     origin: 'herdado',
   },
   {
     id: 'saude_perto',
-    name: 'Saúde Perto de Casa',
+    name: 'Melhor em Casa',
     ministryId: 'saude',
     category: 'saude',
     monthlyCost: 6.8,
@@ -42,11 +42,11 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     active: true,
     impacts: { healthIndex: 0.14, approval: 0.14, primaryBalance: -6.8 },
     groupImpacts: [
-      { groupId: 'baixa_renda', delta: 0.5, reason: 'Unidade básica aberta no bairro.' },
-      { groupId: 'trabalhadores', delta: 0.3, reason: 'Consulta sem perder o dia de trabalho.' },
+      { groupId: 'baixa_renda', delta: 0.5, reason: 'Unidade básica aberta no bairro' },
+      { groupId: 'trabalhadores', delta: 0.3, reason: 'Consulta sem perder o dia de trabalho' },
     ],
     description:
-      'Rede de atenção básica em municípios pequenos. Barato por pessoa atendida e invisível até faltar.',
+      'Rede de atenção básica em municípios pequenos. Barato por pessoa atendida e invisível até faltar',
     origin: 'herdado',
   },
   {
@@ -62,16 +62,16 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     active: true,
     impacts: { educationIndex: 0.16, approval: 0.08, primaryBalance: -5.1 },
     groupImpacts: [
-      { groupId: 'professores', delta: 0.5, reason: 'Jornada ampliada com contratação.' },
-      { groupId: 'baixa_renda', delta: 0.4, reason: 'Criança na escola o dia inteiro.' },
+      { groupId: 'professores', delta: 0.5, reason: 'Jornada ampliada com contratação' },
+      { groupId: 'baixa_renda', delta: 0.4, reason: 'Criança na escola o dia inteiro' },
     ],
     description:
-      'Amplia a jornada em 12 mil escolas. Resultado aparece daqui a dez anos; a conta chega todo mês.',
+      'Amplia a jornada em 12 mil escolas. Resultado aparece daqui a dez anos; a conta chega todo mês',
     origin: 'herdado',
   },
   {
     id: 'moradia_popular',
-    name: 'Chave na Mão',
+    name: 'Minha Casa, Minha Vida',
     ministryId: 'infraestrutura',
     category: 'social',
     monthlyCost: 4.2,
@@ -82,16 +82,16 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     active: true,
     impacts: { poverty: -0.04, infrastructureIndex: 0.1, approval: 0.12, primaryBalance: -4.2 },
     groupImpacts: [
-      { groupId: 'baixa_renda', delta: 0.6, reason: 'Financiamento subsidiado da casa própria.' },
-      { groupId: 'empresariado', delta: 0.35, reason: 'Construção civil girando.' },
+      { groupId: 'baixa_renda', delta: 0.6, reason: 'Financiamento subsidiado da casa própria' },
+      { groupId: 'empresariado', delta: 0.35, reason: 'Construção civil girando' },
     ],
     description:
-      'Habitação popular subsidiada. Gera emprego imediato na construção e foto de entrega de chave.',
+      'Habitação popular subsidiada. Gera emprego imediato na construção e foto de entrega de chave',
     origin: 'herdado',
   },
   {
     id: 'agua_para_todos',
-    name: 'Água e Esgoto para Todos',
+    name: 'Saneamento para Todos',
     ministryId: 'infraestrutura',
     category: 'infraestrutura',
     monthlyCost: 3.4,
@@ -102,11 +102,11 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     active: true,
     impacts: { sanitationIndex: 0.2, healthIndex: 0.06, primaryBalance: -3.4 },
     groupImpacts: [
-      { groupId: 'baixa_renda', delta: 0.35, reason: 'Ligação de esgoto no bairro.' },
-      { groupId: 'ambientalistas', delta: 0.3, reason: 'Menos despejo em rio urbano.' },
+      { groupId: 'baixa_renda', delta: 0.35, reason: 'Ligação de esgoto no bairro' },
+      { groupId: 'ambientalistas', delta: 0.3, reason: 'Menos despejo em rio urbano' },
     ],
     description:
-      'Universalização de saneamento em periferias. A obra que salva mais vida por real gasto e não rende manchete.',
+      'Universalização de saneamento em periferias',
     origin: 'herdado',
   },
   {
@@ -122,11 +122,11 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     active: true,
     impacts: { gdpGrowth: 0.02, unemployment: -0.02, primaryBalance: -2.6 },
     groupImpacts: [
-      { groupId: 'empresariado', delta: 0.3, reason: 'Linha de capital de giro para o pequeno.' },
-      { groupId: 'trabalhadores', delta: 0.2, reason: 'Microempreendedor sobrevivendo mais um trimestre.' },
+      { groupId: 'empresariado', delta: 0.3, reason: 'Linha de capital de giro para o pequeno' },
+      { groupId: 'trabalhadores', delta: 0.2, reason: 'Microempreendedor sobrevivendo mais um trimestre' },
     ],
     description:
-      'Microcrédito para pequenos negócios. Retorno econômico bom, visibilidade política quase zero.',
+      'Microcrédito para pequenos negócios. Retorno econômico bom, visibilidade política quase zero',
     origin: 'herdado',
   },
   {
@@ -142,11 +142,11 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     active: true,
     impacts: { securityIndex: 0.14, homicideRate: -0.05, primaryBalance: -2.9 },
     groupImpacts: [
-      { groupId: 'policiais', delta: 0.45, reason: 'Efetivo e equipamento na fronteira.' },
-      { groupId: 'classe_media', delta: 0.25, reason: 'Apreensão grande no telejornal.' },
+      { groupId: 'policiais', delta: 0.45, reason: 'Efetivo e equipamento na fronteira' },
+      { groupId: 'classe_media', delta: 0.25, reason: 'Apreensão grande no telejornal' },
     ],
     description:
-      'Integração de inteligência entre polícias na fronteira. Resultado mede-se em apreensão, não em segurança sentida.',
+      'Integração de inteligência entre polícias na fronteira. Resultado mede-se em apreensão, não em segurança sentida',
     origin: 'herdado',
   },
   {
@@ -162,52 +162,12 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     active: true,
     impacts: { environmentIndex: 0.22, primaryBalance: -1.8 },
     groupImpacts: [
-      { groupId: 'ambientalistas', delta: 0.6, reason: 'Fiscalização com satélite e multa aplicada.' },
-      { groupId: 'indigenas', delta: 0.5, reason: 'Território demarcado sendo protegido.' },
-      { groupId: 'agronegocio', delta: -0.4, reason: 'Auto de infração chegando na porteira.' },
+      { groupId: 'ambientalistas', delta: 0.6, reason: 'Fiscalização com satélite e multa aplicada' },
+      { groupId: 'indigenas', delta: 0.5, reason: 'Território demarcado sendo protegido' },
+      { groupId: 'agronegocio', delta: -0.4, reason: 'Auto de infração chegando na porteira' },
     ],
     description:
-      'Fiscalização ambiental com monitoramento por satélite. Cada multa aplicada é um voto perdido no Centro-Oeste.',
-    origin: 'herdado',
-  },
-  {
-    id: 'primeiro_emprego',
-    name: 'Primeiro Emprego',
-    ministryId: 'desenvolvimento_social',
-    category: 'trabalho',
-    monthlyCost: 2.2,
-    beneficiaries: 1_100_000,
-    efficiency: 51,
-    popularity: 60,
-    coverage: 32,
-    active: true,
-    impacts: { unemployment: -0.03, approval: 0.06, primaryBalance: -2.2 },
-    groupImpacts: [
-      { groupId: 'universitarios', delta: 0.5, reason: 'Vaga de estágio subsidiada.' },
-      { groupId: 'empresariado', delta: 0.2, reason: 'Contratação com desoneração.' },
-    ],
-    description:
-      'Subsídio para contratação de jovens. Funciona enquanto dura o incentivo e some quando ele acaba.',
-    origin: 'herdado',
-  },
-  {
-    id: 'conecta_brasil',
-    name: 'Conecta Brasil',
-    ministryId: 'infraestrutura',
-    category: 'infraestrutura',
-    monthlyCost: 1.4,
-    beneficiaries: 6_700_000,
-    efficiency: 64,
-    popularity: 55,
-    coverage: 51,
-    active: true,
-    impacts: { infrastructureIndex: 0.12, educationIndex: 0.04, primaryBalance: -1.4 },
-    groupImpacts: [
-      { groupId: 'universitarios', delta: 0.3, reason: 'Banda larga em escola pública do interior.' },
-      { groupId: 'agronegocio', delta: 0.25, reason: 'Conectividade no campo.' },
-    ],
-    description:
-      'Internet em escolas e áreas rurais. Barato, popular e o primeiro a ser cortado quando falta caixa.',
+      'Fiscalização ambiental com monitoramento por satélite. Cada multa aplicada é um voto perdido no Centro-Oeste',
     origin: 'herdado',
   },
 ];

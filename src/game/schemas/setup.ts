@@ -4,6 +4,7 @@ import { MAX_PROMISES, PROMISE_CATALOG } from '../data/promises';
 import { STATES } from '../data/states';
 import { PARTIES } from '../data/parties';
 import { MINISTRY_IDS } from '../data/ministries';
+import { candidateFitsMinistry, MINISTER_POOL } from '../data/people';
 
 const stateIds = STATES.map((state) => state.id) as [string, ...string[]];
 const partyIds = PARTIES.map((party) => party.id) as [string, ...string[]];
@@ -169,6 +170,17 @@ export const newGameSchema = z
     message: 'Não repita promessas.',
     path: ['promises'],
   })
+  // Famoso só entra na pasta dele. A tela já não oferece o contrário, mas save
+  // editado à mão e importação de arquivo passam por aqui também.
+  .refine(
+    (data) =>
+      Object.entries(data.cabinet).every(([ministryId, candidateId]) => {
+        const candidate = MINISTER_POOL.find((entry) => entry.id === candidateId);
+        if (!candidate) return true;
+        return candidateFitsMinistry(candidate, ministryId as (typeof MINISTRY_IDS)[number]);
+      }),
+    { message: 'Há um nome escalado para uma pasta que não é a dele.', path: ['cabinet'] },
+  )
   .refine((data) => Object.keys(data.cabinet).length === MINISTRY_IDS.length, {
     message: 'As dez pastas precisam de um nome antes da posse.',
     path: ['cabinet'],

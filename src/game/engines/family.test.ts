@@ -12,7 +12,7 @@ import {
 import { Rng } from '../utils/rng';
 import { newGameSchema } from '../schemas/setup';
 import { MINISTRY_IDS } from '../data/ministries';
-import { MINISTER_POOL } from '../data/people';
+import { MINISTER_POOL, defaultCabinet } from '../data/people';
 import { DEFAULT_AVATAR } from '../data/avatar';
 import { SPOUSE_BREAKDOWN_IDS } from '../data/dynamic-events/spouse-breakdown';
 
@@ -25,10 +25,7 @@ import { SPOUSE_BREAKDOWN_IDS } from '../data/dynamic-events/spouse-breakdown';
  * e que uma relacao pode comecar e terminar no meio do mandato.
  */
 function newGame(seed = 4242, hasSpouse = true): GameState {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return createGame(
     newGameSchema.parse({

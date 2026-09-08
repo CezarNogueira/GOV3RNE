@@ -14,7 +14,7 @@ import {
 import { Rng } from '../utils/rng';
 import { newGameSchema } from '../schemas/setup';
 import { MINISTRY_IDS } from '../data/ministries';
-import { MINISTER_POOL } from '../data/people';
+import { MINISTER_POOL, defaultCabinet } from '../data/people';
 import { DEFAULT_AVATAR } from '../data/avatar';
 
 /**
@@ -25,10 +25,7 @@ import { DEFAULT_AVATAR } from '../data/avatar';
  * técnica -> tramitação -> linha do orçamento mudada no estado da partida.
  */
 function newGame(seed = 4242): GameState {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return createGame(
     newGameSchema.parse({

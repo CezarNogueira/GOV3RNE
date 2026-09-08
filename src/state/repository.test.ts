@@ -7,6 +7,7 @@ import {
   newGameSchema,
   type NewGameInput,
 } from '@/game';
+import { defaultCabinet } from '@/game';
 
 import { repository } from './repository';
 
@@ -22,10 +23,7 @@ import { repository } from './repository';
  * Este teste guarda a fronteira entre as duas coisas.
  */
 function buildInput(seed = 4242): NewGameInput {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return newGameSchema.parse({
     president: {

@@ -17,7 +17,7 @@ import {
 import { newGameSchema } from '../schemas/setup';
 import { DEFAULT_AVATAR } from '../data/avatar';
 import { MINISTRY_IDS } from '../data/ministries';
-import { MINISTER_POOL } from '../data/people';
+import { MINISTER_POOL, defaultCabinet } from '../data/people';
 import { Rng } from '../utils/rng';
 import type { GameState, Policy, ProposalAnalysis } from '../types/index';
 
@@ -31,10 +31,7 @@ import type { GameState, Policy, ProposalAnalysis } from '../types/index';
  * segurança resolve uma medida esquecida sem travar o jogo.
  */
 function buildState(seed = 99): GameState {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = MINISTER_POOL[index % MINISTER_POOL.length]!.id;
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return createGame(
     newGameSchema.parse({
