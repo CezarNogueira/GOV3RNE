@@ -608,43 +608,43 @@ um vice famoso e um gabinete sem nenhum partido começa com **17 deputados** e
 passou a valer: "traz 22 deputados" na tela de montagem agora soma ao apoio do
 bloco daquela legenda, em vez de ser um número decorativo.
 
-### Um número de aprovação, três níveis de leitura
+### Um número de aprovação, três formas de agrupá-lo
 
-País, região e estado são o mesmo número visto de três distâncias, e não três
-medições concorrentes. O nível é definido nacionalmente (média ponderada dos
-grupos sociais, corrigida pelo bolso do eleitor e pela entrega do governo); a
-região desvia do país pela realidade regional; o estado desvia da região pela
-realidade local. Os desvios são **recentrados por população** em cada camada, e
-é isso que faz a média dos 27 estados ponderada por população voltar a ser a
-aprovação nacional.
+Não há três medições concorrentes: há uma conta e três maneiras de olhar para
+ela. O nível nacional é definido pelos grupos sociais, pelo bolso do eleitor e
+pela entrega do governo. Cada estado fica acima ou abaixo dele pelo que acontece
+ali — desemprego, pobreza, relação com o governador, alcance do programa social
+—, e no fim do mês os 27 são deslocados em bloco até que a média deles,
+contando a população de cada um, seja exatamente a aprovação nacional. A região
+é então a média real dos estados dela.
+
+Isso vale como identidade, não como aproximação: a manchete é a média do mapa, e
+o rótulo de cada região é a média dos estados que ela contém.
 
 Antes eram dois laços fechados — o nacional saía dos grupos, e o estadual
 perseguia a média regional, que perseguia a média dos estados. Cada um com
-equilíbrio próprio, sem nada ligando os dois: dava para ter os 27 estados acima
-de 50% e a manchete marcando 39%. Três causas, todas corrigidas:
+equilíbrio próprio: dava para ter o Sul inteiro acima de 50% e o rótulo do Sul
+marcando 34,8%. Quatro causas, todas corrigidas:
 
+- a região era uma **segunda conta**, estimada e suavizada, em vez da média dos
+  próprios estados;
 - o desvio regional era medido contra a aprovação **já atualizada** do mês, então
-  a queda do mês entrava no desvio e só era devolvida a 30% ao mês. Um governo
-  perdendo dois pontos por mês estabilizava com as regiões seis pontos abaixo do
-  país sem que nada regional tivesse acontecido;
-- evento com endereço regional movia o país em X e as regiões em 0,76X na média
-  (peso 1,8 na região visada e 0,5 nas outras quatro). Viés regional agora
-  **redistribui**, com os pesos somando o número de regiões;
-- o estado perseguia a região a 0,22 ao mês, cinco meses de atraso para
-  acompanhar uma virada. Agora é 0,38 — dois meses, e ainda parece pesquisa.
+  a queda do mês entrava no desvio e voltava só a 30% ao mês;
+- evento com endereço regional movia o país em X e as regiões em 0,76X na média,
+  e a diferença vazava todo mês;
+- o estado perseguia a região a 0,22 ao mês — cinco meses de atraso para
+  acompanhar uma virada. Agora é 0,38.
 
-Resultado medido num mandato inteiro: a diferença entre a manchete e a média do
-mapa caiu de **9 pontos permanentes** para **menos de 1 ponto na maior parte do
-tempo**, com picos de 2,7 nos meses de virada brusca — que é atraso de pesquisa,
-não incoerência. Quatro testes em
+Seis testes em
 [`approval-coherence.test.ts`](src/game/engines/approval-coherence.test.ts)
-seguram isso.
+seguram a identidade, inclusive a checagem mais simples de todas: nenhuma região
+pode marcar um número fora do intervalo dos estados que ela contém.
 
-Na tela, o mapa passou a dizer contra o que comparar: o painel de leitura mostra
-a distância do estado para o país (`+3,2 p.p. vs. país`), sem nada sob o cursor
-ele mostra a média nacional, e no ranking estadual a cor compara com a linha
-nacional em vez de uma régua fixa — 46% num governo de 40% é um bom estado, e num
-governo de 55% é um problema.
+Na tela, cada número aparece ao lado da referência dele, sem sigla para
+traduzir: o painel do mapa mostra o estado e, abaixo, `país 43%`; o bloco de
+regiões mostra `país 43%` no cabeçalho; e a cor compara com o país em vez de uma
+régua fixa — 46% num governo de 40% é uma região boa, e num governo de 55% é um
+problema.
 
 ### O Congresso como tabuleiro de negociação
 

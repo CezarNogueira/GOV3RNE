@@ -48,7 +48,7 @@ function mapAverage(state: GameState): number {
 }
 
 describe('aprovacao nacional e o mapa', () => {
-  it('mantem os dois numeros perto ao longo do mandato inteiro', () => {
+  it('e exatamente a media dos 27 estados, todo mes', () => {
     let state = newGame();
     let pior = 0;
 
@@ -57,9 +57,43 @@ describe('aprovacao nacional e o mapa', () => {
       pior = Math.max(pior, Math.abs(mapAverage(state) - state.approval.overall));
     }
 
-    // Alguma distancia e legitima: pesquisa estadual demora mais que a
-    // nacional. Nove pontos de buraco permanente nao e demora, e incoerencia.
-    expect(pior).toBeLessThan(4);
+    // Nao e "perto": e o mesmo numero. O que o jogador ve na manchete e a
+    // media dos estados que ele ve no mapa, contando quanta gente mora em
+    // cada um.
+    expect(pior).toBeLessThan(0.6);
+  });
+
+  it('mostra em cada regiao a media real dos estados dela', () => {
+    let state = newGame(21);
+    for (let index = 0; index < 26; index += 1) state = tickMonth(state).state;
+
+    for (const region of REGIONS) {
+      const units = state.states.filter((unit) => unit.region === region);
+      const populacao = units.reduce((total, unit) => total + unit.population, 0);
+      const real =
+        units.reduce((total, unit) => total + unit.approval * unit.population, 0) / populacao;
+
+      // O numero da regiao nao e estimado nem suavizado: e a conta que o
+      // jogador faria olhando os estados dela.
+      expect(state.approval.byRegion[region]).toBeCloseTo(real, 1);
+    }
+  });
+
+  it('nao mostra uma regiao abaixo de todos os estados que ela contem', () => {
+    let state = newGame(33);
+    for (let index = 0; index < 26; index += 1) state = tickMonth(state).state;
+
+    for (const region of REGIONS) {
+      const units = state.states.filter((unit) => unit.region === region);
+      const menor = Math.min(...units.map((unit) => unit.approval));
+      const maior = Math.max(...units.map((unit) => unit.approval));
+
+      // O sintoma que o jogador relatou: o Sul inteiro acima de 50 e o rotulo
+      // do Sul marcando 34,8. Uma media que cai fora do intervalo dos proprios
+      // dados nao e media de coisa nenhuma.
+      expect(state.approval.byRegion[region]).toBeGreaterThanOrEqual(menor - 0.2);
+      expect(state.approval.byRegion[region]).toBeLessThanOrEqual(maior + 0.2);
+    }
   });
 
   it('nao acumula vies sistematico entre o mapa e a manchete', () => {

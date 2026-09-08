@@ -1,4 +1,4 @@
-import type { GameState, SocialGroup, SocialSensitivity } from '../types/index';
+import type { FederalUnit, GameState, SocialGroup, SocialSensitivity } from '../types/index';
 import { REGIONS } from '../types/common';
 import { DIFFICULTY_PRESETS } from '../data/difficulty';
 import { Rng } from '../utils/rng';
@@ -230,60 +230,78 @@ export function processNation(state: GameState, rng: Rng): void {
 }
 
 /**
- * A APROVAÇÃO NACIONAL VISTA DE PERTO
+ * A APROVAÇÃO NACIONAL DISTRIBUÍDA PELO PAÍS
  *
- * O número do país e o número do mapa mediam a mesma coisa por dois caminhos
- * que não se falavam: o nacional saía da média dos grupos sociais, e o estadual
- * perseguia a média regional, que por sua vez perseguia a média dos estados.
- * Dois laços fechados, cada um com equilíbrio próprio — dava para ter os 27
- * estados acima de 50 e uma média nacional de 39, o que não é leitura difícil,
- * é leitura errada.
+ * Existe um número só, e ele é o do país. Cada estado fica acima ou abaixo dele
+ * pelo que acontece ali — desemprego, pobreza e a relação com o governador —, e
+ * os desvios são recentrados por população para somarem zero. Depois disso, os
+ * 27 estados são deslocados em bloco até que a média ponderada deles seja
+ * exatamente a aprovação nacional.
  *
- * Agora existe uma hierarquia só: o país define o nível, a região desvia dele
- * pela realidade regional e o estado desvia da região pela realidade local. Os
- * desvios são RECENTRADOS, ponderados por população, para somarem zero dentro
- * de cada região — é isso que garante que a média ponderada dos 27 estados
- * volte a ser a aprovação nacional, e não um segundo número solto.
+ * Isso não é um detalhe de arredondamento: é o que impede o mapa de virar uma
+ * segunda simulação. A média de uma região é a média dos estados dela, a média
+ * do país é a média dos 27, e não há como um discordar do outro porque não há
+ * duas contas — há uma conta e duas maneiras de agrupá-la.
  */
 export function spreadApproval(state: GameState, rng: Rng): void {
   const eco = state.economy;
+  if (state.states.length === 0) return;
 
+  const socialSpend = state.programs
+    .filter((program) => program.active && program.category === 'social')
+    .reduce((total, program) => total + program.monthlyCost, 0);
+
+  // 1. O quanto cada estado tem motivo para estar acima ou abaixo do país.
+  const desvios = state.states.map((unit) => ({
+    unit,
+    valor:
+      -((unit.unemployment - eco.unemployment) * 1.2) -
+      (unit.poverty - state.nation.povertyRate) * 0.18 +
+      (unit.governorRelation - 50) * 0.08 +
+      // Estado pobre sente mais o programa social: onde ele chega, levanta.
+      ((unit.poverty - state.nation.povertyRate) / 12) * (socialSpend - 18) * 0.09,
+  }));
+
+  const populacaoTotal = state.states.reduce((total, unit) => total + unit.population, 0);
+  const mediaDesvios =
+    populacaoTotal > 0
+      ? desvios.reduce((total, entrada) => total + entrada.valor * entrada.unit.population, 0) /
+        populacaoTotal
+      : 0;
+
+  // 2. Cada estado caminha para o alvo dele. Pesquisa estadual demora mais que
+  //    a nacional, mas não pode demorar meio mandato.
+  for (const { unit, valor } of desvios) {
+    const alvo = state.approval.overall + (valor - mediaDesvios);
+    unit.approval = round(clamp100(approach(unit.approval, alvo, 0.38) + rng.noise(0.5)), 1);
+  }
+
+  // 3. Correção de fechamento: o conjunto inteiro desliza até a média ponderada
+  //    bater com a aprovação nacional. Sem isso, a suavização e o ruído deixam
+  //    um resto que se acumula mês a mês — foi assim que o mapa inteiro já
+  //    esteve num patamar e a manchete em outro.
+  const mediaAtual = weightedApproval(state.states);
+  const correcao = state.approval.overall - mediaAtual;
+  if (Math.abs(correcao) > 0.05) {
+    for (const unit of state.states) {
+      unit.approval = round(clamp100(unit.approval + correcao), 1);
+    }
+  }
+
+  // 4. A região é a média real dos estados dela. Não é estimada, não é
+  //    suavizada: é a conta que o jogador faria olhando o mapa.
   for (const region of REGIONS) {
     const units = state.states.filter((unit) => unit.region === region);
     if (units.length === 0) continue;
-
-    const regional = state.approval.byRegion[region];
-
-    // Desvio bruto de cada estado em relação à própria região: desemprego e
-    // pobreza acima da média do país puxam para baixo, governador aliado puxa
-    // para cima.
-    const desvios = units.map((unit) => ({
-      unit,
-      valor:
-        -((unit.unemployment - eco.unemployment) * 1.2) -
-        (unit.poverty - state.nation.povertyRate) * 0.18 +
-        (unit.governorRelation - 50) * 0.08,
-    }));
-
-    // Recentragem: a soma ponderada dos desvios dentro da região é zero. Sem
-    // ela, um mês em que todos os governadores estivessem bem com o Planalto
-    // levantaria os 27 estados de uma vez sem levantar o país.
-    const populacao = units.reduce((total, unit) => total + unit.population, 0);
-    const media =
-      populacao > 0
-        ? desvios.reduce((total, entrada) => total + entrada.valor * entrada.unit.population, 0) /
-          populacao
-        : 0;
-
-    for (const { unit, valor } of desvios) {
-      const alvo = regional + (valor - media);
-      // Pesquisa estadual demora mais que a nacional, mas não pode demorar
-      // meio mandato: a 0,22 o mapa levava cinco meses para alcançar uma
-      // virada do país e o jogador via os dois números discordando o tempo
-      // todo. A 0,38 ele acompanha em dois meses e ainda parece pesquisa.
-      unit.approval = round(clamp100(approach(unit.approval, alvo, 0.38) + rng.noise(0.5)), 1);
-    }
+    state.approval.byRegion[region] = round(weightedApproval(units), 1);
   }
+}
+
+/** Média de aprovação ponderada por população — a conta de uma pesquisa. */
+export function weightedApproval(units: readonly FederalUnit[]): number {
+  const populacao = units.reduce((total, unit) => total + unit.population, 0);
+  if (populacao === 0) return 0;
+  return units.reduce((total, unit) => total + unit.approval * unit.population, 0) / populacao;
 }
 
 /** Propaga os indicadores nacionais para as 27 unidades da federação. */

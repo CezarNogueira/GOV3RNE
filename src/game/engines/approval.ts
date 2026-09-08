@@ -80,65 +80,12 @@ export function calculateApproval(state: GameState, rng: Rng): number {
   state.president.personalApproval = state.approval.personal;
 
   // ---------------------------------------------------- 7. Por região
-  // A região é a aprovação NACIONAL vista de perto, não uma segunda medição.
-  // Cada uma desvia do país pela realidade dela — pobreza, desemprego e o
-  // quanto o gasto social chega ali —, e os desvios são recentrados por
-  // população para somarem zero. É esse recentramento que mantém a média
-  // ponderada das regiões igual ao número nacional em vez de deixar as duas
-  // contas correrem soltas uma da outra.
-  const socialSpend = state.programs
-    .filter((program) => program.active && program.category === 'social')
-    .reduce((total, program) => total + program.monthlyCost, 0);
-
-  const tilts = REGIONS.map((region) => {
-    const regionStates = state.states.filter((unit) => unit.region === region);
-    if (regionStates.length === 0) return { region, tilt: 0, population: 0 };
-
-    const population = regionStates.reduce((total, unit) => total + unit.population, 0);
-    const povertyAverage =
-      regionStates.reduce((total, unit) => total + unit.poverty, 0) / regionStates.length;
-    const unemploymentAverage =
-      regionStates.reduce((total, unit) => total + unit.unemployment, 0) / regionStates.length;
-
-    return {
-      region,
-      population,
-      // Região pobre sente mais o programa social; região com desemprego acima
-      // do país cobra mais caro do governo.
-      tilt:
-        ((povertyAverage - 27) / 12) * (socialSpend - 18) * 0.09 -
-        (unemploymentAverage - state.economy.unemployment) * 1.1,
-    };
-  });
-
-  const totalPopulation = tilts.reduce((total, entry) => total + entry.population, 0);
-  const meanTilt =
-    totalPopulation > 0
-      ? tilts.reduce((total, entry) => total + entry.tilt * entry.population, 0) / totalPopulation
-      : 0;
-
-  for (const { region, tilt } of tilts) {
-    const regionStates = state.states.filter((unit) => unit.region === region);
-    if (regionStates.length === 0) continue;
-
-    // O desvio é que se move devagar, não o nível: quando a aprovação nacional
-    // cai, as cinco regiões caem junto no mesmo mês, mantendo entre si a
-    // distância que a realidade local justifica.
-    //
-    // O desvio é medido contra a aprovação de ONTEM, não contra a de hoje. Com
-    // a de hoje, a queda do mês entrava no desvio e só era devolvida a 30% ao
-    // mês — um governo perdendo dois pontos por mês estabilizava com as
-    // regiões seis pontos abaixo do país sem que nada regional tivesse
-    // acontecido. Era daí que vinha o mapa inteiro discordando da manchete.
-    const previous = state.approval.byRegion[region] - before;
-    const deviation = approach(previous, tilt - meanTilt, 0.3);
-
-    state.approval.byRegion[region] = round(clamp100(state.approval.overall + deviation), 1);
-  }
-
-  // Com a régua nacional e as regionais fechadas, os 27 estados se posicionam
-  // dentro delas. A ordem importa: país, região, estado — nessa direção, e não
-  // cada um por si.
+  // A região não é calculada aqui: ela é a média dos estados dela, e sai
+  // pronta de `spreadApproval`. Ter duas contas para a mesma coisa foi
+  // exatamente o que fez o mapa discordar da manchete por um mandato inteiro.
+  // Com a régua nacional fechada, os 27 estados se posicionam em torno dela e
+  // as cinco regiões saem da média deles. A ordem importa: país, estado,
+  // região — nessa direção, e não cada um por si.
   spreadApproval(state, rng);
 
   // ---------------------------------------------------- 8. Por grupo

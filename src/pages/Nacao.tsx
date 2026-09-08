@@ -158,12 +158,12 @@ export function Nacao() {
 
               <Section title="Ranking estadual" dense>
                 <p className="py-2 text-[11px] leading-snug text-neutral-600">
-                  Ordenado por aprovação do governo federal. A aprovação nacional de{' '}
+                  Ordenado por aprovação do governo federal. A média do país é{' '}
                   <span className="font-mono text-neutral-400">
                     {state.approval.overall.toFixed(1)}%
                   </span>{' '}
-                  é a média destes 27 números ponderada por população — São Paulo e Roraima não
-                  pesam igual. Estado acima da linha nacional aparece em verde.
+                  — é a média destes 27 estados, contando quanta gente mora em cada um. Em verde,
+                  quem está acima dela.
                 </p>
                 {[...state.states]
                   .sort((a, b) => b.approval - a.approval)

@@ -516,14 +516,33 @@ export function Painel() {
             </section>
 
             {/* Por região */}
-            <Section title="Aprovação por região" dense>
+            <Section
+              title="Aprovação por região"
+              dense
+              action={
+                <span className="label">
+                  país {state.approval.overall.toFixed(1)}%
+                </span>
+              }
+            >
               {REGIONS.map((region) => {
                 const value = state.approval.byRegion[region];
                 return (
                   <div key={region} className="py-1.5">
                     <div className="flex items-baseline justify-between">
                       <span className="text-[12px] text-neutral-300">{REGION_LABEL[region]}</span>
-                      <span className="font-mono text-[12px] text-neutral-400">
+                      {/* A cor compara com o país, e não com uma régua fixa:
+                          46% num governo de 40% é uma região boa. */}
+                      <span
+                        className={cx(
+                          'font-mono text-[12px]',
+                          value >= state.approval.overall + 1
+                            ? 'text-gov-400'
+                            : value <= state.approval.overall - 1
+                              ? 'text-danger-400'
+                              : 'text-neutral-400',
+                        )}
+                      >
                         {value.toFixed(1)}%
                       </span>
                     </div>

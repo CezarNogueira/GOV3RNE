@@ -214,18 +214,18 @@ export function BrazilMap({
             </div>
             <div className="shrink-0 text-right">
               <p className="label">{config.label}</p>
-              <p className="font-mono text-sm text-neutral-100">
-                {config.format(readMetric(hovered, metric))}
-              </p>
-              {/* Um número sozinho não se lê: o que importa é a distância dele
-                  para o país. */}
               <p
                 className={cx(
-                  'font-mono text-[11px]',
-                  gapTone(readMetric(hovered, metric) - national, config.lowerIsBetter),
+                  'font-mono text-sm',
+                  compareTone(readMetric(hovered, metric), national, config.lowerIsBetter),
                 )}
               >
-                {formatGap(readMetric(hovered, metric) - national)} vs. país
+                {config.format(readMetric(hovered, metric))}
+              </p>
+              {/* Um número sozinho não se lê: ao lado dele fica o do país,
+                  na mesma unidade, sem sigla nenhuma para traduzir. */}
+              <p className="font-mono text-[11px] text-neutral-500">
+                país {config.format(national)}
               </p>
             </div>
           </>
@@ -266,17 +266,7 @@ function MapLegend({ metric }: { metric: MapMetric }) {
   );
 }
 
-/** "+3,2 p.p." / "-1,8 p.p." — sempre com sinal, para ler de relance. */
-function formatGap(gap: number): string {
-  if (Math.abs(gap) < 0.05) return 'na média';
-  return `${gap > 0 ? '+' : '−'}${Math.abs(gap).toFixed(1)} p.p.`;
-}
 
-function gapTone(gap: number, lowerIsBetter?: boolean): string {
-  if (Math.abs(gap) < 0.05) return 'text-neutral-500';
-  const good = lowerIsBetter ? gap < 0 : gap > 0;
-  return good ? 'text-gov-400' : 'text-danger-400';
-}
 
 export const MAP_METRICS: { id: MapMetric; label: string }[] = [
   { id: 'approval', label: 'Aprovação' },
@@ -285,3 +275,11 @@ export const MAP_METRICS: { id: MapMetric; label: string }[] = [
   { id: 'hdi', label: 'IDH' },
   { id: 'unrest', label: 'Tensão' },
 ];
+
+/** Verde acima do país, vermelho abaixo, cinza em cima da linha. */
+function compareTone(value: number, national: number, lowerIsBetter?: boolean): string {
+  const gap = value - national;
+  if (Math.abs(gap) < 0.5) return 'text-neutral-100';
+  const good = lowerIsBetter ? gap < 0 : gap > 0;
+  return good ? 'text-gov-400' : 'text-danger-400';
+}
