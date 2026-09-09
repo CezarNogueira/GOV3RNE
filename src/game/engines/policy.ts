@@ -8,6 +8,7 @@ import type {
 } from '../types/index';
 import { runVote } from './congress';
 import { invertCompanyImpact, readCompanyPolicy } from './companies/company-text';
+import { readProgramAbolition } from './program-text';
 import { applyNumericChange, revertNumericChange } from './numeric/numeric-policy-engine';
 import { applyCompanyPolicy } from './companies/company-policy-service';
 import { nudgeGroup } from './social';
@@ -144,7 +145,13 @@ export function createPolicy(
     // A leitura empresarial é feita sobre o que o presidente escreveu, não
     // sobre o resumo da análise: é o texto dele que diz qual empresa foi
     // nomeada e qual alavanca ele quis mexer.
-    companyImpact: readCompanyPolicy(`${analysis.title} ${authoredText}`),
+    companyImpact: readCompanyPolicy(`${analysis.title} ${authoredText}`, state),
+    // Extinguir programa é diferente de cortar verba dele, e a leitura é feita
+    // aqui, sobre o texto do presidente, contra os programas que existem NESTA
+    // partida — inclusive os que ele mesmo criou.
+    ...(readProgramAbolition(`${analysis.title} ${authoredText}`, state).length > 0
+      ? { abolishProgramIds: readProgramAbolition(`${analysis.title} ${authoredText}`, state) }
+      : {}),
     // A alteração numérica vem calculada da análise. Guardá-la aqui é o que
     // permite gravar o valor novo no estado quando a medida entrar em vigor —
     // e devolvê-lo se ela cair.

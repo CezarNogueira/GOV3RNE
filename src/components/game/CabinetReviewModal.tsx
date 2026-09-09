@@ -23,6 +23,7 @@ import {
   formatBRL,
   ministerBriefing,
   previewCompanyReactions,
+  readProgramAbolition,
   readCompanyPolicy,
   type MinistryId,
   type ProposalAnalysis,
@@ -74,6 +75,11 @@ export function CabinetReviewModal({
   // Tesouro deixa de arrecadar antes de a caneta encostar no papel.
   const companyImpact = readCompanyPolicy(`${analysis.title} ${analysis.summary}`, state);
   const companyReactions = previewCompanyReactions(state, companyImpact);
+  // Extinguir programa é irreversível dentro da partida: o aviso vem ANTES da
+  // assinatura, com nome, custo e quanta gente deixa de ser atendida.
+  const extintos = readProgramAbolition(`${analysis.title} ${analysis.summary}`, state)
+    .map((programId) => state.programs.find((program) => program.id === programId))
+    .filter((program): program is NonNullable<typeof program> => Boolean(program));
 
   return (
     <Modal
@@ -217,6 +223,26 @@ export function CabinetReviewModal({
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <GroupColumn title="Quem ganha" impacts={winners} tone="pos" />
           <GroupColumn title="Quem perde" impacts={losers} tone="neg" />
+        </div>
+      )}
+
+      {extintos.length > 0 && (
+        <div className="mt-3 border-l-2 border-l-danger-500 bg-danger-900/15 p-3">
+          <p className="label mb-1 text-danger-400">Esta medida acaba com um programa</p>
+          <ul className="space-y-1">
+            {extintos.map((program) => (
+              <li key={program.id} className="text-[12px] leading-snug text-neutral-300">
+                <span className="font-semibold text-neutral-100">{program.name}</span> — R${' '}
+                {program.monthlyCost.toFixed(1)} bi por mês deixam de sair do caixa e{' '}
+                {(program.beneficiaries / 1e6).toFixed(1)} milhões de pessoas deixam de ser
+                atendidas.
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-[11px] leading-snug text-neutral-500">
+            Aprovada, ela apaga o programa da lista. Não fica inativo nem arquivado: some. Recriar
+            depois exige uma medida nova, do zero.
+          </p>
         </div>
       )}
 

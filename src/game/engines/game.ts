@@ -35,6 +35,7 @@ import { processElection } from './election';
 import { processCoupAgainstPresident, processRegime } from './regime';
 import { processWar } from './war';
 import { rollEvents, resolveUnattendedEvents, forecastNextCrisis } from './events';
+import { abolishPrograms, abolitionGroupImpacts } from './program-text';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
 import { makeId, monthLabel, shortMonthLabel } from '../utils/index';
@@ -165,6 +166,41 @@ export function tickMonth(input: GameState): TickOutcome {
     // direto para os estudos de modelagem — e de lá para o leilão, que ainda
     // pode dar deserto.
     notes.push(...openProcessesFromPolicy(state, policy, rng));
+
+    // A medida que acaba com um programa acaba com ele de verdade: ele sai da
+    // lista no mesmo mês, o dinheiro volta ao caixa e a conta política chega
+    // inteira, de uma vez.
+    if (policy.abolishProgramIds?.length) {
+      const fim = abolishPrograms(state, policy.abolishProgramIds);
+
+      for (const program of fim.removed) {
+        for (const impact of abolitionGroupImpacts(program)) {
+          nudgeGroup(state.socialGroups, impact.groupId, impact.delta);
+        }
+        // Programa popular cobra caro para ser extinto; programa que ninguém
+        // defendia sai quase de graça.
+        nudgeApproval(state, -(program.popularity / 28));
+
+      }
+
+      notes.push(...fim.narratives);
+
+      if (fim.removed.length > 0) {
+        consequences.push({
+          id: makeId('cons', rng),
+          sourceId: policy.id,
+          sourceLabel: policy.title,
+          month: state.month,
+          title: `Fim de ${fim.removed.map((program) => program.name).join(', ')}`,
+          body: `R$ ${fim.monthlySaving.toFixed(1)} bi por mês a menos de gasto e ${(
+            fim.beneficiariesLost / 1e6
+          ).toFixed(1)} milhões de pessoas sem o benefício. O programa saiu da lista.`,
+          kind: 'efeito_direto',
+          impacts: {},
+          approvalDelta: 0,
+        });
+      }
+    }
   }
 
   for (const policy of state.policies) {

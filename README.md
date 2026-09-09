@@ -652,6 +652,42 @@ regiões mostra `país 43%` no cabeçalho; e a cor compara com o país em vez de
 régua fixa — 46% num governo de 40% é uma região boa, e num governo de 55% é um
 problema.
 
+### Acabar com um programa
+
+Extinguir não é cortar verba, e o jogo passou a separar as duas coisas
+([`program-text.ts`](src/game/engines/program-text.ts)). "Reduzir o Bolsa
+Família em 20%" mexe num número que pode voltar no mês seguinte. "Acabar com o
+Bolsa Família" apaga o programa: aprovada a medida, ele **sai da lista** — não
+fica inativo, não fica arquivado, não fica histórico.
+
+A leitura erra para o lado seguro de propósito, porque apagar é irreversível
+dentro da partida: verbo de corte antes do nome do programa (`reduzir`, `cortar`,
+`enxugar`) e verbo de estudo em qualquer lugar (`estudar`, `avaliar`, `discutir`)
+desligam a extinção. E a comparação é feita contra os programas que existem
+**naquela partida**, então programa criado pelo próprio presidente também pode
+ser extinto por ele, e programa já apagado não é encontrado de novo.
+
+O que acontece depois acontece quase todo sozinho, e isso é o desenho. O motor
+econômico cobra o custeio dos programas ativos todo mês e o motor social calcula
+o gasto por categoria a partir da mesma lista: tirar o programa de lá já faz o
+dinheiro parar de sair e o patamar da área começar a ceder. Devolver o caixa no
+ato **e** parar de cobrá-lo no fechamento seria pagar duas vezes pelo mesmo
+corte, então a extinção não mexe em caixa nem em pobreza na hora. O que ela
+aplica de imediato é o custo político, que é imediato mesmo: os grupos que
+recebiam reagem com sinal invertido e proporcional à popularidade do programa.
+
+Duas partidas iguais, uma extinguindo o Bolsa Família no mês 1, sete meses
+depois:
+
+```
+com a extinção   caixa R$ 169,4 bi · pobreza 23,19 · aprovação 40,8 · baixa renda 50,0
+mantendo         caixa R$  80,1 bi · pobreza 21,75 · aprovação 45,6 · baixa renda 59,1
+```
+
+O aviso vem antes da assinatura, na Leitura do Gabinete, com nome do programa,
+custo mensal e quanta gente deixa de ser atendida — e dizendo que recriar depois
+exige uma medida nova, do zero.
+
 ### Todo mundo tem rosto
 
 Ninguém no jogo tem foto. Todo personagem que aparece numa lista de escolha — os

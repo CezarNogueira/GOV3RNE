@@ -154,6 +154,13 @@ export interface Policy {
    * a medida entrar em vigor.
    */
   companyImpact?: CompanyPolicyImpact;
+  /**
+   * Programas que esta medida extingue, lidos do texto na assinatura.
+   *
+   * Fica guardado na medida em vez de recalculado: o que o presidente leu antes
+   * de assinar é exatamente o que vai valer se o Congresso aprovar.
+   */
+  abolishProgramIds?: string[];
 
   /** Fase fina da tramitação. Só existe enquanto `requiresCongress` for true. */
   stage?: LegislativeStage;
