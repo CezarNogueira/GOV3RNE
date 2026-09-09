@@ -58,31 +58,37 @@ describe('o tamanho da agenda', () => {
     expect(proporcao).toBeLessThan(0.2);
   });
 
-  it('traz mais de um assunto quando traz algum', () => {
-    const draws = drawMany(newGame(), 120).filter((events) => events.length > 0);
-    const media = draws.reduce((total, events) => total + events.length, 0) / draws.length;
+  it('cobra um assunto por mês, e nunca dois', () => {
+    const draws = drawMany(newGame(), 120);
 
-    expect(media).toBeGreaterThan(1.5);
-    expect(Math.max(...draws.map((events) => events.length))).toBeLessThanOrEqual(8);
+    // Um por mês é regra dura, e a razão é mecânica: evento que chega ao fim do
+    // mês sem decisão é resolvido sozinho pela pior opção. Empilhar seis não
+    // seria seis oportunidades, seria cinco punições para quem não teve agenda
+    // para todas.
+    expect(Math.max(...draws.map((events) => events.length))).toBe(1);
   });
 
-  it('pesa mais a agenda de um governo em crise do que a de um governo estável', () => {
-    const calmo = newGame();
-    calmo.approval.overall = 64;
-    calmo.congress.goodwill = 62;
-    calmo.congress.impeachmentRisk = 8;
+  it('deixa alguns meses em silêncio, e não muitos', () => {
+    const draws = drawMany(newGame(), 200);
+    const limpos = draws.filter((events) => events.length === 0).length;
 
-    const crise = newGame();
-    crise.approval.overall = 30;
-    crise.congress.impeachmentRisk = 55;
-    crise.economy.unemployment = 13;
+    // Mês sem assunto existe para a calmaria ser sentida. Se fosse a maioria, o
+    // jogo viraria uma planilha entre uma decisão e outra.
+    expect(limpos).toBeGreaterThan(0);
+    expect(limpos / draws.length).toBeLessThan(0.35);
+  });
 
-    const media = (state: GameState) => {
-      const draws = drawMany(state, 80).filter((events) => events.length > 0);
-      return draws.reduce((total, events) => total + events.length, 0) / draws.length;
-    };
+  it('faz a frequência configurada mexer no silêncio, já que não mexe mais no volume', () => {
+    const raro = newGame();
+    raro.settings.eventFrequency = 0.25;
 
-    expect(media(crise)).toBeGreaterThan(media(calmo));
+    const constante = newGame();
+    constante.settings.eventFrequency = 2;
+
+    const limpos = (state: GameState) =>
+      drawMany(state, 200).filter((events) => events.length === 0).length;
+
+    expect(limpos(raro)).toBeGreaterThan(limpos(constante));
   });
 });
 

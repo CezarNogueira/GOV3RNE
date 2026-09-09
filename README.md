@@ -480,16 +480,23 @@ fechamento de mês.
 
 ### A agenda do mês
 
-A agenda é o país batendo na porta. Ela tem **90% de chance de trazer alguma
-coisa e 10% de vir limpa** — um mês tranquilo é parte do jogo, e é ele que dá
-contraste ao mês em que tudo acontece junto. Quando há agenda, o tamanho dela
-sai do estado do país:
+A agenda é o país batendo na porta, e ela traz **um assunto por mês — nunca
+dois**. A razão é mecânica, não estética: evento que chega ao fechamento sem
+decisão é resolvido sozinho pela pior opção disponível, com desconto de
+aprovação. Uma agenda de seis assuntos não seria seis oportunidades; seria cinco
+punições para quem não teve ponto de agenda para todas. Com um por mês, toda
+decisão que o país cobra é uma decisão que o presidente leu.
 
-| Situação | Assuntos no mês |
-| -------- | --------------- |
-| Governo estável (aprovação alta, Congresso calmo) | 1 a 3 |
-| Mês comum | 2 a 5 |
-| Governo em crise (aprovação baixa, impeachment no radar, inflação ou desemprego alto) | 4 a 8 |
+Alguns meses vêm em silêncio, e isso é parte do jogo — é o mês tranquilo que dá
+contraste ao mês em que a coisa aperta. Numa partida de 48 meses medida em
+frequência normal: **39 meses com assunto e 9 em silêncio**. A frequência
+configurada nas opções mexe aí, e não no volume: em frequência máxima, 46 dos 48
+meses trazem alguma coisa.
+
+A pressão do país não sumiu da conta — ela deixou de aparecer no volume e
+continua aparecendo em **qual** evento é sorteado. Mês de crise pesa os eventos
+graves pelo `urgencyMultiplier`, e é de lá que vem a sensação de governo em
+chamas.
 
 Dois catálogos concorrem no mesmo sorteio, com o mesmo peso multiplicado pela
 mesma urgência:

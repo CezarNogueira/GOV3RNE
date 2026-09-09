@@ -301,8 +301,8 @@ describe('o sistema aponta nos dois sentidos', () => {
 
 describe('duas campanhas, dois países', () => {
   /** Roda o mandato de um governo que nunca toca nas instituições. */
-  function democratica(months: number): GameState {
-    let state = newGame(4242);
+  function democratica(months: number, seed = 4242): GameState {
+    let state = newGame(seed);
     for (let index = 0; index < months && !state.flags.gameOver; index += 1) {
       state = tickMonth(state).state;
     }
@@ -310,8 +310,8 @@ describe('duas campanhas, dois países', () => {
   }
 
   /** Roda o mandato de um governo que concentra poder e reprime. */
-  function autoritaria(months: number): GameState {
-    let state = inCrisis(newGame(4242));
+  function autoritaria(months: number, seed = 4242): GameState {
+    let state = inCrisis(newGame(seed));
     runRegimeAction(state, { kind: 'estado_excecao', reason: 'crise institucional', months: 12 }, new Rng(20, 0));
     runRegimeAction(state, { kind: 'concentrar_poder', move: 'judiciario' }, new Rng(21, 0));
     runRegimeAction(state, { kind: 'concentrar_poder', move: 'imprensa' }, new Rng(22, 0));
@@ -324,14 +324,32 @@ describe('duas campanhas, dois países', () => {
   }
 
   it('a democracia entrega legitimidade, mercado calmo e mundo aberto', () => {
-    const livre = democratica(12);
-    const fechada = autoritaria(12);
+    // A afirmação é sobre o DESENHO, não sobre uma partida: com um evento por
+    // mês, um único choque econômico responde por boa parte da variação do
+    // período, e uma semente azarada inverte o risco-país sem que nada no
+    // regime tenha mudado. A média de cinco partidas mede o que se quis medir.
+    const sementes = [4242, 77, 909, 31, 555];
+    const media = (valores: number[]) =>
+      valores.reduce((total, valor) => total + valor, 0) / valores.length;
 
-    expect(livre.regime.legitimacy).toBeGreaterThan(fechada.regime.legitimacy);
-    expect(livre.economy.countryRisk).toBeLessThan(fechada.economy.countryRisk);
-    expect(livre.diplomacy.isolation).toBeLessThan(fechada.diplomacy.isolation);
-    expect(livre.regime.civilLiberties).toBeGreaterThan(fechada.regime.civilLiberties);
-    expect(livre.regime.institutionalStrength).toBeGreaterThan(fechada.regime.institutionalStrength);
+    const livres = sementes.map((seed) => democratica(12, seed));
+    const fechadas = sementes.map((seed) => autoritaria(12, seed));
+
+    expect(media(livres.map((estado) => estado.regime.legitimacy))).toBeGreaterThan(
+      media(fechadas.map((estado) => estado.regime.legitimacy)),
+    );
+    expect(media(livres.map((estado) => estado.economy.countryRisk))).toBeLessThan(
+      media(fechadas.map((estado) => estado.economy.countryRisk)),
+    );
+    expect(media(livres.map((estado) => estado.diplomacy.isolation))).toBeLessThan(
+      media(fechadas.map((estado) => estado.diplomacy.isolation)),
+    );
+    expect(media(livres.map((estado) => estado.regime.civilLiberties))).toBeGreaterThan(
+      media(fechadas.map((estado) => estado.regime.civilLiberties)),
+    );
+    expect(media(livres.map((estado) => estado.regime.institutionalStrength))).toBeGreaterThan(
+      media(fechadas.map((estado) => estado.regime.institutionalStrength)),
+    );
   });
 
   it('o autoritarismo entrega poder de decisão e acumula resistência', () => {
