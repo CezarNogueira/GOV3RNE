@@ -652,6 +652,35 @@ regiões mostra `país 43%` no cabeçalho; e a cor compara com o país em vez de
 régua fixa — 46% num governo de 40% é uma região boa, e num governo de 55% é um
 problema.
 
+### Ordens dirigidas
+
+Depois da ruptura, o Estado passa a poder escolher o alvo com nome — e é aí que a
+diferença entre repressão genérica e regime autoritário aparece no jogo. Duas
+ordens, as duas irreversíveis, as duas indisponíveis enquanto o país for uma
+democracia ("numa democracia, quem assinaria isso responderia por isso"):
+
+**Perseguir um grupo.** Escolhe-se um dos 17 grupos sociais: lideranças presas,
+organização proibida, vigilância permanente. A mobilização do grupo vai a zero e
+a aprovação despenca — mas o preço é do regime, não do grupo. Medido com os
+universitários: liberdades 88 → 75,5, legitimidade 71,6 → 61,1, isolamento
+28 → 39,5 e **resistência 8 → 22,3**. A resistência sobe em todo mundo, e não só
+em quem foi perseguido, porque quem assistiu entendeu que pode ser o próximo.
+
+**Afastar uma figura.** Ministro é cassado e preso por decreto: sai do gabinete e
+a pasta fica **vaga** — não há substituto automático, quem mandou prender herdou
+o trabalho até nomear outro —, e o partido dele rompe com o governo. Governador é
+deposto e o estado passa a ser administrado por um interventor: a insatisfação
+local salta (Ceará, 21 → 47) e **os outros 26 governadores perdem 9 pontos de
+relação com o Planalto de uma vez**, porque acabaram de calcular a própria
+distância até essa lista.
+
+O desenho tem um ponto: silenciar quem reclama não compra estabilidade. Duas
+partidas idênticas oito meses depois da ruptura, uma usando as ordens e outra
+não, e a que usou termina com mais resistência, menos legitimidade e mais
+isolamento. Oito testes em
+[`targeted-orders.test.ts`](src/game/engines/targeted-orders.test.ts) seguram
+isso, inclusive o de que ordem recusada não cobra meio preço.
+
 ### Governar sem Congresso
 
 Fechado o Congresso, ele não fica "enfraquecido": deixa de existir para efeito de

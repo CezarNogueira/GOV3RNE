@@ -275,10 +275,13 @@ const TRAJES_MASCULINOS: AvatarConfig['outfit'][] = [
 ];
 
 /**
- * O nome termina em "a"? É o melhor palpite disponível em português, e é o
- * mesmo critério que o resto do jogo já usa para concordância.
+ * O nome termina em "a"? É o melhor palpite disponível em português.
+ *
+ * Olha a PRIMEIRA palavra significativa, pulando abreviação com ponto: em
+ * "Delegada Simone Falcão" quem entrega o gênero é o cargo, não o sobrenome —
+ * e usar o sobrenome escreveria "Delegada Simone Falcão foi cassado".
  */
-function looksFeminine(name: string): boolean {
+export function looksFeminine(name: string): boolean {
   const first = name.split(' ').find((part) => part.length > 2 && !part.endsWith('.')) ?? name;
   return /a$/i.test(first);
 }

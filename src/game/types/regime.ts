@@ -186,4 +186,16 @@ export type RegimeAction =
   | { kind: 'declarar_guerra'; countryId: string }
   | { kind: 'orcamento_militar'; amount: number }
   | { kind: 'buscar_aliados' }
-  | { kind: 'negociar_paz'; accept: boolean };
+  | { kind: 'negociar_paz'; accept: boolean }
+  /**
+   * Perseguição dirigida a um grupo social inteiro: prisão de lideranças,
+   * proibição de organizar-se, aparelho do Estado em cima. Só existe depois da
+   * ruptura, porque é o tipo de ordem que nenhuma democracia executa.
+   */
+  | { kind: 'perseguir_grupo'; groupId: string }
+  /**
+   * Afastamento de uma figura específica — ministro ou governador — por decreto
+   * do regime: cassação, prisão política ou intervenção no estado. A pessoa sai
+   * do tabuleiro e não volta.
+   */
+  | { kind: 'neutralizar_figura'; targetKind: 'ministro' | 'governador'; targetId: string };

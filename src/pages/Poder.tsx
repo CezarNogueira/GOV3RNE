@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
+  MINISTRY_BY_ID,
   REGIME_LABEL,
   regimeActionAvailable,
   ruptureOdds,
@@ -8,6 +9,7 @@ import {
   type GameState,
   type GovernmentRegime,
   type MobilizationLevel,
+  type RegimeAction,
   type RepressionLevel,
 } from '@/game';
 import { useGame } from '@/state/game-store';
@@ -54,6 +56,13 @@ export function Poder() {
   const state = useGame((store) => store.state);
   const regimeAction = useGame((store) => store.regimeAction);
   const [confirming, setConfirming] = useState<'ruptura' | 'guerra' | null>(null);
+  // Ordem dirigida a uma pessoa ou a um grupo não sai sem o jogador ler o que
+  // ela faz: o texto da confirmação é escrito no clique, com o alvo pelo nome.
+  const [confirmacao, setConfirmacao] = useState<{
+    titulo: string;
+    corpo: string;
+    acao: RegimeAction;
+  } | null>(null);
   const [searchParams] = useSearchParams();
   // Quando a frase do presidente já nomeou o país ("declarar guerra à
   // Argentina"), ele chega aqui selecionado — sem precisar procurar na lista.
@@ -336,6 +345,92 @@ export function Poder() {
                 </>
               )}
             </Section>
+
+            {/* ------------------------------------------------ alvos */}
+            {disponivel('perseguir_grupo').ok && (
+              <Section title="Ordens dirigidas">
+                <p className="text-[12px] leading-relaxed text-neutral-500">
+                  Depois da ruptura, o Estado passa a poder escolher o alvo com nome. Nada disto é
+                  reversível: quem é afastado não volta, e quem é perseguido não esquece.
+                </p>
+
+                <p className="label mt-3 mb-1.5">Perseguir um grupo</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {state.socialGroups.map((grupo) => (
+                    <button
+                      key={grupo.id}
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      onClick={() =>
+                        setConfirmacao({
+                          titulo: `Perseguir ${grupo.name}?`,
+                          corpo: `Lideranças presas, organização proibida e vigilância permanente sobre ${grupo.name.toLowerCase()} — ${grupo.electorateShare.toFixed(
+                            0,
+                          )}% do eleitorado. O grupo se cala e o resto do país entende o recado: a resistência sobe em todo mundo, não só neles, e o mundo vê.`,
+                          acao: { kind: 'perseguir_grupo', groupId: grupo.id },
+                        })
+                      }
+                    >
+                      {grupo.name}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="label mt-4 mb-1.5">Afastar uma figura</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {state.government.ministers.map((ministro) => (
+                    <button
+                      key={ministro.id}
+                      type="button"
+                      className="btn-ghost btn-sm"
+                      onClick={() =>
+                        setConfirmacao({
+                          titulo: `Cassar ${ministro.name}?`,
+                          corpo: `O titular de ${MINISTRY_BY_ID[ministro.ministryId].shortName} é cassado e preso por decreto. A pasta fica VAGA até você nomear outro${
+                            ministro.party ? `, e o ${ministro.party} rompe com o governo` : ''
+                          }.`,
+                          acao: {
+                            kind: 'neutralizar_figura',
+                            targetKind: 'ministro',
+                            targetId: ministro.id,
+                          },
+                        })
+                      }
+                    >
+                      {ministro.name}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="label mt-3 mb-1.5">Intervir num estado</p>
+                <select
+                  className="input w-full text-[12px]"
+                  value=""
+                  onChange={(event) => {
+                    const unidade = state.states.find((entry) => entry.id === event.target.value);
+                    if (!unidade) return;
+                    setConfirmacao({
+                      titulo: `Depor ${unidade.governorName}?`,
+                      corpo: `${unidade.name} passa a ser administrado por um interventor nomeado pelo Planalto. O estado obedece, a insatisfação local dispara e os outros 26 governadores calculam a própria distância até essa lista.`,
+                      acao: {
+                        kind: 'neutralizar_figura',
+                        targetKind: 'governador',
+                        targetId: unidade.id,
+                      },
+                    });
+                  }}
+                >
+                  <option value="">Escolha o estado…</option>
+                  {state.states
+                    .filter((unidade) => unidade.governorParty !== 'intervenção')
+                    .map((unidade) => (
+                      <option key={unidade.id} value={unidade.id}>
+                        {unidade.name} · {unidade.governorName}
+                      </option>
+                    ))}
+                </select>
+              </Section>
+            )}
           </div>
 
           {/* ------------------------------------------------ coluna direita */}
@@ -429,6 +524,34 @@ export function Poder() {
           </aside>
         </div>
       </PageBody>
+
+      {/* --------------------------------------------- ordem dirigida */}
+      <Modal
+        open={confirmacao !== null}
+        onClose={() => setConfirmacao(null)}
+        title={confirmacao?.titulo ?? ''}
+        subtitle="Esta decisão não tem botão de desfazer."
+        size="md"
+        footer={
+          <>
+            <button type="button" className="btn-ghost" onClick={() => setConfirmacao(null)}>
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="btn-danger"
+              onClick={() => {
+                if (confirmacao) regimeAction(confirmacao.acao);
+                setConfirmacao(null);
+              }}
+            >
+              Assinar a ordem
+            </button>
+          </>
+        }
+      >
+        <p className="text-[13px] leading-relaxed text-neutral-300">{confirmacao?.corpo}</p>
+      </Modal>
 
       {/* ------------------------------------------------------ confirmação */}
       <Modal

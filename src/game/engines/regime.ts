@@ -8,6 +8,8 @@ import type {
 } from '../types/index';
 import { nudgeGroup } from './social';
 import { nudgeApproval } from './approval';
+import { MINISTRY_BY_ID } from '../data/ministries';
+import { looksFeminine } from '../data/portraits';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
 import { monthLabel } from '../utils/format';
@@ -442,8 +444,16 @@ export function regimeActionAvailable(
       }
       return { ok: true };
     case 'consolidar':
+    case 'perseguir_grupo':
+    case 'neutralizar_figura':
       if (regime.regime !== 'ditadura' && regime.regime !== 'regime_militar' && regime.regime !== 'autoritario') {
-        return { ok: false, reason: 'Não há regime a consolidar: o país ainda é uma democracia.' };
+        return {
+          ok: false,
+          reason:
+            kind === 'consolidar'
+              ? 'Não há regime a consolidar: o país ainda é uma democracia.'
+              : 'Ordem sem base legal nenhuma. Numa democracia, quem assinaria isso responderia por isso — e o Supremo derruba antes do fim do dia.',
+        };
       }
       return { ok: true };
     case 'transicao_democratica':
@@ -795,6 +805,150 @@ export function runRegimeAction(
     }
 
     // ----------------------------------------------------------- CONSOLIDAR
+    case 'neutralizar_figura': {
+      const permitido = regimeActionAvailable(state, 'neutralizar_figura');
+      if (!permitido.ok) return { ok: false, message: permitido.reason ?? '' };
+
+      if (action.targetKind === 'ministro') {
+        const ministro = state.government.ministers.find((entry) => entry.id === action.targetId);
+        if (!ministro) return { ok: false, message: 'Ministro não encontrado.' };
+
+        const pasta = MINISTRY_BY_ID[ministro.ministryId];
+
+        // A pasta fica VAGA. Não há substituto automático: quem mandou prender
+        // o titular herdou o trabalho dele até nomear outro.
+        state.government.ministers = state.government.ministers.filter(
+          (entry) => entry.id !== ministro.id,
+        );
+
+        // Partido do ministro entende o gesto na hora.
+        if (ministro.party) {
+          const bloco = state.congress.blocs.find((entry) => entry.partyId === ministro.party);
+          if (bloco) bloco.support = round(clamp(bloco.support - 34, -100, 100), 1);
+        }
+
+        regime.civilLiberties = round(clamp100(regime.civilLiberties - 5), 1);
+        regime.legitimacy = round(clamp100(regime.legitimacy - 6), 1);
+        regime.publicFear = round(clamp100(regime.publicFear + 9), 1);
+        regime.resistance = round(clamp100(regime.resistance + 7), 1);
+        regime.stateControl = round(clamp100(regime.stateControl + 4), 1);
+        state.diplomacy.isolation = round(clamp100(state.diplomacy.isolation + 5), 1);
+
+        nudgeGroup(state.socialGroups, 'servidores', -3.4);
+        nudgeApproval(state, -1.2);
+
+        // Mesmo palpite de gênero que os retratos usam, para não existirem dois.
+        const ela = looksFeminine(ministro.name);
+        const cassado = ela ? 'cassada e presa' : 'cassado e preso';
+
+        recordMilestone(
+          state,
+          `${ministro.name} ${ela ? 'afastada' : 'afastado'} por decreto`,
+          `${ela ? 'A titular' : 'O titular'} de ${pasta.shortName} foi ${cassado} por ordem direta do Planalto. A pasta ficou vaga e o recado chegou a todo o gabinete.`,
+        );
+
+        return {
+          ok: true,
+          message: `${ministro.name} foi ${cassado}. ${pasta.shortName} está sem titular, o partido ${
+            ela ? 'dela' : 'dele'
+          } rompeu e o resto do gabinete entendeu que a régua mudou.`,
+        };
+      }
+
+      const unidade = state.states.find((entry) => entry.id === action.targetId);
+      if (!unidade) return { ok: false, message: 'Estado não encontrado.' };
+
+      const anterior = unidade.governorName;
+      // Intervenção federal: o governador eleito sai, um interventor entra. O
+      // estado passa a responder ao Planalto e a odiá-lo.
+      unidade.governorName = `Interventor federal em ${unidade.name}`;
+      unidade.governorParty = 'intervenção';
+      unidade.governorRelation = 92;
+      unidade.governorAmbition = 0;
+      unidade.unrest = round(clamp100(unidade.unrest + 26), 1);
+      unidade.approval = round(clamp100(unidade.approval - 14), 1);
+
+      regime.civilLiberties = round(clamp100(regime.civilLiberties - 7), 1);
+      regime.legitimacy = round(clamp100(regime.legitimacy - 9), 1);
+      regime.publicFear = round(clamp100(regime.publicFear + 11), 1);
+      regime.resistance = round(clamp100(regime.resistance + 11), 1);
+      regime.stateControl = round(clamp100(regime.stateControl + 8), 1);
+      state.diplomacy.isolation = round(clamp100(state.diplomacy.isolation + 7), 1);
+
+      // Os outros governadores não são plateia: são a próxima lista.
+      for (const outro of state.states) {
+        if (outro.id === unidade.id) continue;
+        outro.governorRelation = round(clamp100(outro.governorRelation - 9), 1);
+      }
+
+      nudgeApproval(state, -1.8);
+      const governadora = looksFeminine(anterior);
+      const deposto = governadora ? 'deposta' : 'deposto';
+
+      recordMilestone(
+        state,
+        `Intervenção em ${unidade.name}`,
+        `${anterior} foi ${deposto} por decreto e o estado passou a ser administrado por um interventor nomeado pelo Planalto.`,
+      );
+
+      return {
+        ok: true,
+        message: `${anterior} foi ${deposto} e ${unidade.name} está sob intervenção federal. O estado obedece agora — e os outros ${state.states.length - 1} governadores acabaram de calcular a própria distância até essa lista.`,
+      };
+    }
+
+    case 'perseguir_grupo': {
+      const permitido = regimeActionAvailable(state, 'perseguir_grupo');
+      if (!permitido.ok) return { ok: false, message: permitido.reason ?? '' };
+
+      const grupo = state.socialGroups.find((entry) => entry.id === action.groupId);
+      if (!grupo) return { ok: false, message: 'Grupo desconhecido.' };
+
+      // O tamanho do alvo define o tamanho do estrago. Perseguir 2% do
+      // eleitorado é uma operação; perseguir 20% é fraturar o país.
+      const peso = grupo.electorateShare / 10 + grupo.influence / 60;
+
+      grupo.approval = round(clamp100(grupo.approval - 26 - peso * 4), 1);
+      // A mobilização some no curto prazo porque organizar-se virou crime. É
+      // esse silêncio que o regime confunde com apoio.
+      grupo.mobilization = round(clamp100(grupo.mobilization - 34), 1);
+
+      regime.civilLiberties = round(clamp100(regime.civilLiberties - 9 - peso * 2), 1);
+      regime.legitimacy = round(clamp100(regime.legitimacy - 7 - peso * 2), 1);
+      regime.publicFear = round(clamp100(regime.publicFear + 12 + peso), 1);
+      // Resistência não é o grupo perseguido: é todo mundo que entendeu que
+      // pode ser o próximo.
+      regime.resistance = round(clamp100(regime.resistance + 9 + peso * 3), 1);
+      regime.stateControl = round(clamp100(regime.stateControl + 6), 1);
+
+      state.diplomacy.isolation = round(clamp100(state.diplomacy.isolation + 8 + peso * 2), 1);
+      state.economy.countryRisk = Math.round(clamp(state.economy.countryRisk + 30 + peso * 8, 40, 2000));
+
+      // Quem tem afinidade com o alvo se afasta; o resto sente medo, e medo não
+      // é adesão.
+      for (const outro of state.socialGroups) {
+        if (outro.id === grupo.id) continue;
+        const proximo = outro.demands.some((demanda) => grupo.demands.includes(demanda));
+        nudgeGroup(state.socialGroups, outro.id, proximo ? -3.2 : -1.1);
+      }
+
+      nudgeApproval(state, -(1.5 + peso));
+      recordMilestone(
+        state,
+        `Perseguição a ${grupo.name}`,
+        `O aparato do Estado passou a tratar ${grupo.name.toLowerCase()} como caso de polícia: lideranças presas, organização proibida, atividade vigiada.`,
+      );
+
+      return {
+        ok: true,
+        message: `${grupo.name}: lideranças presas e organização proibida. O grupo se cala — a mobilização cai para ${grupo.mobilization.toFixed(
+          0,
+        )} —, e o resto do país entende o recado. Resistência em ${regime.resistance.toFixed(
+          0,
+        )} e o mundo olhando.`,
+      };
+    }
+
     case 'consolidar': {
       const permitido = regimeActionAvailable(state, 'consolidar');
       if (!permitido.ok) return { ok: false, message: permitido.reason ?? 'Ação indisponível.' };
