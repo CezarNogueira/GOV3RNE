@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, ArrowRight, Check, Dice5, Flag, Star } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Dice5, Flag, Lock, Star } from 'lucide-react';
 import {
   ACCESSORIES,
   BACKGROUND_COLORS,
@@ -16,6 +16,9 @@ import {
   CANDIDATE_ORIGIN_NOTE,
   MINISTER_POOL,
   MINISTRIES,
+  candidateFitsMinistry,
+  defaultCabinet,
+  outOfFieldIn,
   MINISTRY_IDS,
   OUTFITS,
   PARTIES,
@@ -27,6 +30,8 @@ import {
   VICE_POOL,
   type CandidateOrigin,
   type CandidateProfile,
+  type Ministry,
+  type MinisterCandidate,
   createSeed,
   formatBRL,
   newGameSchema,
@@ -1057,23 +1062,13 @@ function StepCabinet({
   const takenBy = (candidateId: string): MinistryId | undefined =>
     MINISTRY_IDS.find((id) => draft.cabinet[id] === candidateId);
 
+  // Mesma montagem que o motor usa: nomes que podem de fato assumir a pasta,
+  // preferindo quem é da área e sem repetir ninguém.
   const autofill = () => {
-    setDraft((current) => {
-      const cabinet: Partial<Record<MinistryId, string>> = {};
-      const used = new Set<string>();
-      for (const ministryId of MINISTRY_IDS) {
-        // Prefere quem tem afinidade com a pasta; cai para qualquer nome livre.
-        const best =
-          MINISTER_POOL.find(
-            (candidate) => !used.has(candidate.id) && candidate.fits.includes(ministryId),
-          ) ?? MINISTER_POOL.find((candidate) => !used.has(candidate.id));
-        if (best) {
-          cabinet[ministryId] = best.id;
-          used.add(best.id);
-        }
-      }
-      return { ...current, cabinet };
-    });
+    setDraft((current) => ({
+      ...current,
+      cabinet: defaultCabinet(MINISTRY_IDS) as Partial<Record<MinistryId, string>>,
+    }));
   };
 
   const filled = MINISTRY_IDS.filter((id) => draft.cabinet[id]).length;
@@ -1084,10 +1079,11 @@ function StepCabinet({
         <div>
           <h2 className="label-strong">O gabinete</h2>
           <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-neutral-500">
-            Dez pastas, dez decisões, e nenhuma delas dá para pular. Nome de partido sobe a relação
-            com a bancada inteira dele e é o jeito mais barato de comprar base antes da primeira
-            votação. Independente traz currículo e não traz um voto sequer; nome de internet traz só
-            manchete.
+            Onze pastas, onze decisões, e nenhuma delas dá para pular. Abra a pasta e escolha a
+            ficha: cada legenda tem os quadros dela, os técnicos de carreira ficam numa ficha só, e
+            os famosos aparecem apenas na pasta em que eles realmente atuam. Nome de partido sobe a
+            relação com a bancada inteira e é o jeito mais barato de comprar base; técnico entrega
+            competência e nenhum voto; famoso entrega audiência e holofote em cada erro.
           </p>
         </div>
         <button type="button" className="btn-ghost btn-sm" onClick={autofill}>
@@ -1140,87 +1136,18 @@ function StepCabinet({
                   <p className="mb-2 text-[11px] leading-snug text-neutral-500">
                     {ministry.description}
                   </p>
-                  {/* Mesma divisão da chapa: quadros de partido primeiro,
-                      depois carreira, independentes e famosos. Dentro dos
-                      quadros de partido, um bloco por legenda. */}
-                  {CABINET_ORIGINS.map((origin) => {
-                    const grupo = MINISTER_POOL.filter((candidate) => candidate.origin === origin);
-                    if (grupo.length === 0) return null;
-
-                    return (
-                      <div key={origin} className="mb-3">
-                        <p className="label-strong text-gov-400">
-                          {CANDIDATE_ORIGIN_LABEL[origin]}
-                        </p>
-                        <p className="mb-1.5 mt-0.5 text-[11px] leading-snug text-neutral-600">
-                          {CANDIDATE_ORIGIN_NOTE[origin]}
-                        </p>
-                  <div className="grid gap-1.5 sm:grid-cols-2">
-                    {grupo.map((candidate) => {
-                      const heldBy = takenBy(candidate.id);
-                      const unavailable = heldBy !== undefined && heldBy !== ministry.id;
-                      const fits = candidate.fits.length === 0 || candidate.fits.includes(ministry.id);
-
-                      return (
-                        <button
-                          key={candidate.id}
-                          type="button"
-                          disabled={unavailable}
-                          className={cx(
-                            'option',
-                            chosenId === candidate.id && 'option-selected',
-                            unavailable && 'cursor-not-allowed opacity-35',
-                          )}
-                          onClick={() => {
-                            setDraft((current) => ({
-                              ...current,
-                              cabinet: { ...current.cabinet, [ministry.id]: candidate.id },
-                            }));
-                            setOpen(null);
-                          }}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="truncate text-[12px] font-semibold text-neutral-100">
-                              {candidate.name}
-                            </p>
-                            <Badge tone={KIND_TONE[candidate.kind]}>{KIND_LABEL[candidate.kind]}</Badge>
-                          </div>
-                          <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">
-                            {candidate.bio}
-                          </p>
-                          <div className="mt-1.5 grid grid-cols-2 gap-x-3">
-                            <Meter label="Competência" value={candidate.competence} />
-                            <Meter label="Lealdade" value={candidate.loyalty} />
-                            {candidate.seatsBrought > 0 && (
-                              <Meter
-                                label={`Traz ${candidate.seatsBrought} dep.`}
-                                value={Math.min(100, candidate.seatsBrought * 3)}
-                                tone="info"
-                              />
-                            )}
-                            <Meter
-                              label="Risco de escândalo"
-                              value={candidate.scandalRisk}
-                              tone={candidate.scandalRisk > 45 ? 'danger' : 'neutral'}
-                            />
-                          </div>
-                          {!fits && (
-                            <p className="mt-1 text-[10px] text-warn-500">
-                              Fora da área de formação: a competência cai nesta pasta.
-                            </p>
-                          )}
-                          {unavailable && (
-                            <p className="mt-1 text-[10px] text-neutral-600">
-                              Já ocupa outra pasta neste governo.
-                            </p>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                      </div>
-                    );
-                  })}
+                  <MinisterPicker
+                    ministry={ministry}
+                    chosenId={chosenId}
+                    takenBy={takenBy}
+                    onPick={(candidateId) => {
+                      setDraft((current) => ({
+                        ...current,
+                        cabinet: { ...current.cabinet, [ministry.id]: candidateId },
+                      }));
+                      setOpen(null);
+                    }}
+                  />
                 </div>
               )}
             </li>
@@ -1232,20 +1159,189 @@ function StepCabinet({
 }
 
 /** As origens na ordem em que aparecem no gabinete. */
-const CABINET_ORIGINS: readonly CandidateOrigin[] = ['partido', 'tecnico', 'famoso'];
+
+/**
+ * O SELETOR DE MINISTRO
+ *
+ * A lista inteira de nomes de uma vez não se lê. Aqui ela vem dividida em
+ * fichas: uma por legenda, uma para os técnicos de carreira e uma para os
+ * famosos. Clicar na ficha mostra quem aquela ficha contém, com o número de
+ * disponíveis do lado — e ficha sem ninguém disponível para esta pasta aparece
+ * apagada, porque saber que o PT não tem nome aqui também é informação.
+ *
+ * Famoso só aparece na ficha da pasta dele. Não é penalidade nem aviso: um
+ * goleiro simplesmente não consta na lista da Fazenda.
+ */
+function MinisterPicker({
+  ministry,
+  chosenId,
+  takenBy,
+  onPick,
+}: {
+  ministry: Ministry;
+  chosenId: string | undefined;
+  takenBy: (candidateId: string) => MinistryId | undefined;
+  onPick: (candidateId: string) => void;
+}) {
+  const grupos = useMemo(() => buildPickerGroups(ministry.id), [ministry.id]);
+  const primeiroComGente = grupos.find((grupo) => grupo.candidates.length > 0)?.id ?? null;
+  const [aberto, setAberto] = useState<string | null>(primeiroComGente);
+
+  // Trocar de pasta reabre na primeira ficha que tem gente.
+  useEffect(() => setAberto(primeiroComGente), [primeiroComGente, ministry.id]);
+
+  const grupoAtivo = grupos.find((grupo) => grupo.id === aberto) ?? null;
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-1">
+        {grupos.map((grupo) => {
+          const vazio = grupo.candidates.length === 0;
+          return (
+            <button
+              key={grupo.id}
+              type="button"
+              disabled={vazio}
+              onClick={() => setAberto(grupo.id)}
+              className={cx(
+                'border px-2 py-1 text-[11px] font-medium uppercase tracking-wider transition-colors',
+                vazio
+                  ? 'cursor-not-allowed border-ink-800 text-neutral-700'
+                  : aberto === grupo.id
+                    ? 'border-gov-500 bg-gov-500/15 text-gov-300'
+                    : 'border-ink-700 text-neutral-400 hover:border-ink-600 hover:text-neutral-200',
+              )}
+            >
+              {vazio && <Lock size={9} className="mr-1 inline align-[-1px]" aria-hidden />}
+              {grupo.label}
+              <span className={cx('ml-1.5', vazio ? 'text-neutral-700' : 'text-neutral-500')}>
+                {grupo.candidates.length}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {grupoAtivo && (
+        <>
+          <p className="mt-2 text-[11px] leading-snug text-neutral-600">{grupoAtivo.note}</p>
+
+          <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
+            {grupoAtivo.candidates.map((candidate) => {
+              const heldBy = takenBy(candidate.id);
+              const unavailable = heldBy !== undefined && heldBy !== ministry.id;
+              const foraDaArea = outOfFieldIn(candidate, ministry.id);
+
+              return (
+                <button
+                  key={candidate.id}
+                  type="button"
+                  disabled={unavailable}
+                  className={cx(
+                    'option',
+                    chosenId === candidate.id && 'option-selected',
+                    unavailable && 'cursor-not-allowed opacity-35',
+                  )}
+                  onClick={() => onPick(candidate.id)}
+                >
+                  <p className="truncate text-[12px] font-semibold text-neutral-100">
+                    {candidate.name}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+                    {candidate.party ?? KIND_LABEL[candidate.kind]}
+                  </p>
+                  <p className="mt-1 text-[11px] leading-snug text-neutral-500">{candidate.bio}</p>
+
+                  <div className="mt-1.5 grid grid-cols-3 gap-x-2">
+                    <Meter label="Competência" value={candidate.competence} tone="info" />
+                    <Meter label="Lealdade" value={candidate.loyalty} tone="gov" />
+                    <Meter
+                      label="Escândalo"
+                      value={candidate.scandalRisk}
+                      tone={candidate.scandalRisk > 45 ? 'danger' : 'neutral'}
+                    />
+                  </div>
+
+                  {candidate.seatsBrought > 0 && (
+                    <p className="mt-1 text-[10px] text-info-400">
+                      Traz {candidate.seatsBrought} deputados para a base.
+                    </p>
+                  )}
+                  {foraDaArea && (
+                    <p className="mt-1 text-[10px] text-warn-500">
+                      Fora da área de formação: a competência cai nesta pasta.
+                    </p>
+                  )}
+                  {unavailable && (
+                    <p className="mt-1 text-[10px] text-neutral-600">
+                      Já ocupa outra pasta neste governo.
+                    </p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+interface PickerGroup {
+  id: string;
+  label: string;
+  note: string;
+  candidates: MinisterCandidate[];
+}
+
+/**
+ * As fichas de uma pasta: uma por legenda, uma de técnicos, uma de famosos.
+ *
+ * A ordem é a da negociação: primeiro as legendas, que é onde se compra base;
+ * depois quem entrega competência; por último quem entrega audiência.
+ */
+function buildPickerGroups(ministryId: MinistryId): PickerGroup[] {
+  const elegiveis = MINISTER_POOL.filter((candidate) =>
+    candidateFitsMinistry(candidate, ministryId),
+  );
+
+  const legendas = [
+    ...new Set(
+      MINISTER_POOL.filter((candidate) => candidate.origin === 'partido' && candidate.party).map(
+        (candidate) => candidate.party as string,
+      ),
+    ),
+  ];
+
+  const porLegenda: PickerGroup[] = legendas.map((party) => ({
+    id: `party_${party}`,
+    label: party,
+    note: `Quadros do ${party}. Nomear um deles sobe o apoio da bancada inteira antes da primeira votação — e a conta chega em emenda e cargo.`,
+    candidates: elegiveis.filter((candidate) => candidate.party === party),
+  }));
+
+  return [
+    ...porLegenda,
+    {
+      id: 'tecnicos',
+      label: 'Técnicos',
+      note: 'Carreira, não palanque. Entregam competência e não entregam voto: o Congresso não deve nada a eles, e eles não devem nada ao Congresso.',
+      candidates: elegiveis.filter((candidate) => candidate.origin === 'tecnico'),
+    },
+    {
+      id: 'famosos',
+      label: 'Famosos',
+      note: 'Gente conhecida do país inteiro, escalada para a área em que ela realmente atua. Traz audiência no dia do anúncio e holofote em cima de cada erro depois.',
+      candidates: elegiveis.filter((candidate) => candidate.origin === 'famoso'),
+    },
+  ];
+}
 
 const KIND_LABEL: Record<string, string> = {
   tecnico: 'Técnico',
   politico: 'Político',
   independente: 'Independente',
   internet: 'Internet',
-};
-
-const KIND_TONE: Record<string, 'gov' | 'info' | 'warn' | 'neutral'> = {
-  tecnico: 'gov',
-  politico: 'info',
-  independente: 'neutral',
-  internet: 'warn',
 };
 
 // ===========================================================================

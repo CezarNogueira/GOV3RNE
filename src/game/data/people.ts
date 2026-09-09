@@ -1029,7 +1029,11 @@ export function candidateFitsMinistry(
   ministryId: MinistryId,
 ): boolean {
   if (candidate.origin === 'famoso') return candidate.fits.includes(ministryId);
-  return candidate.fits.length === 0 || candidate.fits.includes(ministryId);
+  // Político e técnico entram em qualquer pasta: `fits` para eles é área de
+  // formação, e estar fora dela cobra competência (ver outOfFieldIn) em vez de
+  // impedir a nomeação. Presidente pode escalar mal — só não pode escalar
+  // absurdo.
+  return true;
 }
 
 /** true quando estar nesta pasta cobra competência do titular. */

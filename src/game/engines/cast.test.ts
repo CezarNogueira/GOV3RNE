@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, type GameState } from './index';
-import { CAUCUSES, MINISTER_POOL, VICE_POOL } from '../data/people';
+import {
+  CAUCUSES,
+  candidateFitsMinistry,
+  defaultCabinet,
+  outOfFieldIn,
+  MINISTER_POOL,
+  VICE_POOL,
+} from '../data/people';
 import { PARTY_BY_ID, partyKey } from '../data/parties';
 import { MINISTRY_IDS } from '../data/ministries';
 import { newGameSchema } from '../schemas/setup';
@@ -16,13 +23,26 @@ import { DEFAULT_AVATAR } from '../data/avatar';
  * exista, que ninguem fique de fora dela e que escolher um lado custe o outro.
  */
 function newGame(viceId: string, gabinete: 'partido' | 'fora'): GameState {
+  // Cada pasta recebe alguém da origem pedida que POSSA assumi-la; quando a
+  // origem não tem ninguém elegível para aquela pasta, entra qualquer nome
+  // válido, porque o que este teste mede é a base no Congresso, não o gabinete.
   const cabinet: Record<string, string> = {};
-  const pool = MINISTER_POOL.filter((candidate) =>
-    gabinete === 'partido' ? candidate.origin === 'partido' : candidate.origin !== 'partido',
-  );
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    cabinet[ministryId] = pool[index % pool.length]!.id;
-  });
+  const usados = new Set<string>();
+  for (const ministryId of MINISTRY_IDS) {
+    const elegivel = (candidate: (typeof MINISTER_POOL)[number]) =>
+      !usados.has(candidate.id) && candidateFitsMinistry(candidate, ministryId);
+
+    const preferido = MINISTER_POOL.find(
+      (candidate) =>
+        elegivel(candidate) &&
+        (gabinete === 'partido' ? candidate.origin === 'partido' : candidate.origin !== 'partido'),
+    );
+    const escolhido = preferido ?? MINISTER_POOL.find(elegivel);
+    if (escolhido) {
+      cabinet[ministryId] = escolhido.id;
+      usados.add(escolhido.id);
+    }
+  }
 
   return createGame(
     newGameSchema.parse({
@@ -201,5 +221,70 @@ describe('siglas do banco de nomes batem com os blocos do Congresso', () => {
         candidate.fits.length > 0 && !candidate.fits.some((pasta) => jogaveis.has(pasta)),
     );
     expect(semPastaJogavel.length).toBeLessThan(MINISTER_POOL.length);
+  });
+});
+
+/**
+ * QUEM PODE ASSUMIR O QUE
+ *
+ * A trava vale para famoso e so para ele: um goleiro nao aparece na lista da
+ * Fazenda. Politico e tecnico continuam podendo assumir qualquer pasta, e
+ * estar fora da area deles cobra competencia em vez de impedir a nomeacao --
+ * presidente pode escalar mal, so nao pode escalar absurdo.
+ */
+describe('a trava de pasta', () => {
+  it('prende cada famoso na pasta dele e em nenhuma outra', () => {
+    for (const candidate of MINISTER_POOL) {
+      if (candidate.origin !== 'famoso') continue;
+
+      const permitidas = MINISTRY_IDS.filter((ministryId) =>
+        candidateFitsMinistry(candidate, ministryId),
+      );
+      expect(permitidas).toEqual(candidate.fits);
+      expect(permitidas.length).toBe(1);
+    }
+  });
+
+  it('nao cobra competencia de famoso, porque ele nunca esta fora da area', () => {
+    for (const candidate of MINISTER_POOL) {
+      if (candidate.origin !== 'famoso') continue;
+      for (const ministryId of MINISTRY_IDS) {
+        expect(outOfFieldIn(candidate, ministryId)).toBe(false);
+      }
+    }
+  });
+
+  it('deixa politico e tecnico assumirem qualquer pasta, com conta a pagar', () => {
+    const politico = MINISTER_POOL.find((candidate) => candidate.origin === 'partido')!;
+    const tecnico = MINISTER_POOL.find((candidate) => candidate.origin === 'tecnico')!;
+
+    for (const ministryId of MINISTRY_IDS) {
+      expect(candidateFitsMinistry(politico, ministryId)).toBe(true);
+      expect(candidateFitsMinistry(tecnico, ministryId)).toBe(true);
+    }
+
+    // Fora da area de formacao existe e cobra: e o aviso que a ficha mostra.
+    const foraDeAlguma = MINISTRY_IDS.some((ministryId) => outOfFieldIn(tecnico, ministryId));
+    expect(foraDeAlguma).toBe(true);
+  });
+
+  it('monta sozinho um gabinete inteiro que respeita a trava', () => {
+    const cabinet = defaultCabinet(MINISTRY_IDS);
+
+    expect(Object.keys(cabinet)).toHaveLength(MINISTRY_IDS.length);
+    expect(new Set(Object.values(cabinet)).size).toBe(MINISTRY_IDS.length);
+
+    for (const ministryId of MINISTRY_IDS) {
+      const candidate = MINISTER_POOL.find((entry) => entry.id === cabinet[ministryId])!;
+      expect(candidateFitsMinistry(candidate, ministryId)).toBe(true);
+    }
+  });
+
+  it('recusa no motor um famoso escalado para a pasta errada', () => {
+    const famoso = MINISTER_POOL.find((candidate) => candidate.origin === 'famoso')!;
+    const outraPasta = MINISTRY_IDS.find((ministryId) => !famoso.fits.includes(ministryId))!;
+
+    // A tela nem oferece, mas a regra nao pode morar so na tela.
+    expect(candidateFitsMinistry(famoso, outraPasta)).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { articulationMultiplier, createGame, workTheVotes, type GameState } from './index';
-import { MINISTER_POOL, defaultCabinet } from '../data/people';
+import { candidateFitsMinistry, MINISTER_POOL, defaultCabinet } from '../data/people';
 import { MINISTRY_BY_ID, MINISTRY_IDS } from '../data/ministries';
 import { PARTIES, TOTAL_CHAMBER_SEATS, TOTAL_SENATE_SEATS } from '../data/parties';
 import { Rng } from '../utils/rng';
@@ -99,7 +99,11 @@ describe('a Secretaria de Relacoes Institucionais', () => {
 
   it('faz o mesmo dinheiro comprar mais voto quando o titular sabe negociar', () => {
     const articulador = MINISTER_POOL.find((candidate) => candidate.fits.includes('sri'))!;
-    const fraco = [...MINISTER_POOL].sort((a, b) => a.competence - b.competence)[0]!;
+    // O pior articulador DISPONÍVEL para a pasta: nem todo nome pode assumir a
+    // SRI, e o teste tem de comparar duas escolhas legítimas.
+    const fraco = [...MINISTER_POOL]
+      .filter((candidate) => candidateFitsMinistry(candidate, 'sri') && candidate.id !== articulador.id)
+      .sort((a, b) => a.competence - b.competence)[0]!;
 
     const bom = newGame(articulador.id);
     const ruim = newGame(fraco.id);

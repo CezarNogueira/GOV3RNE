@@ -1,9 +1,7 @@
 import type { GovernmentProgram } from '../types/index';
 
 /**
- * Programas que o presidente HERDA no dia da posse. Nenhum deles é um programa
- * real do governo brasileiro: são construções do jogo, com nomes próprios,
- * usadas para dar peso às escolhas orçamentárias.
+ * Programas que o presidente HERDA no dia da posse.
  *
  * Cortar um programa devolve caixa e cobra aprovação. Manter todos consome o
  * primário antes de você assinar a primeira medida.

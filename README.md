@@ -652,6 +652,25 @@ regiões mostra `país 43%` no cabeçalho; e a cor compara com o país em vez de
 régua fixa — 46% num governo de 40% é uma região boa, e num governo de 55% é um
 problema.
 
+### Escolher ministro
+
+A pasta abre e a lista vem dividida em fichas, não numa parede de nomes: uma
+ficha por legenda, uma para os técnicos de carreira e uma para os famosos. Cada
+ficha traz o número de disponíveis ao lado, e ficha sem ninguém para aquela
+pasta aparece apagada com cadeado — saber que os famosos não têm nome para a SRI
+também é informação.
+
+A regra de quem pode assumir o quê tem dois pesos, e mora em
+[`people.ts`](src/game/data/people.ts), não na tela:
+
+- **político e técnico entram em qualquer pasta.** `fits` para eles é área de
+  formação: fora dela a competência cai 14 pontos e a ficha avisa antes do
+  clique. O presidente pode escalar mal — a conta chega depois;
+- **famoso só entra na pasta dele.** Não é penalidade nem aviso: um goleiro não
+  consta na lista da Fazenda. A trava está no construtor da partida, na troca de
+  ministro em jogo e na validação do save, porque regra que mora só na interface
+  não é regra.
+
 ### O Congresso como tabuleiro de negociação
 
 Três peças que trabalham juntas.

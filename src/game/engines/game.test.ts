@@ -12,7 +12,7 @@ import { evaluateMandate, snapshotInauguration } from './evaluation';
 import { deserialize, serialize } from './save';
 import { DEFAULT_AVATAR } from '../data/avatar';
 
-import { MINISTER_POOL } from '../data/people';
+import { defaultCabinet, MINISTER_POOL } from '../data/people';
 import { MINISTRY_IDS } from '../data/ministries';
 import { Rng } from '../utils/rng';
 
@@ -21,11 +21,7 @@ import { Rng } from '../utils/rng';
  * têm que ser idênticos entre execuções.
  */
 function baseInput(overrides: Partial<NewGameInput> = {}): NewGameInput {
-  const cabinet: Record<string, string> = {};
-  MINISTRY_IDS.forEach((ministryId, index) => {
-    const candidate = MINISTER_POOL[index % MINISTER_POOL.length];
-    cabinet[ministryId] = candidate?.id ?? 'min_t1';
-  });
+  const cabinet = defaultCabinet(MINISTRY_IDS);
 
   return newGameSchema.parse({
     president: {
