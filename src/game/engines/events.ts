@@ -133,27 +133,33 @@ function urgencyMultiplier(state: GameState, definition: GameEventDefinition): n
 const CLEAN_MONTH_CHANCE = 0.1;
 
 /** Quantos assuntos a agenda deste mês comporta. */
-function agendaSize(state: GameState, rng: Rng): number {
+/**
+ * Quantos assuntos a agenda pode cobrar do presidente no mesmo mês.
+ *
+ * Um. E a razão é mecânica, não estética: todo evento que chega ao fim do mês
+ * sem decisão é resolvido sozinho pela PIOR opção disponível, com metade do
+ * efeito e desconto de aprovação. Uma agenda de seis assuntos, então, não é
+ * seis oportunidades — é cinco punições para quem não teve ponto de agenda para
+ * todas. Com um assunto por mês, toda decisão que o país cobra é uma decisão
+ * que o presidente leu.
+ *
+ * A pressão do país não sumiu: ela deixou de aparecer no VOLUME e continua
+ * aparecendo em QUAL evento é sorteado. Mês de crise pesa os eventos graves
+ * pelo `urgencyMultiplier`, e é de lá que vem a sensação de governo em chamas.
+ */
+const MAX_AGENDA_PER_MONTH = 1;
+
+/**
+ * A chance de o mês passar sem nenhum assunto na mesa.
+ *
+ * A frequência configurada nas opções mexe aqui, e não na quantidade: partida
+ * em frequência alta tem menos meses de silêncio, partida em frequência baixa
+ * tem mais. É o que sobrou de configurável depois que o teto virou um.
+ */
+function cleanMonthChance(state: GameState): number {
   const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
   const pressure = preset.eventPressure * state.settings.eventFrequency;
-
-  const crise =
-    state.approval.overall < 38 ||
-    state.congress.impeachmentRisk > 45 ||
-    state.economy.inflation > state.economy.inflationTarget + 3 ||
-    state.economy.unemployment > 11;
-
-  const estavel =
-    state.approval.overall > 58 &&
-    state.congress.goodwill > 55 &&
-    state.congress.impeachmentRisk < 20;
-
-  const [min, max] = crise ? [4, 8] : estavel ? [1, 3] : [2, 5];
-  const size = rng.int(min as number, max as number);
-
-  // A dificuldade e a frequência configurada ainda mandam: em partida calma o
-  // teto cai, em partida difícil ele sobe.
-  return Math.max(1, Math.min(8, Math.round(size * clamp(pressure, 0.6, 1.4))));
+  return clamp(CLEAN_MONTH_CHANCE / clamp(pressure, 0.4, 2), 0.02, 0.45);
 }
 
 /** Um evento dinâmico está disponível? Cooldown, condições e porta de entrada. */
@@ -214,7 +220,7 @@ export function buildDynamic(
 
 export function rollEvents(state: GameState, rng: Rng): ActiveEvent[] {
   // Mês limpo: nenhum evento especial, e a interface mostra a calmaria.
-  if (rng.bool(CLEAN_MONTH_CHANCE)) return [];
+  if (rng.bool(cleanMonthChance(state))) return [];
 
   const staticPool = EVENT_CATALOG.filter((definition) => {
     if (definition.once && state.flags.firedEvents.includes(definition.id)) return false;
@@ -261,7 +267,7 @@ export function rollEvents(state: GameState, rng: Rng): ActiveEvent[] {
     );
   }
 
-  const size = agendaSize(state, rng);
+  const size = MAX_AGENDA_PER_MONTH;
 
   for (let index = events.length; index < size; index += 1) {
     const staticCandidates = staticPool.filter((definition) => !usedStatic.has(definition.id));
