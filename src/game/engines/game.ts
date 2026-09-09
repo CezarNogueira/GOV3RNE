@@ -35,7 +35,7 @@ import { processElection } from './election';
 import { processCoupAgainstPresident, processRegime } from './regime';
 import { processWar } from './war';
 import { rollEvents, resolveUnattendedEvents, forecastNextCrisis } from './events';
-import { abolishPrograms, abolitionGroupImpacts } from './program-text';
+import { abolishPrograms } from './program-text';
 import { congressDissolved } from './regime';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
@@ -174,15 +174,10 @@ export function tickMonth(input: GameState): TickOutcome {
     if (policy.abolishProgramIds?.length) {
       const fim = abolishPrograms(state, policy.abolishProgramIds);
 
-      for (const program of fim.removed) {
-        for (const impact of abolitionGroupImpacts(program)) {
-          nudgeGroup(state.socialGroups, impact.groupId, impact.delta);
-        }
-        // Programa popular cobra caro para ser extinto; programa que ninguém
-        // defendia sai quase de graça.
-        nudgeApproval(state, -(program.popularity / 28));
-
-      }
+      // As reações NÃO são aplicadas aqui. Elas vêm nos `groupImpacts` e nos
+      // `impacts` da própria medida, montados por `analyzeProgramAbolition`, e
+      // seguem o mesmo caminho de qualquer outra medida do jogo. Aplicá-las de
+      // novo neste ponto cobraria duas vezes de quem perdeu o benefício.
 
       notes.push(...fim.narratives);
 

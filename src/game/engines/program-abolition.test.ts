@@ -141,3 +141,84 @@ describe('o programa sai da lista', () => {
     expect(state.programs.some((entry) => entry.id === 'renda_base')).toBe(true);
   });
 });
+
+/**
+ * A MEDIDA PRECISA SER A MEDIDA
+ *
+ * Antes disto, "acabar com o Bolsa Familia" era lido pelo caminho generico e
+ * virava "Reducao -- transferencia de renda": titulo errado, economia de R$ 90
+ * bi contada por fora e razoes trocadas nos grupos. A extincao acontecia como
+ * efeito colateral de uma medida que dizia outra coisa.
+ */
+describe('a leitura da extincao', () => {
+  it('monta a medida a partir do programa, e nao do caminho generico', () => {
+    const state = newGame();
+    const analysis = interpretLocally('acabar com o bolsa familia', state);
+
+    expect(analysis.title).toContain('Extinção');
+    expect(analysis.title).toContain('Bolsa Família');
+    expect(analysis.summary).toContain('21.4');
+    expect(analysis.summary).toContain('14.2');
+    expect(analysis.warnings.some((aviso) => aviso.includes('não volta'))).toBe(true);
+  });
+
+  it('nao conta a economia duas vezes', () => {
+    const state = newGame();
+    const analysis = interpretLocally('acabar com o bolsa familia', state);
+
+    // O motor para de cobrar o custeio quando o programa sai da lista. Um custo
+    // negativo aqui creditaria a mesma economia de novo, todo mes.
+    expect(analysis.estimatedCost).toBe(0);
+    expect(analysis.impacts.primaryBalance ?? 0).toBe(0);
+    // Pobreza e desemprego tambem sao recalculados pelo gasto por categoria.
+    expect(analysis.impacts.poverty ?? 0).toBe(0);
+  });
+
+  it('poe quem perde e quem ganha do lado certo, com o motivo certo', () => {
+    const state = newGame();
+    const analysis = interpretLocally('acabar com o bolsa familia', state);
+
+    const pobres = analysis.groupImpacts.find((impacto) => impacto.groupId === 'baixa_renda')!;
+    const mercado = analysis.groupImpacts.filter(
+      (impacto) => impacto.groupId === 'mercado_financeiro',
+    );
+
+    // Quem recebia perde, e perde MUITO: 21 milhoes de familias nao e a gota
+    // mensal do programa, e o beneficio inteiro de uma vez.
+    expect(pobres.delta).toBeLessThan(-6);
+    expect(pobres.reason).toContain('Perdeu');
+    // Quem paga a conta comemora.
+    expect(mercado.length).toBeGreaterThan(0);
+    expect(mercado.every((impacto) => impacto.delta > 0)).toBe(true);
+  });
+
+  it('faz o tamanho do programa mudar o tamanho da reacao', () => {
+    const state = newGame();
+
+    const grande = interpretLocally('acabar com o bolsa familia', state);
+    const pequeno = interpretLocally('extinguir o floresta viva', state);
+
+    const perdaMaxima = (analysis: typeof grande) =>
+      Math.min(...analysis.groupImpacts.map((impacto) => impacto.delta));
+
+    // Acabar com um programa de 21 milhoes de pessoas nao pode custar o mesmo
+    // que acabar com um de alcance pequeno.
+    expect(perdaMaxima(grande)).toBeLessThan(perdaMaxima(pequeno));
+  });
+
+  it('exige o Congresso e chega la sem apoio nenhum', () => {
+    const state = newGame();
+    const analysis = interpretLocally('acabar com o bolsa familia', state);
+
+    expect(analysis.requiresCongress).toBe(true);
+    // Programa popular nao se extingue com facilidade: e para ser dificil.
+    expect(analysis.estimatedOpposition).toBeGreaterThan(analysis.estimatedSupport);
+  });
+
+  it('nao rouba a leitura de quem so quis cortar verba', () => {
+    const state = newGame();
+    const corte = interpretLocally('reduzir o bolsa familia em 20%', state);
+
+    expect(corte.title).not.toContain('Extinção');
+  });
+});

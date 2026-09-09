@@ -745,6 +745,29 @@ com a extinção   caixa R$ 169,4 bi · pobreza 23,19 · aprovação 40,8 · bai
 mantendo         caixa R$  80,1 bi · pobreza 21,75 · aprovação 45,6 · baixa renda 59,1
 ```
 
+A medida também é lida como extinção, e não como corte: `analyzeProgramAbolition`
+monta o título, o resumo, o custo e as reações **a partir do próprio programa**.
+Escrever "acabar com o Bolsa Família" produz:
+
+```
+Extinção do Bolsa Família                    projeto de lei · Congresso obrigatório
+A medida encerra o programa em definitivo. R$ 14,2 bi por mês deixam de sair do
+caixa e 21,4 milhões de pessoas deixam de ser atendidas.
+
+baixa_renda        −9,9   Perdeu o Bolsa Família: transferência direta todo dia 20
+mercado_financeiro +2,7   Bolsa Família acabou, e com ele o custo que ele impunha
+mercado_financeiro +2,6   Despesa obrigatória de R$ 170 bi/ano sai do orçamento
+empresariado       +1,5   Gasto público permanente a menos
+
+apoio estimado 6 · oposição 86
+```
+
+O tamanho da reação sai do tamanho do programa: os `groupImpacts` declarados são
+a gota **mensal** dele, e acabar com ele custa o benefício inteiro de uma vez —
+por isso o peso multiplica popularidade, alcance e custo. Extinguir um programa
+pequeno mexe pouco; extinguir um que atende 21 milhões de famílias derruba a
+baixa renda em dez pontos e chega ao Congresso com 86 de oposição.
+
 O aviso vem antes da assinatura, na Leitura do Gabinete, com nome do programa,
 custo mensal e quanta gente deixa de ser atendida — e dizendo que recriar depois
 exige uma medida nova, do zero.

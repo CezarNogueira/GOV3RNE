@@ -1,5 +1,6 @@
-import type { GameState, GovernmentProgram } from '../types/index';
+import type { GameState, GovernmentProgram, ProposalAnalysis } from '../types/index';
 import { normalize } from './text-direction';
+import { estimateSupport } from './fallback-interpreter';
 
 /**
  * ACABAR COM UM PROGRAMA
@@ -22,6 +23,9 @@ const EXTINCAO = [
   'acabar com',
   'acabar de vez com',
   'extinguir',
+  'extincao do',
+  'extincao da',
+  'extincao de',
   'encerrar',
   'cancelar',
   'revogar',
@@ -70,27 +74,35 @@ export function readProgramAbolition(text: string, state: GameState): string[] {
   // vem ANTES do nome do programa, que é onde o sujeito da frase mora.
   const ativos = state.programs.filter((program) => program.active);
 
-  const encontrados = ativos.filter((program) => {
-    const posicao = posicaoDoPrograma(normalized, program);
-    if (posicao < 0) return false;
-
-    const antesDoNome = normalized.slice(0, posicao);
-    if (E_CORTE.some((palavra) => antesDoNome.includes(palavra))) return false;
-
-    return EXTINCAO.some((verbo) => antesDoNome.includes(normalize(verbo)));
-  });
+  const encontrados = ativos.filter((program) =>
+    // QUALQUER menção ao programa serve, e não só a primeira. O texto que chega
+    // aqui costuma ser "título + o que o presidente escreveu", então o nome
+    // aparece duas vezes e só uma delas tem o verbo na frente.
+    posicoesDoPrograma(normalized, program).some((posicao) => {
+      const antesDoNome = normalized.slice(0, posicao);
+      if (E_CORTE.some((palavra) => antesDoNome.includes(palavra))) return false;
+      return EXTINCAO.some((verbo) => antesDoNome.includes(normalize(verbo)));
+    }),
+  );
 
   return encontrados.map((program) => program.id);
 }
 
-/** Onde o nome do programa aparece no texto, ou -1. */
-function posicaoDoPrograma(normalized: string, program: GovernmentProgram): number {
+/** Todas as posições em que o programa é citado no texto. */
+function posicoesDoPrograma(normalized: string, program: GovernmentProgram): number[] {
   const alvos = [program.name, ...apelidosDe(program)];
+  const posicoes: number[] = [];
+
   for (const alvo of alvos) {
-    const posicao = normalized.indexOf(normalize(alvo));
-    if (posicao >= 0) return posicao;
+    const agulha = normalize(alvo);
+    let de = normalized.indexOf(agulha);
+    while (de >= 0) {
+      posicoes.push(de);
+      de = normalized.indexOf(agulha, de + agulha.length);
+    }
   }
-  return -1;
+
+  return posicoes;
 }
 
 /**
@@ -181,17 +193,141 @@ export function abolishPrograms(state: GameState, programIds: readonly string[])
 export function abolitionGroupImpacts(
   program: GovernmentProgram,
 ): { groupId: string; delta: number; reason: string }[] {
-  const peso = 0.6 + program.popularity / 60;
+  // Os `groupImpacts` declarados no programa são a gota MENSAL dele: o quanto
+  // ele empurra o grupo a cada fechamento enquanto existe. Acabar com ele não
+  // custa uma gota — custa o benefício inteiro, de uma vez. O peso traduz isso
+  // pelas três coisas que dizem o tamanho do programa: quanto ele é querido,
+  // quanta gente ele alcança e quanto ele custa.
+  const peso =
+    (0.6 + program.popularity / 60) *
+    (1 + program.coverage / 50) *
+    (1 + Math.min(program.monthlyCost, 24) / 12);
 
   return program.groupImpacts.map((impact) => ({
     groupId: impact.groupId,
     // Sinal invertido: o grupo que ganhava com o programa perde com o fim dele.
     delta: round(-impact.delta * peso, 2),
-    reason: `${program.name} foi extinto`,
+    reason:
+      impact.delta > 0
+        ? `Perdeu o ${program.name}: ${impact.reason.toLowerCase()}`
+        : `${program.name} acabou, e com ele o custo que ele impunha`,
   }));
 }
 
 function round(value: number, digits: number): number {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+
+/**
+ * A MEDIDA DE EXTINÇÃO, ESCRITA A PARTIR DO PROGRAMA
+ *
+ * Sem isto, "acabar com o Bolsa Família" era lido pelo interpretador genérico
+ * como "Redução — transferência de renda": título errado, resumo errado,
+ * economia de R$ 90 bi contada por fora (o motor já para de gastar quando o
+ * programa some) e razões trocadas nos grupos — "baixa renda perde 4 porque o
+ * benefício ficou maior".
+ *
+ * Aqui a medida é montada do próprio programa: o custo é o custo dele, quem
+ * perde é quem ele atendia, quem ganha é quem paga a conta dele, e o tamanho de
+ * tudo isso sai da popularidade e do alcance reais que ele tinha.
+ *
+ * REGRA DE OURO deste arquivo: nada que o motor já faz sozinho entra em
+ * `impacts`. O programa sai da lista, e a partir daí o custeio para de ser
+ * cobrado e o gasto social da categoria cai por conta própria. Repetir isso
+ * aqui pagaria a economia duas vezes.
+ */
+export function analyzeProgramAbolition(
+  text: string,
+  state: GameState,
+): ProposalAnalysis | null {
+  const ids = readProgramAbolition(text, state);
+  if (ids.length === 0) return null;
+
+  const programs = ids
+    .map((id) => state.programs.find((entry) => entry.id === id))
+    .filter((program): program is GovernmentProgram => Boolean(program));
+  if (programs.length === 0) return null;
+
+  const custoMensal = programs.reduce((total, program) => total + program.monthlyCost, 0);
+  const atendidos = programs.reduce((total, program) => total + program.beneficiaries, 0);
+  const nomes = programs.map((program) => program.name).join(', ');
+  const popularidade =
+    programs.reduce((total, program) => total + program.popularity, 0) / programs.length;
+
+  const groupImpacts = programs.flatMap((program) => abolitionGroupImpacts(program));
+
+  // Quem paga a conta do programa comemora o fim dele. O ganho acompanha o
+  // tamanho do gasto que deixa de existir.
+  const alivioFiscal = Math.min(4, custoMensal * 0.18);
+  groupImpacts.push(
+    {
+      groupId: 'mercado_financeiro',
+      delta: round(alivioFiscal, 2),
+      reason: `Despesa obrigatória de R$ ${(custoMensal * 12).toFixed(0)} bi por ano sai do orçamento`,
+    },
+    {
+      groupId: 'empresariado',
+      delta: round(alivioFiscal * 0.6, 2),
+      reason: 'Gasto público permanente a menos',
+    },
+  );
+
+  const cost = estimateSupport(state, groupImpacts, 0);
+
+  return {
+    instrument: 'projeto_lei',
+    title: `Extinção do ${nomes}`,
+    category: programs[0]!.category,
+    summary:
+      `A medida encerra ${programs.length > 1 ? 'os programas' : 'o programa'} ${nomes} em definitivo. ` +
+      `R$ ${custoMensal.toFixed(1)} bi por mês deixam de sair do caixa e ${(atendidos / 1e6).toFixed(1)} ` +
+      `milhões de pessoas deixam de ser atendidas. Aprovada, ${programs.length > 1 ? 'eles somem' : 'ele some'} ` +
+      'da lista de programas: não fica inativo nem arquivado, e recriar depois exige uma medida nova, do zero.',
+    headline: `Governo propõe acabar com ${nomes}`,
+    // Zero de propósito: a economia não é um fluxo NOVO, é a ausência de um
+    // fluxo que já existia. Ela aparece no resumo e no painel de extinção; se
+    // entrasse aqui, o caixa receberia o dinheiro duas vezes.
+    estimatedCost: 0,
+    executionMonths: 1,
+    // Idem para pobreza e desemprego: o motor social recalcula os dois a partir
+    // do gasto por categoria, e o programa já não está lá para contar.
+    impacts: {
+      // O que NÃO é automático: a confiança de quem financia a dívida vê um
+      // governo capaz de cortar gasto obrigatório, e isso é real.
+      fiscalCredibility: round(Math.min(8, custoMensal * 0.35), 2),
+      approval: round(-(popularidade / 22), 2),
+    },
+    groupImpacts,
+    affectedMinistries: [...new Set(programs.map((program) => program.ministryId))],
+    // Programa criado por lei se desfaz por lei. É a matéria mais cara de
+    // aprovar que existe: mexe no bolso de quem recebe.
+    requiresCongress: true,
+    requiredQuorum: 0.5,
+    estimatedSupport: cost.favor,
+    estimatedOpposition: cost.against,
+    legalRisk: round(38 + popularidade * 0.28, 1),
+    delayedEffects: [
+      {
+        monthsAhead: 3,
+        label: `O buraco deixado pelo fim do ${nomes} aparece na pobreza e no consumo das famílias`,
+        // Sem números: quem move pobreza e consumo é o motor social, a partir
+        // do gasto por categoria que o programa deixou de fazer. Isto aqui é o
+        // aviso, não um segundo efeito.
+        impacts: {},
+      },
+    ],
+    rationale:
+      `${nomes} custava R$ ${custoMensal.toFixed(1)} bi por mês e atendia ${(atendidos / 1e6).toFixed(1)} ` +
+      'milhões de pessoas. Extinguir devolve esse dinheiro ao orçamento sem contrapartida e tira o benefício ' +
+      `de quem o recebia, de uma vez. A conta política acompanha a popularidade do programa (${popularidade.toFixed(0)}/100) ` +
+      'e chega no mês da assinatura.',
+    warnings: [
+      `${nomes} sai da lista de programas e não volta.`,
+      popularidade > 60
+        ? `Programa muito popular (${popularidade.toFixed(0)}/100): o custo político do fim dele chega de uma vez, no mês da assinatura.`
+        : 'Programa de popularidade média: o custo político existe, mas é absorvível.',
+    ],
+    fallback: true,
+  };
 }

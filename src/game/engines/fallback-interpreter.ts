@@ -38,6 +38,7 @@ import {
 } from './text-direction';
 import { TOPICS, type Topic } from './interpreter-topics';
 import { readCompanyPolicy, isEmptyCompanyImpact } from './companies/company-text';
+import { analyzeProgramAbolition } from './program-text';
 import { COMPANY_BLUEPRINTS } from '../data/companies/index';
 import { analyzeNumericPolicy } from './numeric/numeric-policy-engine';
 import { readScopeNarrowing } from './numeric/numeric-policy-reader';
@@ -149,6 +150,15 @@ export function interpretLocally(text: string, state: GameState): ProposalAnalys
   const warnings: string[] = [
     'Leitura feita pelo interpretador local, sem IA. A análise é mais grosseira do que a de um modelo de linguagem.',
   ];
+
+  // ------------------------------------------ 0a. A medida acaba com algo?
+  // Vem antes de tudo porque extinguir não é um caso extremo de reduzir: é
+  // outra medida, com outro título, outro custo e outras reações. Lida pelo
+  // caminho genérico, "acabar com o Bolsa Família" virava "Redução —
+  // transferência de renda", com a economia contada por fora e as razões dos
+  // grupos trocadas.
+  const abolition = analyzeProgramAbolition(text, state);
+  if (abolition) return { ...abolition, warnings: [...warnings, ...abolition.warnings] };
 
   // ---------------------------------------------- 0. A medida tem um número?
   // Quando tem, o número MANDA: o valor atual sai do estado da partida, o
