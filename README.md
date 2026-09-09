@@ -652,6 +652,31 @@ regiões mostra `país 43%` no cabeçalho; e a cor compara com o país em vez de
 régua fixa — 46% num governo de 40% é uma região boa, e num governo de 55% é um
 problema.
 
+### Governar sem Congresso
+
+Fechado o Congresso, ele não fica "enfraquecido": deixa de existir para efeito de
+jogo. `congressDissolved()` em [`regime.ts`](src/game/engines/regime.ts) é a
+única fonte da verdade sobre isso, e tela e motor leem dela — para não haver uma
+dizendo uma coisa e o outro fazendo outra.
+
+O que muda no mesmo instante:
+
+- **medida nova entra em vigor pela assinatura.** Nem projeto de lei tramita:
+  não há quórum, não há votação, não há a quem submeter nada;
+- **o que estava na fila é resolvido.** Matéria em tramitação não fica presa numa
+  casa que não existe: passa a valer por decreto, com o registro dizendo
+  exatamente por quê;
+- **o impeachment morre junto.** É processo do Congresso. O risco cai, mas não
+  zera — quem derruba presidente sem Congresso é o quartel, e isso continua
+  valendo em `processCoupAgainstPresident`;
+- **a aba some.** Congresso e Comissões saem da tela de Governo (CPI é comissão
+  do Congresso), quem estava nelas é levado de volta ao Gabinete, e o painel
+  troca "impeachment 42%" por "sem Congresso";
+- **negociar deixa de ser possível.** Trabalhar os votos e receber líderes são
+  recusados sem consumir agenda: não há com quem negociar, e não é mais preciso.
+
+Restaurado o Congresso, tudo volta: a medida seguinte já nasce tramitando.
+
 ### Acabar com um programa
 
 Extinguir não é cortar verba, e o jogo passou a separar as duas coisas

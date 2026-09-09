@@ -62,6 +62,22 @@ const REPRESSION_EFFECT: Record<
  * jogador atravessar a fronteira sem perceber, que é como isso costuma
  * acontecer.
  */
+/**
+ * O CONGRESSO EXISTE?
+ *
+ * Enquanto ele existe — normal ou enfraquecido —, medida tramita, é negociada e
+ * pode cair. Fechado, não há a quem submeter nada: o que o presidente assina
+ * entra em vigor porque ele assinou, e é exatamente isso que a palavra
+ * "ditadura" quer dizer no lugar onde ela dói.
+ *
+ * Esta é a única fonte da verdade sobre o assunto. A tela esconde a aba, o
+ * motor pula a votação e o impeachment para de andar — tudo lendo daqui, para
+ * não existir uma tela dizendo uma coisa e um motor fazendo outra.
+ */
+export function congressDissolved(state: GameState): boolean {
+  return state.regime.congressStatus === 'suspenso';
+}
+
 export function classifyRegime(state: GameState): GovernmentRegime {
   const regime = state.regime;
 

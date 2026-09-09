@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Scale } from 'lucide-react';
 import {
   INSTRUMENT_RULES,
@@ -12,6 +12,7 @@ import {
   type MinistryId,
 } from '@/game';
 import { Avatar } from '@/components/game/Avatar';
+import { congressDissolved } from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader, TabBar } from '@/components/layout/PageHeader';
 import { MeasureFlowModal } from '@/components/game/MeasureFlowModal';
@@ -38,6 +39,13 @@ export function Governo() {
 
   const worn = state.government.ministers.filter((m) => m.wear > 70 || m.delivery < 0).length;
   const inTransit = state.policies.filter((p) => p.status === 'tramitando').length;
+  const semCongresso = congressDissolved(state);
+
+  // Quem estava na aba do Congresso quando ela sumiu precisa ir para algum
+  // lugar, senão a tela fica em branco.
+  useEffect(() => {
+    if (semCongresso && (tab === 'congresso' || tab === 'comissoes')) setTab('gabinete');
+  }, [semCongresso, tab]);
 
   return (
     <>
@@ -54,9 +62,16 @@ export function Governo() {
           onChange={setTab}
           tabs={[
             { id: 'gabinete', label: 'Gabinete', count: worn },
-            { id: 'congresso', label: 'Congresso' },
+            // Congresso fechado não tem aba: não há bancada para consultar nem
+            // votação para acompanhar. A comissão parlamentar vai junto, porque
+            // CPI é comissão do Congresso.
+            ...(semCongresso
+              ? []
+              : ([
+                  { id: 'congresso', label: 'Congresso' },
+                ] as const)),
             { id: 'execucao', label: 'Execução', count: inTransit },
-            { id: 'comissoes', label: 'Comissões' },
+            ...(semCongresso ? [] : ([{ id: 'comissoes', label: 'Comissões' }] as const)),
             { id: 'supremo', label: 'Supremo' },
             { id: 'governadores', label: 'Governadores' },
           ]}
@@ -66,7 +81,9 @@ export function Governo() {
           {tab === 'gabinete' && (
             <GabineteTab state={state} onDetail={setDetail} onPressure={(id) => runAction('reuniao_ministro', id)} />
           )}
-          {tab === 'congresso' && <CongressoTab state={state} onWork={() => runAction('trabalhar_os_votos')} />}
+          {tab === 'congresso' && !semCongresso && (
+            <CongressoTab state={state} onWork={() => runAction('trabalhar_os_votos')} />
+          )}
           {tab === 'execucao' && <ExecucaoTab state={state} />}
           {tab === 'comissoes' && <ComissoesTab state={state} />}
           {tab === 'supremo' && <SupremoTab state={state} />}

@@ -16,6 +16,7 @@ import {
 import {
   CATEGORY_LABEL,
   INSTRUMENT_RULES,
+  congressDissolved,
   MEASURE_TYPE_CONFIG,
   SOCIAL_GROUP_BY_ID,
   MINISTRY_BY_ID,
@@ -60,6 +61,7 @@ export function CabinetReviewModal({
   if (!analysis || !state) return null;
 
   const rules = INSTRUMENT_RULES[analysis.instrument];
+  const semCongresso = congressDissolved(state);
   const config = MEASURE_TYPE_CONFIG[analysis.instrument];
   const opinion = buildLegalOpinion(analysis);
   const briefing = ministerBriefing(state, analysis);
@@ -137,7 +139,9 @@ export function CabinetReviewModal({
       {/* Como este instrumento tramita, em linguagem simples */}
       <p className="mt-3 flex items-start gap-2 border border-ink-700 bg-ink-900/50 p-2.5 text-[12px] leading-relaxed text-neutral-400">
         <Scale size={13} className="mt-0.5 shrink-0 text-neutral-600" aria-hidden />
-        {config.votingExplanation}
+        {semCongresso
+          ? 'O Congresso está fechado. Não há tramitação, não há quórum e não há votação: o que você assinar entra em vigor porque você assinou.'
+          : config.votingExplanation}
       </p>
 
       {/* Números-chave */}
@@ -155,9 +159,15 @@ export function CabinetReviewModal({
         <FactCell label="Execução" value={`${analysis.executionMonths} meses`} />
         <FactCell
           label="Precisa do Congresso"
-          value={config.requiresChamber ? 'Sim' : 'Não'}
-          tone={config.requiresChamber ? 'neg' : 'pos'}
-          hint={config.requiresChamber ? `quórum ${Math.round(analysis.requiredQuorum * 513)} dep.` : 'vale por caneta'}
+          value={semCongresso ? 'Não existe' : config.requiresChamber ? 'Sim' : 'Não'}
+          tone={semCongresso ? 'pos' : config.requiresChamber ? 'neg' : 'pos'}
+          hint={
+            semCongresso
+              ? 'a casa está fechada'
+              : config.requiresChamber
+                ? `quórum ${Math.round(analysis.requiredQuorum * 513)} dep.`
+                : 'vale por caneta'
+          }
         />
         <FactCell
           label="Risco jurídico"

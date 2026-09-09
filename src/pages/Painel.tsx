@@ -20,6 +20,7 @@ import {
   promiseReading,
   type AgendaActionId,
 } from '@/game';
+import { congressDissolved } from '@/game';
 import { useGame } from '@/state/game-store';
 import { BrazilMap } from '@/components/game/BrazilMap';
 import { EventCard } from '@/components/game/EventCard';
@@ -503,8 +504,14 @@ export function Painel() {
                 <span className="text-2xl">%</span>
               </p>
               <p className="mt-0.5 text-[11px] text-neutral-500">
-                pessoal {state.approval.personal.toFixed(0)}% · impeachment{' '}
-                {state.congress.impeachmentRisk.toFixed(0)}%
+                pessoal {state.approval.personal.toFixed(0)}%
+                {/* Sem Congresso não há impeachment: o risco de queda mudou de
+                    endereço e agora é o do quartel, que mora no painel de Poder. */}
+                {congressDissolved(state) ? (
+                  <> · sem Congresso</>
+                ) : (
+                  <> · impeachment {state.congress.impeachmentRisk.toFixed(0)}%</>
+                )}
               </p>
               <p className="mt-1.5 text-[11px] text-neutral-600">
                 {approvalLabel(state.approval.overall)} · {momentumLabel(state.approval.momentum)}
@@ -645,7 +652,7 @@ export function Painel() {
                   </li>
                 ))}
               </ul>
-              {state.congress.impeachmentStage !== 'nenhum' && (
+              {!congressDissolved(state) && state.congress.impeachmentStage !== 'nenhum' && (
                 <p className="mt-2 border-l-2 border-l-danger-500 bg-danger-900/20 p-2 text-[11px] leading-snug text-danger-400">
                   {impeachmentLabel(state.congress.impeachmentStage)} · risco{' '}
                   {state.congress.impeachmentRisk.toFixed(0)}/100

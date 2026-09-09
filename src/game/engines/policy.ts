@@ -9,6 +9,7 @@ import type {
 import { runVote } from './congress';
 import { invertCompanyImpact, readCompanyPolicy } from './companies/company-text';
 import { readProgramAbolition } from './program-text';
+import { congressDissolved } from './regime';
 import { applyNumericChange, revertNumericChange } from './numeric/numeric-policy-engine';
 import { applyCompanyPolicy } from './companies/company-policy-service';
 import { nudgeGroup } from './social';
@@ -128,7 +129,9 @@ export function createPolicy(
     headline: analysis.headline,
     authoredText,
     createdMonth: state.month,
-    status: rules.needsVote ? 'tramitando' : 'assinada',
+    // Sem Congresso não há tramitação: a caneta basta, que é o ponto inteiro de
+    // ter fechado o Congresso.
+    status: rules.needsVote && !congressDissolved(state) ? 'tramitando' : 'assinada',
     cost: analysis.estimatedCost,
     // O custo total é diluído pelo prazo de execução.
     monthlyCost: round(costInBillions / months, 3),
@@ -137,7 +140,7 @@ export function createPolicy(
     impacts: analysis.impacts,
     groupImpacts: analysis.groupImpacts,
     delayedEffects: analysis.delayedEffects,
-    requiresCongress: analysis.requiresCongress,
+    requiresCongress: analysis.requiresCongress && !congressDissolved(state),
     requiredQuorum: analysis.requiredQuorum,
     legalRisk: analysis.legalRisk,
     aiGenerated,
@@ -243,6 +246,41 @@ export function processPolicies(
 ): { consequences: Consequence[]; newlyImplemented: Policy[] } {
   const consequences: Consequence[] = [];
   const newlyImplemented: Policy[] = [];
+
+  // Congresso fechado no meio da tramitação: o que estava na fila não fica na
+  // fila para sempre. Some a casa, some a votação — e o que dependia dela passa
+  // por decreto, com o registro dizendo exatamente por quê.
+  if (congressDissolved(state)) {
+    for (const policy of state.policies) {
+      if (policy.status !== 'tramitando') continue;
+
+      policy.status = 'aprovada';
+      policy.stage = 'sancao';
+      policy.requiresCongress = false;
+      policy.measureLog = [
+        ...policy.measureLog,
+        {
+          id: makeId('log', rng),
+          month: state.month,
+          label: 'Aprovada sem votação',
+          detail:
+            'O Congresso está fechado. A matéria não foi votada por ninguém: entrou em vigor pela assinatura do presidente.',
+        },
+      ];
+
+      consequences.push({
+        id: makeId('cons', rng),
+        sourceId: policy.id,
+        sourceLabel: policy.title,
+        title: `Em vigor por decreto: ${policy.title}`,
+        body: 'Não houve votação porque não há Congresso. A medida vale a partir de agora.',
+        month: state.month,
+        kind: 'efeito_direto',
+        impacts: {},
+        approvalDelta: 0,
+      });
+    }
+  }
 
   for (const policy of state.policies) {
     const rules = INSTRUMENT_RULES[policy.instrument];

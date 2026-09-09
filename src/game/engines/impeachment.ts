@@ -2,6 +2,7 @@ import type { GameState, ImpeachmentStage } from '../types/index';
 import { DIFFICULTY_PRESETS } from '../data/difficulty';
 import { TOTAL_CHAMBER_SEATS } from '../data/parties';
 import { runVote } from './congress';
+import { congressDissolved } from './regime';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
 import { makeId } from '../utils/id';
@@ -55,6 +56,24 @@ export function processImpeachment(state: GameState, rng: Rng): ImpeachmentUpdat
   const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
   const congress = state.congress;
   const previousStage = congress.impeachmentStage;
+
+  // Impeachment é processo do Congresso. Sem Congresso, ele não anda — o que
+  // não significa que o presidente ficou seguro: o risco de queda apenas mudou
+  // de endereço, e agora mora no quartel (ver processCoupAgainstPresident).
+  if (congressDissolved(state)) {
+    congress.impeachmentStage = 'nenhum';
+    congress.impeachmentRisk = round(clamp100(congress.impeachmentRisk * 0.7), 1);
+    return {
+      stage: 'nenhum',
+      risk: congress.impeachmentRisk,
+      changed: previousStage !== 'nenhum',
+      narrative:
+        previousStage !== 'nenhum'
+          ? 'O processo de impeachment morreu junto com o Congresso que o abrigava.'
+          : null,
+      removed: false,
+    };
+  }
 
   // ---------------------------------------------------------- 1. Ingredientes
   // Nenhum destes derruba um presidente sozinho. Juntos, derrubam.

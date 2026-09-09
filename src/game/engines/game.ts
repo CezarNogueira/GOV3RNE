@@ -36,6 +36,7 @@ import { processCoupAgainstPresident, processRegime } from './regime';
 import { processWar } from './war';
 import { rollEvents, resolveUnattendedEvents, forecastNextCrisis } from './events';
 import { abolishPrograms, abolitionGroupImpacts } from './program-text';
+import { congressDissolved } from './regime';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
 import { makeId, monthLabel, shortMonthLabel } from '../utils/index';
@@ -554,20 +555,31 @@ export function runAgendaAction(
       break;
     }
 
-    case 'trabalhar_os_votos': {
+    case 'trabalhar_os_votos':
+    case 'reuniao_lideres': {
+      // Não há votos a trabalhar nem líderes a receber quando a casa está
+      // fechada. Bloquear aqui evita o presidente gastar agenda com um
+      // interlocutor que ele mesmo dissolveu.
+      if (congressDissolved(state)) {
+        return {
+          ok: false,
+          message: 'O Congresso está fechado. Não há com quem negociar — e não é mais preciso.',
+          state: input,
+        };
+      }
+      if (actionId === 'reuniao_lideres') {
+        state.congress.goodwill = round(clamp100(state.congress.goodwill + 5), 1);
+        for (const bloc of state.congress.blocs.filter((entry) => entry.inGovernment)) {
+          bloc.support = clamp(bloc.support + 4, -100, 100);
+        }
+        message =
+          'Café da manhã no Alvorada com os líderes da base. Nada foi assinado e todo mundo saiu achando que ganhou alguma coisa.';
+        break;
+      }
+
       const budget = Math.min(state.economy.treasuryCash * 0.35, 14);
       const outcome = workTheVotes(state, budget, rng);
       message = outcome.narrative;
-      break;
-    }
-
-    case 'reuniao_lideres': {
-      state.congress.goodwill = round(clamp100(state.congress.goodwill + 5), 1);
-      for (const bloc of state.congress.blocs.filter((entry) => entry.inGovernment)) {
-        bloc.support = clamp(bloc.support + 4, -100, 100);
-      }
-      message =
-        'Café da manhã no Alvorada com os líderes da base. Nada foi assinado e todo mundo saiu achando que ganhou alguma coisa.';
       break;
     }
 

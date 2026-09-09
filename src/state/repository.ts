@@ -42,6 +42,7 @@ import {
   type PublicReactionEntry,
   type SaveSlotMeta,
   type VoteResult,
+  congressDissolved,
 } from '@/game';
 import { interpretWithAi } from '@/lib/ai-client';
 
@@ -678,9 +679,11 @@ class GameRepository {
       choice: `${analysis.instrument.replace('_', ' ')} assinada`,
       message: analysis.summary,
       notes: [
-        analysis.requiresCongress
-          ? 'Depende do Congresso: a tramitação começa agora.'
-          : 'Vale pela caneta: entra em vigor sem passar pelo Congresso.',
+        congressDissolved(next)
+          ? 'Não há Congresso: a medida entra em vigor pela sua assinatura.'
+          : analysis.requiresCongress
+            ? 'Depende do Congresso: a tramitação começa agora.'
+            : 'Vale pela caneta: entra em vigor sem passar pelo Congresso.',
         ...analysis.warnings.slice(0, 2),
       ],
     });
