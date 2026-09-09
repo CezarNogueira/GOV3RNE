@@ -25,11 +25,18 @@ export function DecisionFeedback() {
       {decision && (
         <motion.aside
           key={decision.id}
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 8 }}
+          /* O x fica na animação, e não numa classe do Tailwind: o framer
+             escreve `transform` inline e apagaria um `-translate-x-1/2`
+             declarado por classe, jogando o painel meia largura para a
+             direita. Aqui as duas coisas moram no mesmo lugar. */
+          initial={{ opacity: 0, x: '-50%', y: 16 }}
+          animate={{ opacity: 1, x: '-50%', y: 0 }}
+          exit={{ opacity: 0, x: '-50%', y: 8 }}
           transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-          className="fixed bottom-3 right-3 z-[55] max-h-[70vh] w-[min(26rem,calc(100vw-1.5rem))] overflow-y-auto border border-ink-700 bg-ink-950/97 shadow-2xl backdrop-blur"
+          /* Centralizada embaixo: a devolutiva é a resposta do país à decisão
+             que o jogador acabou de tomar, e ela merece o eixo da tela em vez
+             do canto onde mora o aviso descartável. */
+          className="fixed bottom-3 left-1/2 z-[55] max-h-[70vh] w-[min(30rem,calc(100vw-1.5rem))] overflow-y-auto border border-ink-700 bg-ink-950/97 shadow-2xl backdrop-blur"
           role="status"
           aria-live="polite"
         >
