@@ -13,19 +13,28 @@
  * Todos são fictícios, como o resto do elenco do jogo.
  */
 
-export type BuyerKind = 'fundo' | 'grupo_nacional' | 'grupo_estrangeiro' | 'pulverizado';
+export type BuyerKind =
+  | 'fundo'
+  | 'grupo_nacional'
+  | 'grupo_estrangeiro'
+  | 'pulverizado'
+  /** Pessoa física: um dono com nome, rosto e telefone do presidente. */
+  | 'pessoa';
 
 export const BUYER_KIND_LABEL: Record<BuyerKind, string> = {
   fundo: 'Fundo de investimento',
   grupo_nacional: 'Grupo nacional',
   grupo_estrangeiro: 'Grupo estrangeiro',
   pulverizado: 'Capital pulverizado',
+  pessoa: 'Dono pessoa física',
 };
 
 export interface BuyerProfile {
   id: string;
   name: string;
   kind: BuyerKind;
+  /** Como o dono é apresentado quando ele é gente, e não sigla. */
+  role?: string;
   /** Como a imprensa apresenta o novo dono na primeira manchete. */
   note: string;
   /**
@@ -105,6 +114,79 @@ export const BUYER_POOL: readonly BuyerProfile[] = [
   },
 ];
 
+/**
+ * DONOS DE CARNE E OSSO
+ *
+ * Fundo e holding são abstrações confortáveis: quando a estatal quebra na mão
+ * deles, não há a quem cobrar. Estas são pessoas — têm nome, ofício e rosto na
+ * ficha da empresa, e é a elas que o país vai perguntar o que aconteceu.
+ *
+ * São o comprador natural da venda dirigida: num regime sem leilão público, a
+ * empresa não vai "ao mercado", vai para alguém. Todas são fictícias.
+ */
+export const PERSON_BUYERS: readonly BuyerProfile[] = [
+  {
+    id: 'buyer_p_bastos',
+    name: 'Otávio Bastos',
+    kind: 'pessoa',
+    role: 'Empresário do setor de energia',
+    note: 'construiu um grupo de geração no interior e nunca escondeu a proximidade com quem governa',
+    costCutting: 74,
+    capital: 78,
+    dividend: 70,
+  },
+  {
+    id: 'buyer_p_lacerda',
+    name: 'Marta Lacerda',
+    kind: 'pessoa',
+    role: 'Investidora e ex-executiva',
+    note: 'passou vinte anos no comando de uma companhia listada antes de comprar por conta própria',
+    costCutting: 66,
+    capital: 84,
+    dividend: 58,
+  },
+  {
+    id: 'buyer_p_delgado',
+    name: 'Rubens Delgado',
+    kind: 'pessoa',
+    role: 'Herdeiro de conglomerado familiar',
+    note: 'terceira geração de uma família que compra empresa pública desde os anos 90',
+    costCutting: 58,
+    capital: 90,
+    dividend: 76,
+  },
+  {
+    id: 'buyer_p_fontoura',
+    name: 'Inácio Fontoura',
+    kind: 'pessoa',
+    role: 'Operador do agronegócio',
+    note: 'dono de terra e de silo, entrou no jogo comprando o que o Estado largou',
+    costCutting: 82,
+    capital: 62,
+    dividend: 72,
+  },
+  {
+    id: 'buyer_p_queiroz',
+    name: 'Sandra Queiroz',
+    kind: 'pessoa',
+    role: 'Banqueira',
+    note: 'montou um banco médio do zero e conhece o valor de um ativo público melhor que o Tesouro',
+    costCutting: 70,
+    capital: 88,
+    dividend: 80,
+  },
+  {
+    id: 'buyer_p_tavares',
+    name: 'Genival Tavares',
+    kind: 'pessoa',
+    role: 'Empreiteiro',
+    note: 'construiu meia dúzia de obras federais e sabe exatamente quanto vale cada uma delas',
+    costCutting: 86,
+    capital: 54,
+    dividend: 68,
+  },
+];
+
 export function buyerById(id: string): BuyerProfile | undefined {
-  return BUYER_POOL.find((entry) => entry.id === id);
+  return [...BUYER_POOL, ...PERSON_BUYERS].find((entry) => entry.id === id);
 }

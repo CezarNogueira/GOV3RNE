@@ -8,8 +8,10 @@ import type {
   PrivatizationProcess,
 } from '../../types/index';
 import { buildExecutive, findCompany, valuationOf } from './company-service';
-import { BUYER_POOL, companyBlueprint } from '../../data/companies/index';
+import { BUYER_POOL, PERSON_BUYERS, companyBlueprint } from '../../data/companies/index';
+import { portraitFor } from '../../data/portraits';
 import { shockMarket } from './company-market-service';
+import { congressDissolved } from '../regime';
 import { Rng } from '../../utils/rng';
 import { clamp, clamp100, round } from '../../utils/math';
 import { makeId } from '../../utils/id';
@@ -63,7 +65,13 @@ function marketAppetite(state: GameState, company: Company): number {
  * por lei depende de autorização legislativa; vender uma fatia minoritária sem
  * perder o controle é ato administrativo.
  */
-export function saleRequiresLaw(company: Company, share: number): boolean {
+export function saleRequiresLaw(company: Company, share: number, state?: GameState): boolean {
+  // Autorização legislativa é autorização DE ALGUÉM. Com o Congresso fechado não
+  // há a quem pedir, e exigir a lei mesmo assim travava a venda para sempre:
+  // o processo ficava três meses numa etapa esperando um plenário que não
+  // existe mais.
+  if (state && congressDissolved(state)) return false;
+
   const remaining = company.ownership.stateOwnership - share;
   const losesControl = company.ownership.stateOwnership > 50 && remaining <= 50;
   return company.ownership.saleRequiresLaw && (losesControl || remaining <= 0);
@@ -84,7 +92,11 @@ export function proposePrivatization(
   if (company.control !== 'federal') {
     return { ok: false, message: `${company.name} não é uma empresa federal.` };
   }
-  if (!company.ownership.privatizable) {
+  // "Presta serviço de Estado e não se vende" é uma regra que alguém precisa
+  // fazer valer: o Congresso, o Supremo, a lei orgânica. Fechado o Congresso,
+  // não sobra quem segure — e é exatamente por isso que regimes de exceção
+  // vendem o que a democracia protegia.
+  if (!company.ownership.privatizable && !congressDissolved(state)) {
     return {
       ok: false,
       message: `${company.name} presta serviço de Estado e não pode ser vendida nas regras desta simulação.`,
@@ -127,7 +139,7 @@ export function proposePrivatization(
     investorInterest: round(clamp100(appetite * 80), 1),
     politicalOpposition: round(politicalOpposition, 1),
     publicSupport: round(publicSupport, 1),
-    requiresLaw: saleRequiresLaw(company, offered),
+    requiresLaw: saleRequiresLaw(company, offered, state),
     log: [
       log(
         rng,
@@ -154,9 +166,11 @@ export function proposePrivatization(
     ok: true,
     process,
     message: `Processo aberto: ${offered.toFixed(1)}% de ${company.name}. ${
-      process.requiresLaw
-        ? 'A venda depende de autorização do Congresso.'
-        : 'A alienação é minoritária e dispensa lei específica.'
+      congressDissolved(state)
+        ? 'Sem Congresso, não há autorização a pedir: a venda sai por decreto, sem leilão e sem concorrência.'
+        : process.requiresLaw
+          ? 'A venda depende de autorização do Congresso.'
+          : 'A alienação é minoritária e dispensa lei específica.'
     }`,
   };
 }
@@ -191,6 +205,23 @@ export function advancePrivatizations(state: GameState, rng: Rng): CompanyNews[]
     );
 
     if (process.stage === 'legislativo') {
+      // O Congresso fechou no meio do caminho: a matéria não vai ser votada por
+      // ninguém e o processo não pode ficar preso esperando plenário.
+      if (congressDissolved(state)) {
+        process.stage = 'leilao';
+        process.stageEndsMonth = state.month;
+        process.requiresLaw = false;
+        process.log.push(
+          log(
+            rng,
+            state.month,
+            'Autorização dispensada',
+            'Não há Congresso para autorizar coisa alguma. A venda segue por decreto.',
+          ),
+        );
+        continue;
+      }
+
       const policy = state.policies.find((entry) => entry.id === process.policyId);
       if (!policy) {
         process.stage = 'estudos';
@@ -220,7 +251,9 @@ export function advancePrivatizations(state: GameState, rng: Rng): CompanyNews[]
     switch (process.stage) {
       case 'proposta': {
         process.stage = 'estudos';
-        process.stageEndsMonth = state.month + 3;
+        // Estudo de modelagem é o que a lei exige de quem precisa se explicar.
+        // Regime fechado assina em um mês; democracia leva três.
+        process.stageEndsMonth = state.month + (congressDissolved(state) ? 1 : 3);
         process.log.push(
           log(
             rng,
@@ -263,6 +296,43 @@ export function advancePrivatizations(state: GameState, rng: Rng): CompanyNews[]
       }
 
       case 'leilao': {
+        // Sem Congresso, não há leilão: há venda dirigida. O governo escolhe o
+        // comprador, define o preço e assina — que é como o ativo público muda
+        // de mão em regime fechado. Não dá deserto porque não foi ao mercado, e
+        // o preço sai pior justamente por isso: quem compra sabe que não tem
+        // concorrente.
+        if (congressDissolved(state)) {
+          process.proceeds = round(process.reservePrice * 0.82, 1);
+          process.stage = 'concluida';
+          process.log.push(
+            log(
+              rng,
+              state.month,
+              'Venda dirigida',
+              `Sem leilão e sem concorrência: o lote de ${process.shareOffered.toFixed(1)}% foi vendido por R$ ${(
+                process.proceeds / 1000
+              ).toFixed(1)} bi, 18% abaixo do preço mínimo, a um comprador escolhido pelo governo.`,
+            ),
+          );
+
+          applySale(state, company, process.shareOffered, process.proceeds, rng, 'dirigida');
+
+          const donoDirigido = company.ownership.controllingShareholder;
+          news.push(
+            buildNews(
+              rng, state, company, 'privatizacao',
+              `${company.name} é vendida sem leilão`,
+              donoDirigido
+                ? `O governo dispensou a concorrência e entregou ${company.name} a ${donoDirigido.name}. A operação rendeu R$ ${(
+                    process.proceeds / 1000
+                  ).toFixed(1)} bi ao Tesouro — abaixo do que valia — e ninguém teve a quem reclamar.`
+                : `O governo vendeu ${company.name} sem chamar concorrente.`,
+              -0.6,
+            ),
+          );
+          break;
+        }
+
         // Leilão pode dar deserto. Interesse baixo, risco-país alto e empresa no
         // vermelho afastam comprador — e aí o governo fica com o mico e a conta
         // política de ter anunciado.
@@ -363,17 +433,24 @@ function drawController(
   // presidente chamar ao Planalto. O caminho da venda é que decide qual dos
   // dois aconteceu.
   const candidatos =
-    mode === 'leilao'
-      ? BUYER_POOL.filter((buyer) => buyer.kind !== 'pulverizado')
-      : company.ownership.listed
-        ? BUYER_POOL
-        : BUYER_POOL.filter((buyer) => buyer.kind !== 'pulverizado');
+    mode === 'dirigida'
+      ? PERSON_BUYERS
+      : mode === 'leilao'
+        ? BUYER_POOL.filter((buyer) => buyer.kind !== 'pulverizado')
+        : company.ownership.listed
+          ? BUYER_POOL
+          : BUYER_POOL.filter((buyer) => buyer.kind !== 'pulverizado');
   const escolhido = rng.pick(candidatos.length > 0 ? candidatos : BUYER_POOL);
 
   return {
     id: escolhido.id,
     name: escolhido.name,
     kind: escolhido.kind,
+    ...(escolhido.role ? { role: escolhido.role } : {}),
+    // Dono que é gente tem rosto, montado pelo mesmo montador de todo mundo.
+    ...(escolhido.kind === 'pessoa'
+      ? { avatar: portraitFor(escolhido.id, escolhido.name) }
+      : {}),
     sinceMonth: state.month,
     costCutting: escolhido.costCutting,
     capital: escolhido.capital,
@@ -382,8 +459,16 @@ function drawController(
   };
 }
 
-/** Como a União perdeu o controle: leilão de bloco ou goteira no pregão. */
-type SaleMode = 'leilao' | 'mercado';
+/**
+ * Como a União perdeu o controle.
+ *
+ *   leilao     bloco disputado em pregão público, com vencedor;
+ *   mercado    fatia atrás de fatia, até o controle escorrer sem dono definido;
+ *   dirigida   sem concorrência, para quem o governo escolheu — e nesse caso o
+ *              dono é sempre gente, com nome e rosto, porque venda dirigida não
+ *              tem para onde esconder quem levou.
+ */
+type SaleMode = 'leilao' | 'mercado' | 'dirigida';
 
 function applySale(
   state: GameState,
@@ -457,7 +542,7 @@ export function sellStake(
   }
 
   const offered = clamp(round(share, 2), 0.5, company.ownership.stateOwnership);
-  if (saleRequiresLaw(company, offered)) {
+  if (saleRequiresLaw(company, offered, state)) {
     return {
       ok: false,
       message: `Vender ${offered.toFixed(1)}% faria a União perder o controle de ${company.name}. Isso depende de lei: abra um processo de desestatização.`,

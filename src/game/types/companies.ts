@@ -1,3 +1,4 @@
+import type { AvatarConfig } from './president';
 import type { MinistryId } from './politics';
 
 /**
@@ -160,7 +161,11 @@ export interface CompanyController {
   /** Id em BUYER_POOL. */
   id: string;
   name: string;
-  kind: 'fundo' | 'grupo_nacional' | 'grupo_estrangeiro' | 'pulverizado';
+  kind: 'fundo' | 'grupo_nacional' | 'grupo_estrangeiro' | 'pulverizado' | 'pessoa';
+  /** Ofício, quando o dono é gente. */
+  role?: string;
+  /** Retrato do dono, montado como o de qualquer pessoa do jogo. */
+  avatar?: AvatarConfig;
   /** Mês em que assumiu, para a ficha contar a história. */
   sinceMonth: number;
   /** 0-100: disposição de cortar quadro e investimento atrás de margem. */

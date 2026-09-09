@@ -688,6 +688,34 @@ isolamento. Oito testes em
 [`targeted-orders.test.ts`](src/game/engines/targeted-orders.test.ts) seguram
 isso, inclusive o de que ordem recusada não cobra meio preço.
 
+### Vender estatal sem Congresso
+
+Numa democracia, alienar o controle de uma estatal tem três freios, e cada um
+tem dono: a lei que o Congresso precisa aprovar, o estudo de modelagem de três
+meses e o leilão, que pode dar deserto. Fechado o Congresso, nenhum deles tem
+quem o faça valer:
+
+- **a lei some**, porque não há a quem pedir autorização. O processo que já
+  estava na etapa legislativa pula direto para a venda, em vez de esperar para
+  sempre um plenário que não existe;
+- **o estudo cai de três meses para um** — modelagem é o que se exige de quem
+  precisa se explicar;
+- **não há leilão, há venda dirigida**. Não dá deserto porque não foi ao
+  mercado, e o preço sai **18% abaixo do mínimo** justamente por isso: quem
+  compra sabe que não tem concorrente;
+- **o que a democracia protegia passa a ser vendável.** "Presta serviço de
+  Estado e não se vende" é uma regra que alguém precisa fazer valer.
+
+Do anúncio à assinatura: **6 meses**, contra os 9 (e um leilão deserto) do mesmo
+ativo em democracia.
+
+A empresa sai da aba de federais e entra na de privadas, e o comprador da venda
+dirigida é sempre **uma pessoa** — nome, ofício e retrato na ficha, montado pelo
+mesmo montador de avatar de todo mundo. É a diferença entre "o controle foi
+transferido a um fundo" e *"o governo dispensou a concorrência e entregou os
+Correios a Otávio Bastos, empresário do setor de energia — e ninguém teve a quem
+reclamar"*.
+
 ### Governar sem Congresso
 
 Fechado o Congresso, ele não fica "enfraquecido": deixa de existir para efeito de

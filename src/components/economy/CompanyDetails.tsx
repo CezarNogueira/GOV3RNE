@@ -15,6 +15,7 @@ import {
   type MinistryId,
 } from '@/game';
 import { useGame } from '@/state/game-store';
+import { Avatar } from '@/components/game/Avatar';
 import { Modal } from '@/components/ui/overlays';
 import { Badge, Bar, StatRow, Tip, cx } from '@/components/ui/primitives';
 import { CompanyFinanceChart } from './CompanyFinanceChart';
@@ -195,11 +196,28 @@ export function CompanyDetails({
               />
               <StatRow label="Participação privada" value={`${company.ownership.privateOwnership.toFixed(1)}%`} />
               {controlador && (
-                <StatRow
-                  label="Controlador"
-                  value={controlador.name}
-                  tip={`${BUYER_KIND_LABEL[controlador.kind]}. Assumiu o controle no mês ${controlador.sinceMonth} e responde pela empresa desde então.`}
-                />
+                <>
+                  <StatRow
+                    label="Controlador"
+                    value={controlador.name}
+                    tip={`${BUYER_KIND_LABEL[controlador.kind]}. Assumiu o controle no mês ${controlador.sinceMonth} e responde pela empresa desde então.`}
+                  />
+                  {/* Dono que é gente tem rosto e ofício: quando a empresa
+                      quebrar, existe alguém a quem o país vai perguntar. */}
+                  {controlador.avatar && (
+                    <div className="flex items-center gap-2.5 border-t border-ink-800 py-2">
+                      <Avatar config={controlador.avatar} size={40} className="shrink-0" />
+                      <div className="min-w-0">
+                        <p className="truncate text-[12px] font-semibold text-neutral-100">
+                          {controlador.name}
+                        </p>
+                        <p className="text-[11px] text-neutral-500">
+                          {controlador.role ?? BUYER_KIND_LABEL[controlador.kind]}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
               <StatRow label="Valor da empresa" value={bi(valuationOf(company))} />
               {company.ownership.stateOwnership > 0 && (

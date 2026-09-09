@@ -360,6 +360,9 @@ function CompanyTable({
                   {company.ownership.controllingShareholder && (
                     <span className="block text-[10px] text-neutral-600">
                       ex-estatal · {company.ownership.controllingShareholder.name}
+                      {company.ownership.controllingShareholder.role
+                        ? ` · ${company.ownership.controllingShareholder.role.toLowerCase()}`
+                        : ''}
                     </span>
                   )}
                 </td>
