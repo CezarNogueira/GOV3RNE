@@ -1,5 +1,11 @@
 import type { Difficulty, PolicyCategory, Region } from './common';
-import type { CampaignPromise, FamilyMember, PartyProfile, President } from './president';
+import type {
+  AvatarConfig,
+  CampaignPromise,
+  FamilyMember,
+  PartyProfile,
+  President,
+} from './president';
 import type { EconomyState, EconomySnapshot, BudgetLine, TaxLine } from './economy';
 import type { CompaniesState } from './companies';
 import type {
@@ -48,6 +54,8 @@ export interface GovernmentState {
   ministers: Minister[];
   vicePresidentId: string;
   vicePresidentName: string;
+  /** Retrato do vice, montado como o do presidente. */
+  vicePresidentAvatar: AvatarConfig;
   vicePresidentParty: string;
   vicePresidentLoyalty: number;
   vicePresidentArticulation: number;

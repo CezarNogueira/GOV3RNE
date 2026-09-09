@@ -207,6 +207,7 @@ export function appointMinister(
     monthsInOffice: 0,
     scandalRisk: candidate.scandalRisk,
     bio: candidate.bio,
+    avatar: candidate.avatar,
     appointmentKind: candidate.kind,
   };
 

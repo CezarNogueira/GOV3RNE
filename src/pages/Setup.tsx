@@ -1019,8 +1019,9 @@ function ViceGrid({
             className={cx('option', draft.viceId === candidate.id && 'option-selected')}
             onClick={() => update('viceId', candidate.id)}
           >
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
+            <div className="flex items-start gap-2.5">
+              <Avatar config={candidate.avatar} size={44} className="shrink-0" />
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-semibold text-neutral-100">
                   {candidate.name}
                 </p>
@@ -1120,11 +1121,14 @@ function StepCabinet({
                   </p>
                 </div>
                 {chosen ? (
-                  <div className="shrink-0 text-right">
-                    <p className="text-[12px] text-neutral-200">{chosen.name}</p>
-                    <p className="text-[10px] uppercase tracking-wider text-neutral-600">
-                      {chosen.party ?? chosen.kind}
-                    </p>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <div className="text-right">
+                      <p className="text-[12px] text-neutral-200">{chosen.name}</p>
+                      <p className="text-[10px] uppercase tracking-wider text-neutral-600">
+                        {chosen.party ?? chosen.kind}
+                      </p>
+                    </div>
+                    <Avatar config={chosen.avatar} size={30} />
                   </div>
                 ) : (
                   <Badge tone="warn">Vago</Badge>
@@ -1244,12 +1248,17 @@ function MinisterPicker({
                   )}
                   onClick={() => onPick(candidate.id)}
                 >
-                  <p className="truncate text-[12px] font-semibold text-neutral-100">
-                    {candidate.name}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-wider text-neutral-500">
-                    {candidate.party ?? KIND_LABEL[candidate.kind]}
-                  </p>
+                  <div className="flex items-start gap-2.5">
+                    <Avatar config={candidate.avatar} size={40} className="shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12px] font-semibold text-neutral-100">
+                        {candidate.name}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-wider text-neutral-500">
+                        {candidate.party ?? KIND_LABEL[candidate.kind]}
+                      </p>
+                    </div>
+                  </div>
                   <p className="mt-1 text-[11px] leading-snug text-neutral-500">{candidate.bio}</p>
 
                   <div className="mt-1.5 grid grid-cols-3 gap-x-2">

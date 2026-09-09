@@ -1,3 +1,4 @@
+import type { AvatarConfig } from './president';
 import type { IdeologyVector, PolicyCategory, Region } from './common';
 
 /**
@@ -134,6 +135,8 @@ export interface Minister {
   monthsInOffice: number;
   scandalRisk: number;
   bio: string;
+  /** O mesmo retrato que apareceu na lista de escolha. */
+  avatar: AvatarConfig;
   /** Nomeação política traz bancada; técnica traz entrega. */
   appointmentKind: 'politico' | 'tecnico' | 'independente' | 'internet';
 }
@@ -170,6 +173,8 @@ export const CANDIDATE_ORIGIN_NOTE: Record<CandidateOrigin, string> = {
 export interface CandidateProfile {
   id: string;
   name: string;
+  /** Retrato montado com as mesmas peças do avatar do jogador. */
+  avatar: AvatarConfig;
   party: string;
   /** De onde a pessoa vem. Decide em que divisão ela aparece na chapa. */
   origin: CandidateOrigin;

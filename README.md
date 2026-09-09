@@ -652,6 +652,27 @@ regiões mostra `país 43%` no cabeçalho; e a cor compara com o país em vez de
 régua fixa — 46% num governo de 40% é uma região boa, e num governo de 55% é um
 problema.
 
+### Todo mundo tem rosto
+
+Ninguém no jogo tem foto. Todo personagem que aparece numa lista de escolha — os
+12 nomes da chapa e os 55 do gabinete — usa o **mesmo montador de avatar que o
+jogador usa para si**: as mesmas seis peças, a mesma paleta, o mesmo traço
+vetorial ([`portraits.ts`](src/game/data/portraits.ts)).
+
+- para as **pessoas reais** da divisão "famosos", a aparência é declarada à mão e
+  aproxima o que se conhece de cada uma dentro do que a paleta permite: tom de
+  pele, cor e comprimento do cabelo, barba, óculos, traje. Com seis tons de pele
+  e sete de cabelo, é caricatura de seis peças, não retrato;
+- para o **elenco fictício**, não há aparência real a aproximar, então o rosto é
+  sorteado de forma determinística a partir do id — sem tocar no `Rng` da
+  partida, para que o mesmo nome desenhe sempre a mesma cara, do primeiro ao
+  último mês e em qualquer save.
+
+Cinco testes em [`portraits.test.ts`](src/game/engines/portraits.test.ts) cobram
+que ninguém fique sem rosto, que nenhuma pessoa real caia no sorteio (sairia com
+a cara de outra qualquer) e que o elenco fictício não repita meia dúzia de
+faces.
+
 ### Escolher ministro
 
 A pasta abre e a lista vem dividida em fichas, não numa parede de nomes: uma

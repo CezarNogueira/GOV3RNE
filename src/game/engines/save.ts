@@ -1,5 +1,7 @@
 import { MINISTRY_BY_ID } from '../data/ministries';
 import { REGIONS } from '../types/common';
+import { MINISTER_POOL } from '../data/people';
+import { portraitFor } from '../data/portraits';
 import type { GameState, SaveSlotMeta } from '../types/index';
 import { GAME_STATE_VERSION } from './setup';
 import { INSTRUMENT_RULES } from './policy';
@@ -137,6 +139,25 @@ export function migrate(state: GameState): GameState {
             populacaoRegional
           ).toFixed(1),
         );
+      }
+    }
+  }
+
+  // Save anterior aos retratos do elenco: ministros e vice não tinham rosto, e
+  // a tela de governo desenha um. O retrato é reconstruído pelo mesmo montador
+  // determinístico, então o nome que estava lá continua com a mesma cara que
+  // teria se a partida tivesse começado hoje.
+  if (migrated.government) {
+    if (!migrated.government.vicePresidentAvatar) {
+      migrated.government.vicePresidentAvatar = portraitFor(
+        migrated.government.vicePresidentId,
+        migrated.government.vicePresidentName,
+      );
+    }
+    for (const minister of migrated.government.ministers ?? []) {
+      if (!minister.avatar) {
+        const origem = MINISTER_POOL.find((candidate) => candidate.name === minister.name);
+        minister.avatar = origem?.avatar ?? portraitFor(minister.id, minister.name);
       }
     }
   }

@@ -585,6 +585,7 @@ function buildGovernment(rng: Rng, input: NewGameInput, party: PartyProfile): Go
       monthsInOffice: 0,
       scandalRisk: candidate.scandalRisk,
       bio: candidate.bio,
+      avatar: candidate.avatar,
       appointmentKind: candidate.kind,
     };
   });
@@ -597,6 +598,7 @@ function buildGovernment(rng: Rng, input: NewGameInput, party: PartyProfile): Go
     ministers,
     vicePresidentId: vice.id,
     vicePresidentName: vice.name,
+    vicePresidentAvatar: vice.avatar,
     vicePresidentParty: vice.party,
     vicePresidentLoyalty: vice.loyalty,
     vicePresidentArticulation: vice.ambitious ? 20 : 0,

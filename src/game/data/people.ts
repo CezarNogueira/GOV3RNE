@@ -1,10 +1,12 @@
 import type {
+  AvatarConfig,
   CaucusId,
   CandidateOrigin,
   CandidateProfile,
   MinistryId,
   MinistryTier,
 } from '../types/index';
+import { portraitFor } from './portraits';
 
 /**
  * QUEM É FICTÍCIO E QUEM NÃO É.
@@ -266,7 +268,7 @@ export const CAUCUSES: readonly { id: CaucusId; name: string; deputados: number;
  * grupo que responde a ele. Um quadro do MDB (38 deputados) trazendo 24 já é
  * uma adesão excepcional.
  */
-export const VICE_POOL: readonly CandidateProfile[] = [
+const VICE_SEEDS: readonly Omit<CandidateProfile, 'avatar'>[] = [
   {
     id: 'vp_sarmento',
     name: 'Ruth Sarmento',
@@ -483,6 +485,16 @@ export const VICE_POOL: readonly CandidateProfile[] = [
   },
 ];
 
+/**
+ * Todo nome da chapa entra com rosto. O retrato vem do mesmo montador que o
+ * jogador usa: nenhuma foto, nenhuma exceção.
+ */
+export const VICE_POOL: readonly CandidateProfile[] = VICE_SEEDS.map((seed) => ({
+  ...seed,
+  avatar: portraitFor(seed.id, seed.name),
+}));
+
+
 // ===========================================================================
 // 5. GABINETE
 // ===========================================================================
@@ -490,6 +502,8 @@ export const VICE_POOL: readonly CandidateProfile[] = [
 export interface MinisterCandidate {
   id: string;
   name: string;
+  /** Retrato montado com as mesmas peças do avatar do jogador. */
+  avatar: AvatarConfig;
   party: PartyId | null;
   kind: 'politico' | 'tecnico' | 'independente' | 'internet';
   origin: CandidateOrigin;
@@ -515,7 +529,7 @@ export interface MinisterCandidate {
   refuses?: MinistryId[];
 }
 
-export const MINISTER_POOL: readonly MinisterCandidate[] = [
+const MINISTER_SEEDS: readonly Omit<MinisterCandidate, 'avatar'>[] = [
   // --- Técnicos: competência alta, bancada zero ---
   {
     id: 'min_t1', name: 'Helena Vasconcelos', party: null, kind: 'tecnico', origin: 'tecnico',
@@ -888,6 +902,12 @@ export const MINISTER_POOL: readonly MinisterCandidate[] = [
     bio: 'Apresentadora com trânsito no Brasil e no Japão, e o raro talento de deixar qualquer sala confortável.',
   },
 ];
+
+/** O gabinete inteiro com rosto, pela mesma regra da chapa. */
+export const MINISTER_POOL: readonly MinisterCandidate[] = MINISTER_SEEDS.map((seed) => ({
+  ...seed,
+  avatar: portraitFor(seed.id, seed.name),
+}));
 
 // ===========================================================================
 // 6. IMPRENSA, REDES E OPOSIÇÃO (fictícios)

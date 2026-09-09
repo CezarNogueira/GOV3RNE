@@ -11,6 +11,7 @@ import {
   type Minister,
   type MinistryId,
 } from '@/game';
+import { Avatar } from '@/components/game/Avatar';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader, TabBar } from '@/components/layout/PageHeader';
 import { MeasureFlowModal } from '@/components/game/MeasureFlowModal';
@@ -106,7 +107,9 @@ function GabineteTab({
       {/* Vice */}
       <Section title="Vice-presidente da República">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
+          <div className="flex min-w-0 items-start gap-3">
+            <Avatar config={gov.vicePresidentAvatar} size={56} className="shrink-0" />
+            <div className="min-w-0">
             <p className="font-display text-xl font-semibold text-neutral-50">
               {gov.vicePresidentName}
             </p>
@@ -114,6 +117,7 @@ function GabineteTab({
             <p className="mt-1.5 max-w-xl text-[12px] leading-relaxed text-neutral-500">
               {VICE_STATUS_TEXT[gov.vicePresidentStatus]}
             </p>
+            </div>
           </div>
           <div className="shrink-0 text-right">
             <p className="font-mono text-3xl text-neutral-100">{gov.vicePresidentArticulation.toFixed(0)}</p>
@@ -196,18 +200,21 @@ function GabineteTab({
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <button
                     type="button"
-                    className="min-w-0 flex-1 text-left"
+                    className="flex min-w-0 flex-1 items-start gap-2.5 text-left"
                     onClick={() => onDetail(minister)}
                   >
-                    <p className="truncate text-[13px] font-semibold text-neutral-100">
-                      {ministry.shortName}
-                      <span className="ml-1.5 font-normal text-neutral-500">{minister.name}</span>
-                    </p>
-                    <p className="text-[11px] text-neutral-600">
-                      {minister.party ?? KIND_LABEL[minister.appointmentKind]} ·{' '}
-                      {minister.monthsInOffice} {minister.monthsInOffice === 1 ? 'mês' : 'meses'} na
-                      pasta
-                    </p>
+                    <Avatar config={minister.avatar} size={38} className="shrink-0" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13px] font-semibold text-neutral-100">
+                        {ministry.shortName}
+                        <span className="ml-1.5 font-normal text-neutral-500">{minister.name}</span>
+                      </span>
+                      <span className="block text-[11px] text-neutral-600">
+                        {minister.party ?? KIND_LABEL[minister.appointmentKind]} ·{' '}
+                        {minister.monthsInOffice} {minister.monthsInOffice === 1 ? 'mês' : 'meses'}{' '}
+                        na pasta
+                      </span>
+                    </span>
                   </button>
 
                   <div className="flex shrink-0 items-center gap-3">
