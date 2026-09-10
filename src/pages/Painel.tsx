@@ -825,8 +825,12 @@ function TargetPicker({
  * O Painel é a tela de decisão do mês e não pode virar a lista de tudo o que o
  * presidente é capaz de fazer. Cada ação daqui mora onde o contexto dela está:
  * cobrar ministro fica ao lado do ministro, na aba Gabinete de Governo; receber
- * governador fica ao lado do governador, na aba Governadores. Escrever medida
- * tem o campo próprio no topo do Painel.
+ * governador fica ao lado do governador, na aba Governadores; trabalhar os votos
+ * fica na aba Congresso, ao lado da conta do plenário; descansar, a noite com o
+ * cônjuge e o divórcio ficam em Vida Pessoal. Escrever medida tem o campo
+ * próprio no topo do Painel.
+ *
+ * Regra para ação nova: se ela já tem botão em outra página, entra nesta lista.
  */
 const FORA_DO_PAINEL: ReadonlySet<AgendaActionId> = new Set<AgendaActionId>([
   'escrever_medida',
@@ -834,6 +838,10 @@ const FORA_DO_PAINEL: ReadonlySet<AgendaActionId> = new Set<AgendaActionId>([
   'reuniao_lideres',
   'reuniao_ministro',
   'reuniao_governador',
+  'trabalhar_os_votos',
+  'descansar',
+  'noite_com_conjuge',
+  'divorciar',
 ]);
 
 const STATUS_LABEL: Record<string, string> = {

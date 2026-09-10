@@ -348,14 +348,28 @@ function CongressoTab({ state, onWork }: { state: State; onWork: () => void }) {
 
   const baseChamber = state.congress.governmentSeatsChamber;
   const majority = Math.ceil(TOTAL_CHAMBER_SEATS / 2);
+  // Trabalhar os votos saiu da agenda do Painel e mora só aqui. O custo vem do
+  // catálogo e o botão trava sem pontos, como a agenda fazia.
+  const custoVotos = AGENDA_ACTION_BY_ID.trabalhar_os_votos.cost;
+  const podeTrabalhar = state.agenda.points >= custoVotos;
 
   return (
     <div className="space-y-4">
       <Section
         title="A conta do plenário"
         action={
-          <button type="button" className="btn-ghost btn-sm" onClick={onWork}>
-            Trabalhar os votos · 3 pt
+          <button
+            type="button"
+            className={cx('btn-ghost btn-sm', !podeTrabalhar && 'opacity-40')}
+            disabled={!podeTrabalhar}
+            onClick={onWork}
+            title={
+              podeTrabalhar
+                ? 'Liderança por liderança, com emenda, cargo ou favor guardado'
+                : `Faltam pontos de agenda: trabalhar os votos custa ${custoVotos} pt`
+            }
+          >
+            Trabalhar os votos · {custoVotos} pt
           </button>
         }
       >
