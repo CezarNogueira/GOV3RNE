@@ -132,3 +132,45 @@ function escapeRegex(value: string): string {
 }
 
 export { normalize };
+
+/**
+ * AS FORMAS EM QUE UM VERBO APARECE DE VERDADE
+ *
+ * O banco de intenções declara o verbo no infinitivo — "acabar", "colocar",
+ * "reduzir" —, e ninguém escreve assim. O jogador escreve "acaba com o bolsa",
+ * "coloca mais dinheiro", "reduz isso". Antes disto, o casamento era literal e
+ * a frase inteira caía para a intenção genérica mais próxima.
+ *
+ * A conjugação é GERADA a partir do radical, e não listada: acrescentar um
+ * verbo novo ao banco continua sendo escrever uma palavra. E é gerada por
+ * lista fechada de terminações, não por prefixo solto, porque "matar" com
+ * casamento por prefixo casaria "matéria" — e "mudar a matéria tributária"
+ * viraria "matar".
+ */
+const ENDINGS_AR = ['ar', 'a', 'e', 'am', 'em', 'ou', 'ando', 'ei', 'aram', 'ava', 'ada', 'ado'];
+const ENDINGS_ER_IR = ['er', 'ir', 'e', 'a', 'em', 'am', 'eu', 'iu', 'endo', 'indo', 'i', 'ido'];
+
+export function verbForms(infinitive: string): string[] {
+  const verb = canonical(infinitive).trim();
+  if (verb.length === 0) return [];
+
+  // Locução ("colocar mais", "dar mais"): conjuga só a primeira palavra.
+  const [head, ...rest] = verb.split(' ');
+  const cauda = rest.length > 0 ? ` ${rest.join(' ')}` : '';
+  const base = head as string;
+
+  const raiz = base.replace(/(ar|er|ir)$/, '');
+  // Radical curto demais vira ruído: "ir" -> "" casaria com tudo.
+  if (raiz.length < 3) return [`${base}${cauda}`];
+
+  const endings = base.endsWith('ar') ? ENDINGS_AR : ENDINGS_ER_IR;
+  const formas = new Set([base, ...endings.map((ending) => `${raiz}${ending}`)]);
+
+  // Em boa parte dos verbos de -er/-ir, a terceira pessoa É o radical puro:
+  // "ele reduz", "ele conduz". Sem isto, "reduz o Bolsa Família" não
+  // encontrava "reduzir" e caía na intenção vizinha. O casamento é por palavra
+  // inteira, então um radical que não é palavra ("abr") nunca casa com nada.
+  if (!base.endsWith('ar')) formas.add(raiz);
+
+  return [...formas].map((forma) => `${forma}${cauda}`);
+}

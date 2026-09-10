@@ -72,7 +72,18 @@ export interface RecognizedNumber {
  *   ESCOLHER     há mais de uma leitura plausível — pergunta antes de seguir;
  *   NADA         não deu para entender o suficiente.
  */
-export type RecognitionAction = 'DIRETO' | 'CONFIGURAR' | 'ESCOLHER' | 'NADA';
+export type RecognitionAction =
+  | 'DIRETO'
+  | 'CONFIGURAR'
+  | 'ESCOLHER'
+  | 'NADA'
+  /**
+   * NAVEGAR: a frase não é uma medida, é um pedido de "me mostra o que dá para
+   * fazer aqui". "Programas", "empresas", "impostos" — o jogador está
+   * explorando, e o sistema abre o gerenciador em vez de inventar uma medida
+   * que ele não pediu.
+   */
+  | 'NAVEGAR';
 
 export interface RecognitionChoice {
   /** Id da intenção ou da entidade que esta opção representa. */
@@ -97,6 +108,8 @@ export interface RecognizedMeasure {
   ministries: MinistryId[];
   /** Construtor a abrir quando a medida precisa ser configurada. */
   builder?: string;
+  /** Para onde levar quando a leitura é de navegação, não de medida. */
+  destination?: 'programas' | 'empresas' | 'orcamento' | 'impostos' | 'industria' | 'poder';
   action: RecognitionAction;
   /** Frase curta em português dizendo o que o sistema entendeu. */
   reading: string;
@@ -146,7 +159,14 @@ export interface BuilderAmountSpec {
 }
 
 /** Tipo de tela que o construtor pede. */
-export type BuilderShape = 'OPCOES' | 'ORCAMENTO' | 'REFORMA_TRIBUTARIA' | 'EMPRESA' | 'PODER';
+export type BuilderShape =
+  | 'OPCOES'
+  | 'ORCAMENTO'
+  | 'REFORMA_TRIBUTARIA'
+  | 'EMPRESA'
+  | 'PODER'
+  /** Painel de um programa: os números reais dele e o que dá para fazer. */
+  | 'PROGRAMA';
 
 export interface BuilderSpec {
   id: string;

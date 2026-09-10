@@ -22,6 +22,7 @@ import type {
 import type { NewGameInput } from '../schemas/setup';
 import { MACRO_BASELINE } from '../data/generated/baseline';
 import { STATES, STATE_PROFILE } from '../data/states';
+import { GOVERNOR_BY_STATE } from '../data/governors';
 import { PARTIES, PARTY_BY_ID, TOTAL_CHAMBER_SEATS, TOTAL_SENATE_SEATS, partyKey } from '../data/parties';
 import { MINISTRIES, MINISTRY_IDS } from '../data/ministries';
 import { SOCIAL_GROUPS } from '../data/social-groups';
@@ -371,18 +372,38 @@ function buildStates(rng: Rng, party: PartyProfile): FederalUnit[] {
   return STATES.map((state) => {
     const profile = STATE_PROFILE[state.id];
     if (!profile) throw new Error(`Perfil ausente para ${state.id}`);
-    const governorParty = rng.weighted(bigParties, (p) => {
-      const regional = p.regionalStrength[state.region] ?? 30;
-      return regional + p.chamberSeats * 0.4;
-    });
+    // O governador real do estado, quando existe no banco. O sorteio continua
+    // valendo como rede de segurança: estado sem entrada cadastrada recebe um
+    // nome procedural em vez de quebrar a criação da partida.
+    const real = GOVERNOR_BY_STATE[state.id];
+    const governorParty = real
+      ? (PARTIES.find((p) => p.acronym === real.party || p.id === real.party) ??
+        rng.weighted(bigParties, (p) => (p.regionalStrength[state.region] ?? 30) + p.chamberSeats * 0.4))
+      : rng.weighted(bigParties, (p) => {
+          const regional = p.regionalStrength[state.region] ?? 30;
+          return regional + p.chamberSeats * 0.4;
+        });
     const aligned = governorParty.id === party.id;
+
+    // A relação com o Planalto nasce da distância ideológica declarada, e não
+    // de um sorteio: um governador de direita começa longe de um presidente de
+    // esquerda mesmo sem nenhum atrito ter acontecido ainda.
+    const distancia = real
+      ? Math.abs(real.ideology - party.ideology.economic) / 100
+      : Math.abs(governorParty.ideology.economic - party.ideology.economic) / 100;
 
     return {
       ...state,
-      governorName: `${rng.pick(FIRST_NAMES)} ${rng.pick(LAST_NAMES)}`,
+      governorName: real?.name ?? `${rng.pick(FIRST_NAMES)} ${rng.pick(LAST_NAMES)}`,
       governorParty: governorParty.acronym,
-      governorRelation: clamp100(48 + (aligned ? 22 : 0) + rng.noise(10)),
-      governorAmbition: clamp100(rng.range(10, 80) + state.gdpShare * 1.2),
+      // A distância pesa, mas não define: governador de oposição começa frio,
+      // não em guerra. Um mandato tem quatro anos para azedar isso sozinho.
+      governorRelation: clamp100(
+        56 + (aligned ? 18 : 0) - distancia * 16 + rng.noise(real ? 5 : 10),
+      ),
+      governorAmbition: real
+        ? clamp100(real.ambition + rng.noise(4))
+        : clamp100(rng.range(10, 80) + state.gdpShare * 1.2),
       approval: clamp100(52 + rng.noise(8)),
       poverty: profile.poverty,
       unemployment: profile.unemployment,

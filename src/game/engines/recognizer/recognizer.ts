@@ -8,7 +8,7 @@ import type {
 import { INTENTS, type IntentSpec } from './intents';
 import { buildEntityRegistry, findEntities } from './entities';
 import { detectHypothetical, detectNegation } from './context';
-import { canonical, hasWord, ngrams, stem, stripped, tokens } from './text';
+import { canonical, hasWord, ngrams, stem, stripped, tokens, verbForms } from './text';
 import { similarity } from './fuzzy';
 import { findNumbers } from '../numeric/number-parser';
 
@@ -92,8 +92,15 @@ function scoreIntent(
   }
 
   // ------------------------------------------------------- verbo + objeto
-  const verb = intent.verbs.find((stemmed) =>
-    forms.some((form) => form.includes(` ${stemmed}`) || form.startsWith(stemmed)),
+  // O verbo é procurado em todas as conjugações que ele realmente assume, e
+  // como PALAVRA INTEIRA: é o que faz "acaba com o bolsa" encontrar "acabar"
+  // sem que "matéria" encontre "matar".
+  const verb = intent.verbs.find((declared) =>
+    verbForms(declared).some((form) =>
+      form.includes(' ')
+        ? forms.some((text) => text.includes(form))
+        : forms.some((text) => hasWord(text, form)),
+    ),
   );
   // O complemento é procurado também na forma reduzida, onde "hospitais" já
   // virou "hospital" e "impostos" virou "imposto". Sem isso, o plural do
@@ -220,6 +227,32 @@ export function recognizeMeasure(text: string, state: GameState): RecognizedMeas
   // ------------------------------------------------------------- intenção
   const compact = stripped(text);
   const reduced = tokens(text).join(' ');
+  // ------------------------------------------------------------ navegação
+  // Antes de procurar intenção: a frase é só o nome de um sistema? "Programas",
+  // "empresas", "quero mexer nos impostos" não são medidas — são o jogador
+  // perguntando o que dá para fazer ali. Inventar uma medida a partir disso é
+  // pior do que não entender.
+  const destino = readNavigation(normalized, compact, entities);
+  if (destino) {
+    return {
+      rawText: text,
+      normalizedText: normalized,
+      intent: `abrir_${destino}`,
+      intentLabel: NAVIGATION_LABEL[destino],
+      confidence: 0.9,
+      entities,
+      numbers,
+      ministries: [],
+      action: 'NAVEGAR',
+      destination: destino,
+      reading: `Abrindo ${NAVIGATION_LABEL[destino].toLowerCase()}.`,
+      choices: [],
+      notes: [],
+      negated: false,
+      hypothetical: false,
+    };
+  }
+
   const scored = INTENTS.map((intent) =>
     scoreIntent(intent, normalized, compact, reduced, blocks, entities),
   )
@@ -286,6 +319,40 @@ export function recognizeMeasure(text: string, state: GameState): RecognizedMeas
   const runnerUp = scored[1];
   const ambiguousIntent = runnerUp && top.score - runnerUp.score < 0.08;
 
+  // Intenção de programa sem programa nomeado: "acaba com esse programa" diz o
+  // QUE fazer e não diz COM O QUÊ. Escolher um por conta própria seria apagar o
+  // programa errado — então o sistema pergunta, listando os que existem.
+  if (top.intent.expects.includes('PROGRAM') && !matching.some((entity) => entity.kind === 'PROGRAM')) {
+    const programas = (state.programs ?? []).filter((program) => program.active);
+    if (programas.length > 0) {
+      return {
+        rawText: text,
+        normalizedText: normalized,
+        intent: top.intent.id,
+        intentLabel: top.intent.label,
+        confidence,
+        entities,
+        numbers,
+        category: top.intent.category,
+        ministries: top.intent.ministries,
+        ...(top.intent.builder ? { builder: top.intent.builder } : {}),
+        action: 'ESCOLHER',
+        reading: `${top.intent.label}: qual programa?`,
+        choices: programas.map((program) => ({
+          id: program.id,
+          label: program.name,
+          detail: `R$ ${program.monthlyCost.toFixed(1)} bi por mês · ${(
+            program.beneficiaries / 1e6
+          ).toFixed(1)} milhões de pessoas`,
+          rewrite: `${top.intent.phrases[0]?.replace('o programa', program.name) ?? program.name}`,
+        })),
+        notes,
+        negated,
+        hypothetical,
+      };
+    }
+  }
+
   // Empresa citada por descrição ("a empresa de petróleo") em vez de nome.
   const namedCompany = matching.find((entity) => entity.kind === 'COMPANY' && entity.confidence >= 0.97);
   const guessedCompany = matching.find((entity) => entity.kind === 'COMPANY' && entity.confidence < 0.97);
@@ -340,4 +407,74 @@ export function recognizeMeasure(text: string, state: GameState): RecognizedMeas
     negated,
     hypothetical,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Navegação
+// ---------------------------------------------------------------------------
+
+type Destination = NonNullable<RecognizedMeasure['destination']>;
+
+const NAVIGATION_LABEL: Record<Destination, string> = {
+  programas: 'Programas do governo',
+  empresas: 'Empresas',
+  orcamento: 'Orçamento',
+  impostos: 'Tributos',
+  industria: 'Indústria',
+  poder: 'Poder e ordem',
+};
+
+/**
+ * As palavras que nomeiam um sistema inteiro, e não uma ação dentro dele.
+ *
+ * Declaradas como dados, e não como cadeia de `if`: acrescentar um sistema novo
+ * é acrescentar uma linha aqui.
+ */
+const NAVIGATION_TERMS: Record<Destination, string[]> = {
+  programas: ['programas', 'programa social', 'programas sociais', 'programas do governo', 'beneficios'],
+  empresas: ['empresas', 'estatais', 'empresas federais', 'empresas publicas'],
+  orcamento: ['orcamento', 'orcamentos', 'gastos do governo', 'despesas'],
+  impostos: ['impostos', 'tributos', 'carga tributaria', 'sistema tributario'],
+  industria: ['industria', 'industrias', 'setor industrial', 'parque industrial'],
+  poder: ['poder', 'regime', 'forcas armadas'],
+};
+
+/** Verbos que dizem "me mostra", e não "faça". */
+const BROWSE_VERBS = [
+  'ver', 'abrir', 'mostrar', 'listar', 'gerenciar', 'administrar', 'consultar', 'explorar',
+];
+
+function readNavigation(
+  normalized: string,
+  compact: string,
+  entities: readonly RecognizedEntity[],
+): Destination | null {
+
+  for (const [destino, termos] of Object.entries(NAVIGATION_TERMS) as [Destination, string[]][]) {
+    const termo = termos.find((candidato) =>
+      candidato.includes(' ') ? normalized.includes(candidato) : hasWord(normalized, candidato),
+    );
+    if (!termo) continue;
+
+    // Só o nome do sistema e nada mais. A comparação é feita sobre a frase sem
+    // palavras vazias: "os programas" vira "programas" e navega; "apoiar
+    // pequenas empresas" continua sendo três palavras de conteúdo e é ação, não
+    // navegação. Sem esse aperto, toda frase curta que citasse um sistema
+    // deixava de virar medida.
+    const soONome = compact === termo || compact === `${termo}s` || `${compact}s` === termo;
+    // "quero mexer nos programas", "gerenciar programas", "ver as empresas".
+    const pedeParaVer =
+      BROWSE_VERBS.some((verbo) => verbForms(verbo).some((forma) => hasWord(normalized, forma))) ||
+      /\bquero (mexer|ver|olhar|entrar)\b/.test(normalized);
+
+    // Entidade específica citada tira a frase da navegação: "mexer no Bolsa
+    // Família" é ação sobre um programa, não abrir a lista de todos.
+    const alvoEspecifico = entities.some(
+      (entity) => entity.kind === 'PROGRAM' || entity.kind === 'COMPANY',
+    );
+
+    if (!alvoEspecifico && (soONome || pedeParaVer)) return destino;
+  }
+
+  return null;
 }

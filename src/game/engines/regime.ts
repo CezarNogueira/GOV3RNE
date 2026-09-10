@@ -11,7 +11,7 @@ import { nudgeApproval } from './approval';
 import { MINISTRY_BY_ID } from '../data/ministries';
 import { looksFeminine } from '../data/portraits';
 import { Rng } from '../utils/rng';
-import { clamp, clamp100, round } from '../utils/math';
+import { approach, clamp, clamp100, round } from '../utils/math';
 import { monthLabel } from '../utils/format';
 import { declareWar, negotiatePeace, seekAllies } from './war';
 
@@ -339,6 +339,37 @@ export function processRegime(state: GameState, rng: Rng): string[] {
     1,
   );
   regime.ruptureRisk = ruptureRisk(state);
+
+  // ------------------------------------------------ o mercado não esquece
+  // Todos os efeitos de risco-país do regime eram solavancos: fechar o
+  // Congresso somava 90 pontos de uma vez, e a reversão à média do motor macro
+  // devolvia tudo em poucos meses. Na prática, uma ditadura de um ano acabava
+  // custando ao mercado o mesmo que uma democracia — o oposto do desenho.
+  //
+  // Aqui existe um PISO, e não um empurrão: enquanto o país estiver fechado, o
+  // risco não desce abaixo dele. O prêmio some no mês em que as instituições
+  // voltarem, e não antes.
+  const pisoDeRegime =
+    (regime.regime === 'ditadura' || regime.regime === 'regime_militar'
+      ? 150
+      : regime.regime === 'autoritario'
+        ? 90
+        : regime.regime === 'estado_de_excecao'
+          ? 55
+          : 0) +
+    (regime.congressStatus === 'suspenso' ? 60 : regime.congressStatus === 'enfraquecido' ? 20 : 0) +
+    Math.max(0, regime.resistance - 40) * 0.8 +
+    Math.max(0, 45 - regime.legitimacy) * 1.2;
+
+  if (pisoDeRegime > 0) {
+    const alvo = 210 + pisoDeRegime;
+    if (state.economy.countryRisk < alvo) {
+      // Sobe devagar: o mercado reprecifica em semanas, não num dia.
+      state.economy.countryRisk = Math.round(
+        clamp(approach(state.economy.countryRisk, alvo, 0.25), 40, 2000),
+      );
+    }
+  }
 
   // O rótulo do regime é relido depois de tudo: exceção que caducou, rua que
   // esvaziou ou instituição que se recompôs mudam o que o país é hoje.

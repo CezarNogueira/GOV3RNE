@@ -45,6 +45,101 @@ export interface IntentSpec {
 }
 
 export const INTENTS: readonly IntentSpec[] = [
+  // ------------------------------------------------------------- Programas
+  // Programa é entidade de primeira classe: o jogador cita pelo nome e escolhe
+  // o que fazer com ele, do mesmo jeito que faz com uma empresa. As seis
+  // intenções abaixo cobrem o ciclo inteiro — dinheiro, alcance, regras e fim.
+  {
+    id: 'encerrar_programa',
+    label: 'Encerrar um programa',
+    phrases: [
+      'acabar com o programa', 'extinguir o programa', 'encerrar o programa',
+      'cancelar o programa', 'fim do programa', 'matar o programa',
+      'acabar com esse programa', 'fechar o programa',
+    ],
+    verbs: ['acabar', 'extinguir', 'encerrar', 'cancelar', 'revogar', 'abolir', 'matar', 'fechar', 'derrubar'],
+    objects: ['programa', 'beneficio', 'auxilio', 'bolsa'],
+    expects: ['PROGRAM'],
+    builder: 'programa',
+    category: 'social',
+    ministries: ['desenvolvimento_social'],
+    specificity: 0.95,
+  },
+  {
+    id: 'ampliar_programa',
+    label: 'Ampliar um programa',
+    phrases: [
+      'colocar mais dinheiro no programa', 'aumentar o programa', 'ampliar o programa',
+      'expandir o programa', 'mais verba para o programa', 'reforcar o programa',
+      'aumentar o beneficio', 'expandir o publico',
+    ],
+    verbs: ['aumentar', 'ampliar', 'expandir', 'reforcar', 'elevar', 'subir', 'colocar', 'botar', 'dar', 'investir'],
+    objects: ['programa', 'beneficio', 'auxilio', 'bolsa', 'publico', 'cobertura'],
+    expects: ['PROGRAM'],
+    builder: 'programa',
+    category: 'social',
+    ministries: ['desenvolvimento_social'],
+    specificity: 0.9,
+  },
+  {
+    id: 'reduzir_programa',
+    label: 'Reduzir um programa',
+    phrases: [
+      'cortar o programa', 'reduzir o programa', 'diminuir o programa',
+      'tirar dinheiro do programa', 'enxugar o programa', 'limitar o programa',
+      'reduzir o beneficio', 'restringir o publico',
+    ],
+    verbs: ['cortar', 'reduzir', 'diminuir', 'tirar', 'enxugar', 'limitar', 'restringir', 'baixar'],
+    objects: ['programa', 'beneficio', 'auxilio', 'bolsa', 'publico', 'cobertura'],
+    expects: ['PROGRAM'],
+    builder: 'programa',
+    category: 'social',
+    ministries: ['desenvolvimento_social'],
+    specificity: 0.9,
+  },
+  {
+    id: 'alterar_programa',
+    label: 'Mudar as regras de um programa',
+    phrases: [
+      'mudar as regras do programa', 'alterar as regras do programa',
+      'mudar quem pode receber', 'mudar quem recebe', 'alterar os criterios',
+      'mexer no programa', 'mudar o programa', 'rever o programa',
+      'alterar a elegibilidade', 'mudar as condicoes',
+    ],
+    verbs: ['mudar', 'alterar', 'mexer', 'rever', 'ajustar', 'reformular', 'modificar'],
+    objects: ['programa', 'regra', 'criterio', 'elegibilidade', 'condicao', 'beneficio', 'bolsa', 'quem recebe'],
+    expects: ['PROGRAM'],
+    builder: 'programa',
+    alwaysConfigure: true,
+    category: 'social',
+    ministries: ['desenvolvimento_social'],
+    specificity: 0.88,
+  },
+  {
+    id: 'suspender_programa',
+    label: 'Suspender um programa',
+    phrases: ['suspender o programa', 'pausar o programa', 'congelar o programa', 'parar o programa'],
+    verbs: ['suspender', 'pausar', 'congelar', 'parar', 'interromper'],
+    objects: ['programa', 'beneficio', 'auxilio', 'bolsa'],
+    expects: ['PROGRAM'],
+    builder: 'programa',
+    category: 'social',
+    ministries: ['desenvolvimento_social'],
+    specificity: 0.92,
+  },
+  {
+    id: 'retomar_programa',
+    label: 'Retomar um programa suspenso',
+    phrases: ['reativar o programa', 'retomar o programa', 'reabrir o programa', 'voltar com o programa'],
+    verbs: ['reativar', 'retomar', 'reabrir', 'restabelecer', 'voltar'],
+    objects: ['programa', 'beneficio', 'auxilio', 'bolsa'],
+    expects: ['PROGRAM'],
+    builder: 'programa',
+    category: 'social',
+    ministries: ['desenvolvimento_social'],
+    specificity: 0.92,
+  },
+
   // ------------------------------------------------------------- Societário
   {
     id: 'privatizar_empresa',

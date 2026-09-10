@@ -58,6 +58,13 @@ export function MeasureBuilderModal({
 }) {
   const builder = BUILDER_BY_ID[builderId];
 
+  // O programa que a frase citou. É dele que saem os números do cabeçalho e é
+  // o nome dele que entra na medida escrita pelo painel.
+  const programaAlvo = useMemo(() => {
+    const citado = (recognition?.entities ?? []).find((entity) => entity.kind === 'PROGRAM');
+    return citado ? state.programs.find((program) => program.id === citado.id) : undefined;
+  }, [recognition, state.programs]);
+
   // Pré-seleção a partir do que a frase já dizia: quem escreveu "cortar gastos
   // da saúde" não deveria ter de marcar Saúde de novo.
   const preselectedAreas = useMemo(
@@ -129,10 +136,14 @@ export function MeasureBuilderModal({
     optionIds: options,
     ...(builder.amount ? { amount } : {}),
     changes,
+    // O programa citado viaja com o plano: é o nome dele que entra na frase
+    // final, e é por isso que clicar produz exatamente a medida que digitar
+    // produziria.
+    ...(programaAlvo ? { entityId: programaAlvo.id, entityName: programaAlvo.name } : {}),
   };
 
   const pronto =
-    builder.shape === 'OPCOES'
+    builder.shape === 'OPCOES' || builder.shape === 'PROGRAMA'
       ? options.length >= builder.minOptions
       : changes.length > 0;
 
@@ -168,9 +179,32 @@ export function MeasureBuilderModal({
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
         <section>
           {/* ------------------------------------------------ repertório */}
-          {builder.shape === 'OPCOES' && (
+          {(builder.shape === 'OPCOES' || builder.shape === 'PROGRAMA') && (
             <>
-              <p className="label mb-1.5">O que entra na medida</p>
+              {/* O painel de programa mostra primeiro os números REAIS do
+                  programa citado: decidir cortar sem ver quanto ele custa e
+                  quanta gente ele atende é decidir no escuro. */}
+              {builder.shape === 'PROGRAMA' && programaAlvo && (
+                <div className="mb-3 border border-ink-700 bg-ink-900/40 p-3">
+                  <p className="text-[13px] font-semibold text-neutral-100">{programaAlvo.name}</p>
+                  <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">
+                    {programaAlvo.description}
+                  </p>
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
+                    <StatMini label="Custo" value={`R$ ${programaAlvo.monthlyCost.toFixed(1)} bi/mês`} />
+                    <StatMini
+                      label="Atende"
+                      value={`${(programaAlvo.beneficiaries / 1e6).toFixed(1)} mi`}
+                    />
+                    <StatMini label="Popularidade" value={`${programaAlvo.popularity.toFixed(0)}%`} />
+                    <StatMini label="Eficiência" value={`${programaAlvo.efficiency.toFixed(0)}%`} />
+                  </div>
+                </div>
+              )}
+
+              <p className="label mb-1.5">
+                {builder.shape === 'PROGRAMA' ? 'O que fazer com ele' : 'O que entra na medida'}
+              </p>
               <div className="grid gap-1.5 sm:grid-cols-2">
                 {builder.options.map((option) => {
                   const marcada = options.includes(option.id);
@@ -476,5 +510,15 @@ export function MeasureBuilderModal({
         </aside>
       </div>
     </Modal>
+  );
+}
+
+/** Número curto com rótulo, para o cabeçalho do programa. */
+function StatMini({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wider text-neutral-600">{label}</p>
+      <p className="font-mono text-[12px] text-neutral-200">{value}</p>
+    </div>
   );
 }

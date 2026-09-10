@@ -3,6 +3,8 @@ import { Rng } from '../utils/rng';
 import { buildDynamic } from './events';
 import { SPOUSE_BREAKDOWN_EVENTS, SPOUSE_BREAKDOWN_IDS } from '../data/dynamic-events/spouse-breakdown';
 import { approach, clamp, clamp100, round } from '../utils/math';
+import { nudgeApproval } from './approval';
+import { nudgeGroup } from './social';
 import { makeId, monthLabel } from '../utils/index';
 
 /**
@@ -196,6 +198,58 @@ export function processPersonalLife(state: GameState, rng: Rng): TimelineEntry[]
   }
 
   return entries;
+}
+
+/**
+ * O DIVÓRCIO
+ *
+ * A relação pode acabar por decisão do presidente, e não só por explosão de
+ * quem estava do outro lado. É a saída que existia na ficção do jogo — o
+ * estouro do medidor oferece "anunciar a separação" — e não existia como
+ * decisão que ele pudesse tomar sozinho, num mês qualquer, sem crise nenhuma.
+ *
+ * O preço não é o mesmo em todo mês. Divorciar-se de alguém que o país aprova,
+ * no meio de um mandato tranquilo, custa muito mais do que encerrar uma relação
+ * que já estava pública e insustentável: aprovação, evangélicos, conservadores e
+ * um mês de imprensa falando de outra coisa que não o governo.
+ */
+export function divorceSpouse(state: GameState): { ok: boolean; message: string } {
+  const spouse = state.family.find((member) => member.kind === 'conjuge');
+  if (!spouse) return { ok: false, message: 'Não há de quem se divorciar.' };
+
+  // Quanto o país gostava dela e quanto ela estava exposta decidem o tamanho do
+  // estrago. Relação desgastada há meses machuca menos: todo mundo já sabia.
+  const querida = spouse.approval / 100;
+  const exposta = spouse.exposure / 100;
+  const desgaste = spouse.stress / 100;
+
+  const custo = round(clamp(2.6 * querida + 1.8 * exposta - 2.2 * desgaste, -0.6, 4.2), 2);
+
+  state.family = state.family.filter((member) => member.id !== spouse.id);
+
+  nudgeApproval(state, -custo);
+  nudgeGroup(state.socialGroups, 'evangelicos', -(1.4 + querida * 2.2));
+  nudgeGroup(state.socialGroups, 'catolicos', -(0.9 + querida * 1.4));
+  // Parte do país lê a separação como assunto privado que virou espetáculo.
+  nudgeGroup(state.socialGroups, 'imprensa', 1.2);
+
+  const president = state.president;
+  president.stress = round(clamp100(president.stress + 12), 1);
+  president.mood = round(clamp100(president.mood - 16), 1);
+  president.energy = round(clamp100(president.energy - 6), 1);
+  // Patrimônio partido ao meio: divórcio custa dinheiro, inclusive o do
+  // presidente.
+  president.personalWealth = Math.round(president.personalWealth * 0.62);
+
+  return {
+    ok: true,
+    message:
+      custo > 2
+        ? `A separação de ${spouse.name} foi anunciada em nota de três linhas e ocupou o noticiário por uma semana. O país gostava dela, e a conta veio inteira: ${custo.toFixed(1)} ponto(s) de aprovação e metade do seu patrimônio.`
+        : `A separação de ${spouse.name} foi anunciada sem surpresa para ninguém: a essa altura, o casamento já era assunto encerrado fora do Palácio. Custou ${custo.toFixed(
+            1,
+          )} ponto(s) de aprovação e metade do seu patrimônio.`,
+  };
 }
 
 /**

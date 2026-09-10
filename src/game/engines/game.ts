@@ -27,7 +27,7 @@ import { processPolicies } from './policy';
 import { generatePublicReaction } from './legislative';
 import { processMinisters, pressureMinister } from './government';
 import { processDiplomacy, runScheduledVisit } from './diplomacy';
-import { nightWithSpouse, processPersonalLife, rest, spouseBreakdown } from './personal';
+import { divorceSpouse, nightWithSpouse, processPersonalLife, rest, spouseBreakdown } from './personal';
 import { generateNews, generatePosts } from './news';
 import { processPromises } from './promises';
 import { processImpeachment } from './impeachment';
@@ -619,6 +619,13 @@ export function runAgendaAction(
 
     case 'descansar': {
       message = rest(state);
+      break;
+    }
+
+    case 'divorciar': {
+      const fim = divorceSpouse(state);
+      if (!fim.ok) return { ok: false, message: fim.message, state: input };
+      message = fim.message;
       break;
     }
 

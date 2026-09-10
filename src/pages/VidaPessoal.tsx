@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { conditionLabel, formatMoney, physicalMultiplier, momentumLabel } from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader } from '@/components/layout/PageHeader';
@@ -23,6 +24,7 @@ export function VidaPessoal() {
   const spouse = state.family.find((member) => member.kind === 'conjuge');
   const children = state.family.filter((member) => member.kind === 'filho');
   const agendaPoints = state.agenda.points;
+  const [confirmandoDivorcio, setConfirmandoDivorcio] = useState(false);
   const primeiroNome = spouse?.name.split(' ')[0] ?? '';
   const multiplier = physicalMultiplier(state);
 
@@ -215,6 +217,52 @@ export function VidaPessoal() {
                     >
                       {agendaPoints < 2 ? 'Sem pontos de agenda este mês' : 'Passar a noite juntos'}
                     </button>
+                  </div>
+
+                  {/* O divórcio é decisão do presidente, e não só desfecho
+                      de um estouro. Fica separado do resto e com confirmação:
+                      não é botão para clicar sem querer. */}
+                  <div className="mt-3 border border-ink-800 p-3">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="label-strong text-neutral-400">Encerrar o casamento</p>
+                      <span className="label">1 ponto de agenda</span>
+                    </div>
+                    <p className="mt-1 text-[12px] leading-snug text-neutral-500">
+                      Nota curta, patrimônio partido ao meio e uma semana de noticiário que não é
+                      sobre o governo. Custa aprovação na proporção de quanto o país gosta{' '}
+                      {primeiroNome ? `de ${primeiroNome}` : 'dela'} — hoje, {spouse.approval.toFixed(0)}%.
+                      Não tem volta.
+                    </p>
+                    {confirmandoDivorcio ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-danger px-3 py-1.5 text-[12px]"
+                          onClick={() => {
+                            runAction('divorciar');
+                            setConfirmandoDivorcio(false);
+                          }}
+                        >
+                          Confirmar o divórcio
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-ghost btn-sm"
+                          onClick={() => setConfirmandoDivorcio(false)}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn-ghost btn-sm mt-2"
+                        disabled={agendaPoints < 1}
+                        onClick={() => setConfirmandoDivorcio(true)}
+                      >
+                        {agendaPoints < 1 ? 'Sem pontos de agenda' : 'Pedir o divórcio'}
+                      </button>
+                    )}
                   </div>
 
                   {spouse.stress >= 85 ? (

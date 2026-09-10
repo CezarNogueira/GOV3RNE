@@ -49,10 +49,26 @@ export function composeMeasureText(plan: MeasurePlan, state: GameState): string 
       : `${plan.title}: ${corpo}.`;
   }
 
+  // O painel de programa escreve a frase com o NOME do programa no lugar da
+  // palavra genérica. É isso que faz o clique e a digitação chegarem no mesmo
+  // lugar: "acabar com o programa" + Bolsa Família vira exatamente a frase que
+  // o jogador teria escrito, e o leitor de extinção a reconhece igual.
+  if (builder.shape === 'PROGRAMA' && plan.entityName) {
+    const nomeadas = clauses.map((clause) => clause.replace('o programa', `o ${plan.entityName}`));
+    const quanto = plan.amount ? ` em R$ ${plan.amount} bilhões por ano` : '';
+    return nomeadas.length > 0
+      ? `${capitalize(nomeadas.join(', '))}${quanto}.`
+      : `${plan.title}: ${plan.entityName}.`;
+  }
+
   const valor = plan.amount ? ` com R$ ${plan.amount} bilhões por ano` : '';
   return clauses.length > 0
     ? `${plan.title}${valor}: ${clauses.join(', ')}.`
     : `${plan.title}${valor}.`;
+}
+
+function capitalize(text: string): string {
+  return text.length > 0 ? `${text[0]!.toUpperCase()}${text.slice(1)}` : text;
 }
 
 function describePlannedChange(change: PlannedChange, state: GameState): string {

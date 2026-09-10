@@ -51,6 +51,23 @@ const EXTRA_COMPANY_ALIASES: Record<string, string[]> = {
   embratur: ['promocao do turismo'],
 };
 
+/**
+ * Apelidos de programa que nenhum cadastro teria.
+ *
+ * O nome oficial e a primeira palavra dele já são reconhecidos sozinhos; aqui
+ * entra só o jeito falado — "auxílio", "vale gás", "o programa das casas".
+ */
+const PROGRAM_ALIASES: Record<string, string[]> = {
+  renda_base: ['bolsa familia', 'bolsa', 'auxilio', 'transferencia de renda', 'auxilio brasil'],
+  saude_perto: ['melhor em casa', 'atencao basica', 'saude da familia', 'saude perto'],
+  escola_integral: ['escola em tempo integral', 'escola integral', 'tempo integral'],
+  moradia_popular: ['minha casa minha vida', 'minha casa', 'habitacao popular'],
+  agua_para_todos: ['saneamento para todos', 'saneamento basico', 'agua e esgoto', 'saneamento'],
+  credito_produtivo: ['credito produtivo popular', 'microcredito', 'credito popular', 'pronampe'],
+  seguranca_integrada: ['fronteira integrada', 'seguranca de fronteira', 'seguranca integrada'],
+  floresta_viva: ['floresta viva', 'protecao da floresta'],
+};
+
 /** Como o jogador chama cada pasta quando não usa o nome oficial. */
 const MINISTRY_ALIASES: Record<string, string[]> = {
   casa_civil: ['casa civil', 'presidencia', 'palacio do planalto'],
@@ -255,6 +272,40 @@ export function buildEntityRegistry(state: GameState): EntityRecord[] {
     });
   }
   records.push(...CONCEPT_ENTITIES.map((entity) => ({ ...entity, aliases: mergeAliases(entity.aliases) })));
+
+  // ---------------------------------------------------------- Programas
+  // Os programas da PARTIDA, e não um catálogo fixo: programa criado pelo
+  // presidente é citável no mês seguinte, e programa extinto deixa de ser
+  // encontrado no mesmo instante em que sai da lista.
+  //
+  // O apelido curto sai do próprio nome — quem escreve "acaba com o bolsa" não
+  // vai digitar "Bolsa Família" inteiro — e é registrado só quando a primeira
+  // palavra é específica o bastante para não colidir com outro programa.
+  const nomesDeProgramas = (state.programs ?? []).map((program) => canonical(program.name));
+
+  for (const program of state.programs ?? []) {
+    const primeira = program.name.split(/[\s,]+/).find((palavra) => palavra.length > 4);
+    const apelidoServe =
+      primeira !== undefined &&
+      nomesDeProgramas.filter((nome) => nome.startsWith(canonical(primeira))).length === 1;
+
+    records.push({
+      kind: 'PROGRAM',
+      id: program.id,
+      name: program.name,
+      aliases: mergeAliases(
+        [program.name, ...(apelidoServe && primeira ? [primeira] : [])],
+        PROGRAM_ALIASES[program.id],
+      ),
+      meta: {
+        ministryId: program.ministryId,
+        category: program.category,
+        monthlyCost: program.monthlyCost,
+        beneficiaries: program.beneficiaries,
+        active: program.active,
+      },
+    });
+  }
 
   // ------------------------------------------------------------- Países
   // O tabuleiro internacional da partida: é dele que sai o alvo de uma

@@ -18,8 +18,10 @@ Banco Central, Câmara dos Deputados) e, a partir do primeiro mês jogado, passa
 a ser produzidos pelo motor de simulação — **não representam a realidade e não
 devem ser lidos como previsão**.
 
-Políticos, parlamentares, governadores, jornalistas, veículos de imprensa e
-empresas do jogo são **fictícios**. Siglas partidárias reais aparecem com
+Políticos, parlamentares, jornalistas, veículos de imprensa e empresas do jogo
+são **fictícios**. Os **27 governadores** são pessoas reais, com o partido que
+elas de fato tinham no mandato 2023–2026; ambição, combatividade e relação com o
+Planalto são parâmetro de simulação. Siglas partidárias reais aparecem com
 atributos de simulação atribuídos pelo jogo (ideologia, disciplina, preço da
 negociação), que **não correspondem a posições oficiais de nenhuma legenda**.
 
@@ -577,6 +579,23 @@ registerAgendaEvent({
 
 Nada mais precisa ser tocado.
 
+### Os governadores do mapa
+
+As 27 unidades da federação têm os governadores reais eleitos em 2022, com nome,
+sigla e eixo ideológico declarado ([`governors.ts`](src/game/data/governors.ts)).
+Ambição presidencial, combatividade e o traço mostrado na ficha são parâmetro de
+jogo.
+
+A relação com o Planalto deixou de ser sorteada: ela nasce da **distância
+ideológica** entre o governador e o partido do presidente. Um presidente do PL
+começa mais perto de Zema do que um do PT; um do PT começa mais perto de
+Jerônimo. Ninguém começa rompido — abaixo de 20 seria tirar do jogador a chance
+de estragar a relação sozinho.
+
+> **Atenção à data.** A partida começa em 2027, e quem estaria no cargo então são
+> os eleitos em outubro de 2026. Os nomes deste arquivo são os do mandato
+> anterior, e é ali que se corrigem quando o resultado for conhecido.
+
 ### Quem mora com o presidente
 
 O cargo tem duas pessoas dentro e só uma foi eleita. Quem mora no Palácio tem um
@@ -599,6 +618,14 @@ presidente que não dá conta; blindar fecha o assunto no oficial e deixa a
 interpretação para quem quiser fazer; anunciar a separação encerra a crise e
 encerra a relação. Numa partida sem nenhum cuidado, o medidor estoura por volta
 do vigésimo mês.
+
+O casamento também pode acabar por decisão do presidente, e não só por explosão
+de quem estava do outro lado: **pedir o divórcio** é uma ação de agenda de 1
+ponto, com confirmação, disponível em qualquer mês. O preço acompanha o quanto o
+país gostava de quem sai — separar-se de alguém admirado, no meio de um mandato
+tranquilo, custou 2,9 pontos de aprovação e metade do patrimônio pessoal;
+encerrar um casamento que já era assunto morto fora do Palácio custou quase
+nada. Evangélicos e católicos reagem nos dois casos.
 
 Quem **entra solteiro** no Planalto não fica solteiro por decreto: eventos de
 agenda apresentam alguém, e assumir a relação coloca outra pessoa dentro do
@@ -740,6 +767,41 @@ O que muda no mesmo instante:
   recusados sem consumir agenda: não há com quem negociar, e não é mais preciso.
 
 Restaurado o Congresso, tudo volta: a medida seguinte já nasce tramitando.
+
+### Programa como entidade de primeira classe
+
+O reconhecedor conhecia empresa, pasta, tributo e país — e não conhecia
+programa. `PROGRAM` existia como tipo e nada o populava, então nenhuma frase
+sobre o Bolsa Família chegava a lugar nenhum sem passar pelo caminho genérico.
+
+Agora os programas vêm de `state.programs`, e não de um catálogo à parte:
+programa criado pelo presidente é citável no mês seguinte, e programa extinto
+deixa de ser encontrado no mesmo instante em que sai da lista. Seis intenções
+cobrem o ciclo inteiro — encerrar, ampliar, reduzir, alterar regras, suspender,
+retomar — e todas abrem o mesmo painel, que mostra os números reais do programa
+antes de qualquer escolha.
+
+**A conjugação passou a ser gerada, não listada.** O banco declara o verbo no
+infinitivo e ninguém escreve assim: o jogador escreve "acaba", "coloca",
+"reduz". As formas são derivadas do radical por lista fechada de terminações —
+`verbForms('acabar')` devolve *acaba, acabe, acabam, acabou, acabando*… — e
+casadas como palavra inteira, porque casamento por prefixo transformaria
+"matéria tributária" em ordem de matar. Isso conserta o **banco de intenções
+inteiro**, não só os programas.
+
+**Escrever o nome de um sistema abre o sistema.** "Programas", "empresas", "ver
+as estatais", "quero mexer nos impostos" não viram medida: viram navegação
+(`action: 'NAVEGAR'`). A regra é apertada de propósito — a frase precisa ser
+*só* o nome do sistema, ou trazer verbo de consulta — senão "apoiar pequenas
+empresas" deixaria de ser medida.
+
+**Sem alvo, o jogo pergunta.** "Mata esse programa" diz o que fazer e não diz
+com o quê. Escolher um por conta própria apagaria o programa errado, então a
+leitura volta com a lista dos oito, cada um com custo e alcance.
+
+E clicar e escrever produzem a mesma medida: o painel monta a frase *"Acabar com
+o Bolsa Família"* e a entrega ao mesmo interpretador que lê o que o jogador
+digita. Não há dois caminhos de cálculo.
 
 ### Acabar com um programa
 

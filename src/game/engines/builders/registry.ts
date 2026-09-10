@@ -21,6 +21,96 @@ import type { BuilderSpec } from '../../types/index';
  * Acrescentar uma política nova é acrescentar uma opção nesta lista.
  */
 export const BUILDERS: readonly BuilderSpec[] = [
+  // ------------------------------------------------------------- Programas
+  // Um painel só para todo programa do jogo. As opções são as operações do §9:
+  // dinheiro, alcance, regras e fim. Qual programa está sendo editado vem do
+  // texto do jogador (ou do clique na lista) e entra no plano como entidade —
+  // por isso o painel não precisa de uma entrada por programa.
+  {
+    id: 'programa',
+    title: 'Programa de governo',
+    intro:
+      'Entendi que você quer mexer num programa. Escolha o que fazer com ele: cada caminho custa uma coisa diferente e agrada gente diferente.',
+    shape: 'PROGRAMA',
+    category: 'social',
+    ministries: ['desenvolvimento_social'],
+    minOptions: 1,
+    instrument: 'projeto_lei',
+    amount: {
+      label: 'Quanto muda no orçamento do programa',
+      unit: 'BRL_BILLION',
+      min: 0,
+      max: 120,
+      step: 1,
+      default: 10,
+      hint: 'R$ bilhões por ano. Vale para ampliar e para cortar — a direção vem da opção escolhida.',
+    },
+    options: [
+      {
+        id: 'ampliar_orcamento',
+        label: 'Aumentar o orçamento',
+        detail: 'Mais dinheiro por mês, mesma regra e mesmo público.',
+        clause: 'ampliar o orçamento do programa',
+        cost: 12,
+      },
+      {
+        id: 'reduzir_orcamento',
+        label: 'Reduzir o orçamento',
+        detail: 'Menos dinheiro por mês. O programa continua existindo, atendendo pior.',
+        clause: 'reduzir o orçamento do programa',
+        cost: -12,
+      },
+      {
+        id: 'ampliar_beneficio',
+        label: 'Aumentar o valor do benefício',
+        detail: 'Cada beneficiário recebe mais. Custa na proporção de quantos são.',
+        clause: 'aumentar o valor do benefício pago pelo programa',
+        cost: 14,
+      },
+      {
+        id: 'ampliar_publico',
+        label: 'Expandir o público atendido',
+        detail: 'Mais gente entra. O custo por pessoa não muda; o número de pessoas, sim.',
+        clause: 'expandir o público atendido pelo programa',
+        cost: 16,
+      },
+      {
+        id: 'restringir_publico',
+        label: 'Restringir o público atendido',
+        detail: 'Critério mais duro na entrada: menos gente, menos gasto, mais fila.',
+        clause: 'restringir o público atendido pelo programa',
+        cost: -10,
+      },
+      {
+        id: 'alterar_regras',
+        label: 'Mudar as regras de entrada',
+        detail: 'Muda quem pode receber e o que precisa cumprir para continuar recebendo.',
+        clause: 'alterar os critérios de elegibilidade do programa',
+        cost: 0,
+      },
+      {
+        id: 'condicionalidades',
+        label: 'Exigir contrapartida',
+        detail: 'Frequência escolar, vacinação, comprovação de renda. Melhora a focalização e aumenta a exclusão por burocracia.',
+        clause: 'criar condicionalidades para o programa',
+        cost: 2,
+      },
+      {
+        id: 'suspender',
+        label: 'Suspender temporariamente',
+        detail: 'O programa para de pagar sem ser extinto. Volta quando você mandar.',
+        clause: 'suspender o programa',
+        cost: 0,
+      },
+      {
+        id: 'encerrar',
+        label: 'Encerrar o programa',
+        detail: 'Sai da lista para sempre. O dinheiro volta ao caixa e quem recebia deixa de receber.',
+        clause: 'acabar com o programa',
+        cost: 0,
+      },
+    ],
+  },
   {
     id: 'pequenas_empresas',
     title: 'Apoio às pequenas empresas',

@@ -72,6 +72,16 @@ export const AGENDA_ACTIONS: readonly AgendaAction[] = [
     consequence: 'Reduz estresse e devolve energia para o mês seguinte.',
   },
   {
+    id: 'divorciar',
+    label: 'Pedir o divórcio',
+    description:
+      'Encerrar o casamento por decisão sua, no mês que você escolher. Nota curta, patrimônio partido ao meio e uma semana de noticiário que não é sobre o governo.',
+    cost: 1,
+    energyCost: 10,
+    category: 'pessoal',
+    consequence: 'Custa aprovação na proporção de quanto o país gostava dela — e metade do seu patrimônio.',
+  },
+  {
     id: 'nada',
     label: 'Não fazer nada este mês',
     description: 'O mês passa, a crise anda sozinha e a sua caneta fica guardada.',
