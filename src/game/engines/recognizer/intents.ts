@@ -45,6 +45,27 @@ export interface IntentSpec {
 }
 
 export const INTENTS: readonly IntentSpec[] = [
+  // ----------------------------------------------------------------- Renda
+  {
+    id: 'elevar_renda',
+    label: 'Elevar a renda',
+    phrases: [
+      'aumentar a renda', 'elevar a renda', 'melhorar a renda', 'aumentar a renda media',
+      'melhorar os salarios', 'aumentar os salarios', 'melhorar o salario',
+      'aumentar a renda dos trabalhadores', 'criar empregos melhores',
+      'desenvolver a economia', 'gerar emprego', 'gerar empregos',
+      'melhorar a vida do trabalhador', 'aumentar o poder de compra',
+    ],
+    verbs: ['aumentar', 'elevar', 'melhorar', 'desenvolver', 'gerar', 'criar', 'levantar'],
+    objects: ['renda', 'salario', 'emprego', 'poder de compra', 'economia', 'renda media'],
+    expects: ['SOCIAL_GROUP', 'BUDGET_AREA'],
+    builder: 'renda',
+    alwaysConfigure: true,
+    category: 'economia',
+    ministries: ['fazenda', 'desenvolvimento_social'],
+    specificity: 0.72,
+  },
+
   // ------------------------------------------------------------- Programas
   // Programa é entidade de primeira classe: o jogador cita pelo nome e escolhe
   // o que fazer com ele, do mesmo jeito que faz com uma empresa. As seis

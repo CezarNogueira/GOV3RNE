@@ -39,6 +39,8 @@ import {
 import { TOPICS, type Topic } from './interpreter-topics';
 import { readCompanyPolicy, isEmptyCompanyImpact } from './companies/company-text';
 import { analyzeProgramAbolition } from './program-text';
+import { REGIONS, REGION_LABEL } from '../types/common';
+import type { Region } from '../types/common';
 import { COMPANY_BLUEPRINTS } from '../data/companies/index';
 import { analyzeNumericPolicy } from './numeric/numeric-policy-engine';
 import { readScopeNarrowing } from './numeric/numeric-policy-reader';
@@ -160,13 +162,31 @@ export function interpretLocally(text: string, state: GameState): ProposalAnalys
   const abolition = analyzeProgramAbolition(text, state);
   if (abolition) return { ...abolition, warnings: [...warnings, ...abolition.warnings] };
 
+  // ------------------------------------------ 0b. A medida tem endereço?
+  // Estado ou região citados no texto viram o ALVO da medida: os efeitos param
+  // de cair sobre o país inteiro e passam a cair só ali, com o número nacional
+  // sentindo apenas a fatia populacional. É o que separa "investir na Bahia" de
+  // "investir no Brasil".
+  const endereco = readMeasureAddress(text, state);
+  const comEndereco = (analysis: ProposalAnalysis): ProposalAnalysis =>
+    endereco.targetStates.length > 0 || endereco.targetRegions.length > 0
+      ? {
+          ...analysis,
+          impacts: {
+            ...analysis.impacts,
+            ...(endereco.targetStates.length > 0 ? { targetStates: endereco.targetStates } : {}),
+            ...(endereco.targetRegions.length > 0 ? { targetRegions: endereco.targetRegions } : {}),
+          },
+        }
+      : analysis;
+
   // ---------------------------------------------- 0. A medida tem um número?
   // Quando tem, o número MANDA: o valor atual sai do estado da partida, o
   // proposto sai do texto, e todo o impacto é calculado a partir da diferença
   // entre os dois. Nada aqui depende do nome da medida, e por isso
   // "para R$ 1.700" e "para R$ 1.800" não podem terminar iguais.
   const numeric = analyzeNumericPolicy(text, state);
-  if (numeric) return numericAnalysis(numeric, state, normalized, warnings);
+  if (numeric) return comEndereco(numericAnalysis(numeric, state, normalized, warnings));
 
   // Uma alíquota declarada ("de 8% para 6%") é a leitura mais confiável que o
   // texto pode oferecer: define direção e magnitude ao mesmo tempo.
@@ -216,7 +236,7 @@ export function interpretLocally(text: string, state: GameState): ProposalAnalys
   }
 
   if (matches.length === 0) {
-    return genericAnalysis(text, state, intensity, warnings);
+    return comEndereco(genericAnalysis(text, state, intensity, warnings));
   }
 
   // Elege o assunto principal. Posição na frase importa, mas especificidade
@@ -374,7 +394,7 @@ export function interpretLocally(text: string, state: GameState): ProposalAnalys
     );
   }
 
-  return {
+  return comEndereco({
     instrument,
     title: title.slice(0, 120),
     category: primary.topic.category,
@@ -402,7 +422,7 @@ export function interpretLocally(text: string, state: GameState): ProposalAnalys
     }`,
     fallback: true,
     warnings,
-  };
+  });
 }
 
 /**
@@ -857,4 +877,39 @@ function genericAnalysis(
     fallback: true,
     warnings,
   };
+}
+
+/**
+ * O ENDEREÇO DA MEDIDA
+ *
+ * Lê estado e região citados no texto. Devolve vazio quando a medida é
+ * nacional, que é o caso da maioria — e aí nada muda no comportamento de
+ * sempre.
+ *
+ * Compara contra as 27 unidades da partida e as cinco regiões, sem lista
+ * paralela: estado é estado, e o nome dele já mora em `data/states.ts`.
+ */
+export function readMeasureAddress(
+  text: string,
+  state: GameState,
+): { targetStates: string[]; targetRegions: Region[] } {
+  const normalized = normalize(text);
+
+  const targetStates = state.states
+    .filter((unit) => {
+      const nome = normalize(unit.name);
+      const capital = normalize(unit.capital);
+      return (
+        new RegExp(`(^|[^a-z])${nome}([^a-z]|$)`).test(normalized) ||
+        new RegExp(`(^|[^a-z])${capital}([^a-z]|$)`).test(normalized)
+      );
+    })
+    .map((unit) => unit.id);
+
+  const targetRegions = REGIONS.filter((region) => {
+    const rotulo = normalize(REGION_LABEL[region]);
+    return new RegExp(`(^|[^a-z])${rotulo}([^a-z]|$)`).test(normalized);
+  });
+
+  return { targetStates, targetRegions };
 }

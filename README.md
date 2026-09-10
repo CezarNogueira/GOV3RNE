@@ -768,6 +768,49 @@ O que muda no mesmo instante:
 
 Restaurado o Congresso, tudo volta: a medida seguinte já nasce tramitando.
 
+### Renda média como consequência
+
+A renda média não podia subir, e não era falta de medidas — era a fórmula. A
+renda nacional perseguia `1.800 × (1 + crescimento)`: ancorada num número fixo,
+ela não mudava de patamar num mandato inteiro por melhor que fosse o governo. E a
+renda de cada estado perseguia `nacional × (renda dele / 1.980)` — uma razão
+recalculada da própria renda dele, ou seja, **um ponto fixo**: a Bahia nunca
+podia convergir nem divergir de São Paulo, por mais que se investisse ali.
+
+Agora existe o elo que faltava: **produtividade por estado**, 0–100. Ela é o que
+traduz política em salário, e a cadeia não tem atalho:
+
+```
+investimento e qualificação → produtividade → salário → renda média
+```
+
+A renda nacional passou a ser o que o país produz por pessoa ocupada, corrigido
+pelo desemprego, mais transferências e piso salarial. A renda de cada estado sai
+da produtividade, do desemprego e da infraestrutura **dele** contra a média do
+país. Produtividade move 4% ao mês, porque é acervo de décadas — escola
+construída, estrada existente, empresa instalada — e o equilíbrio dela usa a
+mesma fórmula que cria a produtividade inicial, para que um estado parado fique
+parado em vez de decair sozinho.
+
+**Medida com endereço.** Estado ou região citados no texto viram alvo: os efeitos
+caem só ali, e o número nacional sente apenas a fatia populacional. Uma obra que
+muda a vida do Acre não muda a média do Brasil, e fingir que muda seria mentir no
+painel nacional.
+
+**Nove caminhos, nove resultados.** Cada opção do painel declara o próprio efeito
+por R$ 10 bi/ano, com prazo próprio: salário mínimo chega ao bolso no mês
+seguinte e cobra inflação; ensino técnico quase não aparece no primeiro ano e é o
+maior efeito de longo prazo; obra dá emprego durante e produtividade depois.
+
+Uma campanha de três anos, contra a mesma partida sem política nenhuma:
+
+```
+                    com política      controle
+renda nacional      R$ 3.312          R$ 2.954
+renda da Bahia      R$ 2.399          R$ 2.081
+produtividade BA    79,3              74,3
+```
+
 ### Programa como entidade de primeira classe
 
 O reconhecedor conhecia empresa, pasta, tributo e país — e não conhecia

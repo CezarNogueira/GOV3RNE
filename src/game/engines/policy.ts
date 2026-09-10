@@ -1,4 +1,5 @@
 import type {
+  FederalUnit,
   Consequence,
   GameState,
   Policy,
@@ -205,7 +206,56 @@ export function applyImpacts(state: GameState, impacts: PolicyImpact, share = 1)
     eco.minimumWage = Math.round(eco.minimumWage + apply(impacts.minimumWage));
   }
 
+  // ------------------------------------------------------- Efeito com endereço
+  // Medida com estado ou região nomeada cai SÓ ali. É o que separa "investir na
+  // Bahia" de "investir no Brasil": o mesmo dinheiro, concentrado em nove
+  // milhões de pessoas em vez de duzentos, muda a vida daquele estado e quase
+  // nada da média nacional.
+  const enderecados = targetedUnits(state, impacts);
+  if (enderecados.length > 0) {
+    // Concentrar não multiplica: o efeito declarado é repartido entre os
+    // estados atingidos, e cada um sente na proporção do que recebeu.
+    for (const unit of enderecados) {
+      if (impacts.productivity) {
+        unit.productivity = round(clamp100(unit.productivity + apply(impacts.productivity)), 2);
+      }
+      if (impacts.infrastructure) {
+        unit.infrastructure = round(clamp100(unit.infrastructure + apply(impacts.infrastructure)), 1);
+      }
+      if (impacts.unemployment) {
+        unit.unemployment = round(clamp(unit.unemployment + apply(impacts.unemployment), 1.5, 34), 2);
+      }
+      if (impacts.averageIncome) {
+        unit.income = Math.round(unit.income + apply(impacts.averageIncome));
+      }
+      if (impacts.poverty) {
+        unit.poverty = round(clamp(unit.poverty + apply(impacts.poverty), 3, 70), 2);
+      }
+    }
+
+    // Com endereço, o país sente só a fatia populacional daquilo.
+    const populacaoAtingida = enderecados.reduce((total, unit) => total + unit.population, 0);
+    const fatia = populacaoAtingida / Math.max(1, nation.population);
+    applyNationalSocial(state, impacts, share * fatia);
+    return;
+  }
+
   // Indicadores sociais: movem devagar, mesmo com medida forte.
+  applyNationalSocial(state, impacts, share);
+}
+
+/**
+ * Os indicadores do país inteiro.
+ *
+ * Separado para poder ser chamado com uma FATIA: medida endereçada a um estado
+ * move o número nacional só na proporção da população dele. Uma obra que muda a
+ * vida do Acre não muda a média do Brasil, e fingir que muda seria mentir para
+ * o jogador no painel nacional.
+ */
+function applyNationalSocial(state: GameState, impacts: PolicyImpact, share: number): void {
+  const nation = state.nation;
+  const apply = (value: number | undefined) => (value ?? 0) * share;
+
   nation.povertyRate = round(clamp(nation.povertyRate + apply(impacts.poverty), 2, 70), 3);
   nation.hdi = round(clamp(nation.hdi + apply(impacts.hdi), 0.4, 0.99), 4);
   nation.lifeExpectancy = round(clamp(nation.lifeExpectancy + apply(impacts.lifeExpectancy), 55, 90), 3);
@@ -484,5 +534,22 @@ export function committedMonthlyCost(state: GameState): number {
       .filter((policy) => policy.status === 'vigente' && policy.monthsRemaining > 0)
       .reduce((total, policy) => total + policy.monthlyCost, 0),
     2,
+  );
+}
+
+/**
+ * Os estados que a medida nomeou.
+ *
+ * Vazio quando a medida é nacional, que é o caso da esmagadora maioria delas —
+ * e aí o caminho de sempre continua valendo, sem nenhuma mudança de
+ * comportamento para as medidas que já existiam.
+ */
+function targetedUnits(state: GameState, impacts: PolicyImpact): FederalUnit[] {
+  const porEstado = impacts.targetStates ?? [];
+  const porRegiao = impacts.targetRegions ?? [];
+  if (porEstado.length === 0 && porRegiao.length === 0) return [];
+
+  return state.states.filter(
+    (unit) => porEstado.includes(unit.id) || porRegiao.includes(unit.region),
   );
 }

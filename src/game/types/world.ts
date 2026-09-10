@@ -46,6 +46,18 @@ export interface FederalUnit extends StateInfo {
   crime: number;
   infrastructure: number;
   unrest: number;
+  /**
+   * PRODUTIVIDADE DO ESTADO, 0-100.
+   *
+   * O elo que faltava entre política e renda. Investimento, qualificação,
+   * indústria e tecnologia empurram este número; ele é que empurra o salário,
+   * e o salário é que empurra a renda média. Sem ele, "renda" só podia ser
+   * empurrada na marra — que é exatamente o que não se quer.
+   *
+   * Move devagar de propósito: produtividade é estoque, não fluxo. Ensino
+   * técnico assinado hoje aparece aqui daqui a muitos meses.
+   */
+  productivity: number;
 }
 
 export interface SocialGroup {

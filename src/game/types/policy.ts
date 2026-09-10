@@ -1,4 +1,4 @@
-import type { LegalInstrument, PolicyCategory } from './common';
+import type { LegalInstrument, PolicyCategory, Region } from './common';
 import type { CompanyPolicyImpact } from './companies';
 import type { NumericImpactBreakdown, NumericPolicyChange } from './numeric-policy';
 import type { ChamberId, MinistryId } from './politics';
@@ -31,6 +31,21 @@ export interface PolicyImpact {
   environmentIndex?: number;
   corruptionPerception?: number;
   approval?: number;
+
+  /**
+   * ONDE a medida cai, quando ela não é para o país inteiro.
+   *
+   * Vazio significa nacional, que é o caso da esmagadora maioria das medidas.
+   * Com endereço, os efeitos de renda, produtividade, emprego e infraestrutura
+   * são aplicados SÓ ali — é o que faz "investir na Bahia" ser diferente de
+   * "investir no Brasil" em vez de ser a mesma coisa com outro nome.
+   */
+  targetStates?: string[];
+  targetRegions?: Region[];
+  /** Produtividade local, 0-100. O elo entre investimento e salário. */
+  productivity?: number;
+  /** Estoque de infraestrutura local, 0-100. */
+  infrastructure?: number;
 }
 
 export interface GroupImpact {

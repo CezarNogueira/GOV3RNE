@@ -186,7 +186,30 @@ export function processNation(state: GameState, rng: Rng): void {
   );
   nation.povertyRate = round(approach(nation.povertyRate, povertyTarget, 0.07), 2);
 
-  const incomeTarget = 1_800 * (1 + (eco.gdpGrowth - eco.inflation / 4) / 100) + transfers * 8;
+  // ------------------------------------------------------------------ Renda
+  // A renda média era ancorada num 1.800 fixo vezes o crescimento do ano: por
+  // construção, ela não podia subir de patamar num mandato inteiro, por melhor
+  // que o governo fosse. Agora ela é o que o país PRODUZ por pessoa ocupada,
+  // corrigido pelo quanto dessa gente está de fato ocupada.
+  //
+  // A cadeia é a que o desenho pede, e nenhum elo é pulável:
+  //
+  //   investimento e qualificação -> produtividade -> salário -> renda média
+  //
+  // Produtividade é estoque e move devagar; renda persegue a produtividade com
+  // atraso. Um governo que investe hoje colhe daqui a muitos meses — e um que
+  // desinveste também demora a sentir.
+  const produtividadeNacional = weightedProductivity(state.states);
+  const ocupacao = clamp(1 - (eco.unemployment - 6) * 0.018, 0.82, 1.12);
+
+  const incomeTarget =
+    980 * (1 + produtividadeNacional / 42) * ocupacao +
+    // Transferência entra na renda média porque ela É renda de quem recebe,
+    // mas não vira produtividade: programa social eleva o piso, não o teto.
+    transfers * 7 +
+    // Salário mínimo puxa a base da pirâmide junto.
+    Math.max(0, eco.minimumWage - 1_412) * 0.22;
+
   nation.averageIncome = Math.round(approach(nation.averageIncome, incomeTarget, 0.05));
 
   const giniTarget = clamp(0.42 + nation.povertyRate * 0.0032 - transfers * 0.0014, 0.34, 0.68);
@@ -297,6 +320,19 @@ export function spreadApproval(state: GameState, rng: Rng): void {
   }
 }
 
+/**
+ * Produtividade do país: a média dos estados ponderada por população.
+ *
+ * É o número que decide o teto da renda média nacional. Ponderada porque um
+ * ganho de produtividade em São Paulo vale muito mais para a renda do país do
+ * que o mesmo ganho no Acre.
+ */
+export function weightedProductivity(units: readonly FederalUnit[]): number {
+  const populacao = units.reduce((total, unit) => total + unit.population, 0);
+  if (populacao === 0) return 50;
+  return units.reduce((total, unit) => total + unit.productivity * unit.population, 0) / populacao;
+}
+
 /** Média de aprovação ponderada por população — a conta de uma pesquisa. */
 export function weightedApproval(units: readonly FederalUnit[]): number {
   const populacao = units.reduce((total, unit) => total + unit.population, 0);
@@ -307,6 +343,12 @@ export function weightedApproval(units: readonly FederalUnit[]): number {
 /** Propaga os indicadores nacionais para as 27 unidades da federação. */
 export function processStates(state: GameState, rng: Rng): void {
   const eco = state.economy;
+
+  // Referências do país contra as quais cada estado se posiciona.
+  const produtividadeMedia = weightedProductivity(state.states);
+  const infraMedia =
+    state.states.reduce((total, unit) => total + unit.infrastructure, 0) /
+    Math.max(1, state.states.length);
 
   for (const unit of state.states) {
     // Cada estado orbita a média nacional mantendo a própria distância histórica.
@@ -320,8 +362,23 @@ export function processStates(state: GameState, rng: Rng): void {
     const povertyTarget = state.nation.povertyRate * (unit.poverty / 27.4);
     unit.poverty = round(clamp(approach(unit.poverty, povertyTarget, 0.05), 3, 70), 2);
 
+    // A renda do estado era `nacional * (renda dele / 1980)` — uma razão
+    // recalculada da própria renda dele, ou seja, um ponto fixo: o estado
+    // NUNCA podia convergir nem divergir do país, por mais que se investisse
+    // ali. Era isso que tornava "investir na Bahia" impossível de sentir.
+    //
+    // Agora a razão sai do que o estado é: produtividade, ocupação e
+    // infraestrutura dele contra a média do país. Bahia que produz mais sobe em
+    // relação a São Paulo; Bahia que estagna, desce.
+    const razao = clamp(
+      unit.productivity / Math.max(1, produtividadeMedia) +
+        (eco.unemployment - unit.unemployment) * 0.012 +
+        (unit.infrastructure - infraMedia) * 0.0016,
+      0.35,
+      2.4,
+    );
     unit.income = Math.round(
-      approach(unit.income, state.nation.averageIncome * (unit.income / 1_980), 0.05),
+      approach(unit.income, state.nation.averageIncome * razao, 0.06),
     );
     unit.hdi = round(
       clamp(approach(unit.hdi, state.nation.hdi * (unit.hdi / 0.786), 0.04), 0.45, 0.95),
@@ -336,6 +393,38 @@ export function processStates(state: GameState, rng: Rng): void {
         approach(unit.infrastructure, state.nation.infrastructureIndex * (unit.infrastructure / 55), 0.04),
       ),
       1,
+    );
+
+    // ------------------------------------------------------ Produtividade
+    // O estoque que traduz política em salário. Ele persegue um alvo formado
+    // por três coisas que o governo consegue mexer — escola, infraestrutura e
+    // atividade empresarial — e por uma que ele não escolhe: a inércia do que o
+    // estado já era.
+    //
+    // A velocidade é baixa de propósito (4% ao mês). Produtividade não responde
+    // a anúncio: ensino técnico assinado hoje aparece em salário daqui a anos, e
+    // é isso que separa esta mecânica de um botão que aumenta a renda.
+    // O alvo usa a MESMA fórmula que criou a produtividade inicial do estado —
+    // renda, IDH e infraestrutura —, mais os termos que a política move. É o
+    // que garante que um estado em equilíbrio fique parado: com fórmulas
+    // diferentes, a Bahia perdia dez pontos no primeiro ano sem nenhuma
+    // política ruim ter sido assinada.
+    //
+    // Renda alimenta produtividade e produtividade alimenta renda, mas o laço
+    // converge: o ganho de ida (0,013 ponto por real) vezes o de volta (R$ 23
+    // por ponto) dá 0,3, bem abaixo de 1.
+    const alvoProdutividade = clamp100(
+      22 +
+        (unit.income / 1_980) * 26 +
+        unit.hdi * 34 +
+        unit.infrastructure * 0.16 +
+        (state.nation.educationIndex - 55) * 0.25 +
+        (12 - unit.unemployment) * 0.4 +
+        (state.economy.businessConfidence - 50) * 0.08,
+    );
+    unit.productivity = round(
+      clamp100(approach(unit.productivity, alvoProdutividade, 0.04) + rng.noise(0.15)),
+      2,
     );
 
     // Insatisfação local cresce onde o desemprego e o crime sobem juntos.

@@ -1,4 +1,5 @@
 import type { PolicyCategory } from './common';
+import type { PolicyImpact } from './policy';
 import type { MinistryId } from './politics';
 
 /**
@@ -30,7 +31,11 @@ export type EntityKind =
   | 'SOCIAL_GROUP'
   | 'NUMERIC_TARGET'
   | 'PROGRAM'
-  | 'COUNTRY';
+  | 'COUNTRY'
+  /** Uma das 27 unidades da federação. */
+  | 'STATE'
+  /** Uma das cinco regiões. */
+  | 'REGION';
 
 export interface EntityRecord {
   kind: EntityKind;
@@ -145,6 +150,20 @@ export interface BuilderOption {
   numericTarget?: string;
   /** Quanto move, na unidade do alvo. Positivo aumenta, negativo reduz. */
   numericDelta?: number;
+  /**
+   * Efeito macro próprio da opção, POR R$ 10 bilhões por ano.
+   *
+   * Existe porque o texto que o painel escreve é lido pelo interpretador
+   * genérico, e ele não tem como saber que "ensino técnico" mexe em
+   * produtividade e "desoneração da folha" mexe em emprego. Sem isto, as nove
+   * opções do painel de renda terminavam no mesmo resultado — que é exatamente
+   * o que não se quer.
+   *
+   * A escala por R$ 10 bi é o que faz o tamanho da medida importar.
+   */
+  impactsPer10bi?: PolicyImpact;
+  /** Efeito que só aparece meses depois, na mesma escala. */
+  delayedPer10bi?: { monthsAhead: number; label: string; impacts: PolicyImpact };
 }
 
 export interface BuilderAmountSpec {

@@ -119,9 +119,34 @@ export function buildMeasureFromPlan(
   const base = interpretLocally(text, state);
   const builder: BuilderSpec | undefined = BUILDER_BY_ID[plan.builderId];
 
+  // O efeito declarado por cada opção escolhida, na escala do dinheiro posto.
+  // É daqui que sai a diferença entre "ensino técnico" e "desoneração da
+  // folha": as duas frases seriam quase idênticas para o interpretador
+  // genérico, e não são a mesma política.
+  const escala = (plan.amount ?? 10) / 10;
+  const marcadas = (builder?.options ?? []).filter((option) => plan.optionIds.includes(option.id));
+
+  let impactosDaOpcao: ProposalAnalysis['impacts'] = {};
+  const atrasados = [...base.delayedEffects];
+
+  for (const option of marcadas) {
+    if (option.impactsPer10bi) {
+      impactosDaOpcao = mergeImpacts(impactosDaOpcao, scaleImpacts(option.impactsPer10bi, escala));
+    }
+    if (option.delayedPer10bi) {
+      atrasados.push({
+        monthsAhead: option.delayedPer10bi.monthsAhead,
+        label: option.delayedPer10bi.label,
+        impacts: scaleImpacts(option.delayedPer10bi.impacts, escala),
+      });
+    }
+  }
+
   const analysis: ProposalAnalysis = {
     ...base,
     title: plan.title.slice(0, 120),
+    impacts: mergeImpacts(base.impacts, impactosDaOpcao),
+    delayedEffects: atrasados,
     ...(builder ? { category: builder.category, affectedMinistries: [...builder.ministries] } : {}),
   };
 
@@ -178,4 +203,20 @@ export function buildMeasureFromPlan(
       ],
     },
   };
+}
+
+/** Multiplica cada campo de um impacto pela escala do dinheiro posto. */
+function scaleImpacts(
+  impacts: ProposalAnalysis['impacts'],
+  factor: number,
+): ProposalAnalysis['impacts'] {
+  const escalado: Record<string, unknown> = {};
+
+  for (const [chave, valor] of Object.entries(impacts)) {
+    // Alvo é endereço, não quantidade: multiplicar uma lista de estados por 2
+    // não faria sentido nenhum.
+    escalado[chave] = typeof valor === 'number' ? round(valor * factor, 4) : valor;
+  }
+
+  return escalado as ProposalAnalysis['impacts'];
 }

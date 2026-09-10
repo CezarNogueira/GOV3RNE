@@ -21,6 +21,131 @@ import type { BuilderSpec } from '../../types/index';
  * Acrescentar uma política nova é acrescentar uma opção nesta lista.
  */
 export const BUILDERS: readonly BuilderSpec[] = [
+  // ----------------------------------------------------------------- Renda
+  // Um caminho só para "quero aumentar a renda", com o ONDE vindo do texto (ou
+  // do painel) e o COMO vindo daqui. Cada opção mexe em elos diferentes da
+  // cadeia, com prazos diferentes: é isso que impede as nove de terminarem no
+  // mesmo resultado.
+  {
+    id: 'renda',
+    title: 'Elevar a renda',
+    intro:
+      'Renda média não sobe por decreto: ela sobe quando o país produz mais por pessoa e quando mais gente está ocupada. Escolha por onde atacar — cada caminho cobra um preço e demora um tempo diferente.',
+    shape: 'OPCOES',
+    category: 'economia',
+    ministries: ['fazenda', 'desenvolvimento_social'],
+    minOptions: 1,
+    instrument: 'projeto_lei',
+    amount: {
+      label: 'Tamanho do programa',
+      unit: 'BRL_BILLION',
+      min: 2,
+      max: 120,
+      step: 2,
+      default: 20,
+      hint: 'R$ bilhões por ano. O efeito na renda acompanha o tamanho — e a conta no primário também.',
+    },
+    options: [
+      {
+        id: 'empregos',
+        label: 'Incentivo à contratação',
+        detail: 'Desoneração da folha para quem contrata. Efeito rápido no emprego, fraco na produtividade: cria vaga, não cria qualificação.',
+        clause: 'incentivar a contratação com desoneração da folha',
+        cost: 18,
+        // Vaga rápida, qualificação nenhuma: é o que a desoneração compra.
+        impactsPer10bi: { unemployment: -0.5, productivity: 0.3, primaryBalance: -10, businessConfidence: 1.6 },
+      },
+      {
+        id: 'industria',
+        label: 'Política industrial',
+        detail: 'Crédito e encomenda pública para a indústria. Demora a aparecer e é o que mais levanta produtividade quando aparece.',
+        clause: 'financiar a expansão industrial',
+        cost: 24,
+        // Devagar e forte: a fábrica leva anos e depois fica.
+        impactsPer10bi: { productivity: 0.7, unemployment: -0.2, gdpGrowth: 0.12, primaryBalance: -10 },
+        delayedPer10bi: {
+          monthsAhead: 14,
+          label: 'A expansão industrial começa a aparecer em produtividade e salário',
+          impacts: { productivity: 1.4, averageIncome: 26 },
+        },
+      },
+      {
+        id: 'qualificacao',
+        label: 'Qualificação e ensino técnico',
+        detail: 'Quase nada no primeiro ano. É a política com o maior efeito de longo prazo sobre salário.',
+        clause: 'ampliar a qualificação profissional e o ensino técnico',
+        cost: 14,
+        // Quase nada agora, muito depois: é a política de prazo mais longo.
+        impactsPer10bi: { educationIndex: 1.4, productivity: 0.15, primaryBalance: -10 },
+        delayedPer10bi: {
+          monthsAhead: 22,
+          label: 'A geração qualificada chega ao mercado e o salário médio sobe',
+          impacts: { productivity: 2.2, averageIncome: 34, unemployment: -0.3 },
+        },
+      },
+      {
+        id: 'infraestrutura',
+        label: 'Obras e infraestrutura',
+        detail: 'Emprego durante a obra e produtividade depois dela. Dobra de efeito em estado com infraestrutura ruim.',
+        clause: 'executar obras de infraestrutura',
+        cost: 28,
+        // Emprego durante a obra, produtividade depois dela.
+        impactsPer10bi: { infrastructure: 2.2, infrastructureIndex: 1.1, unemployment: -0.35, primaryBalance: -10 },
+        delayedPer10bi: {
+          monthsAhead: 10,
+          label: 'A obra entregue reduz custo de transporte e eleva a produtividade local',
+          impacts: { productivity: 1.1, averageIncome: 18 },
+        },
+      },
+      {
+        id: 'pequenas_empresas',
+        label: 'Crédito a pequenas empresas',
+        detail: 'Onde está a maior parte do emprego formal. Efeito médio e rápido, com risco de inadimplência.',
+        clause: 'ampliar o crédito às pequenas empresas',
+        cost: 16,
+        // Onde está o emprego formal: efeito médio e rápido.
+        impactsPer10bi: { unemployment: -0.4, productivity: 0.25, businessConfidence: 2.2, primaryBalance: -7 },
+      },
+      {
+        id: 'agricultura',
+        label: 'Apoio à agricultura',
+        detail: 'Renda no interior e na exportação. Pouco efeito nas capitais.',
+        clause: 'apoiar a produção agrícola familiar e o crédito rural',
+        cost: 15,
+        // Renda no interior, pouco nas capitais.
+        impactsPer10bi: { productivity: 0.3, averageIncome: 12, gdpGrowth: 0.08, primaryBalance: -9 },
+      },
+      {
+        id: 'tecnologia',
+        label: 'Tecnologia e inovação',
+        detail: 'Poucos empregos e os de maior salário do país. Concentra renda em quem já tem estudo.',
+        clause: 'investir em pesquisa, tecnologia e inovação',
+        cost: 12,
+        // Poucos empregos, os de maior salário — e mais desigualdade.
+        impactsPer10bi: { productivity: 0.9, averageIncome: 16, gini: 0.004, primaryBalance: -10 },
+      },
+      {
+        id: 'salario_minimo',
+        label: 'Aumento real do salário mínimo',
+        detail: 'Levanta a base da pirâmide no mês seguinte. Encarece a folha das empresas e pressiona preço.',
+        clause: 'conceder aumento real ao salário mínimo',
+        cost: 22,
+        // O único caminho que chega ao bolso no mês seguinte, e o único que
+        // encarece a folha de todo mundo ao mesmo tempo.
+        impactsPer10bi: { minimumWage: 45, averageIncome: 30, poverty: -0.5, inflation: 0.14, unemployment: 0.2, businessConfidence: -2 },
+      },
+      {
+        id: 'atracao',
+        label: 'Atrair empresas para estados pobres',
+        detail: 'Incentivo fiscal para quem se instalar fora do eixo. Efeito concentrado onde a renda é menor.',
+        clause: 'conceder incentivo fiscal à instalação de empresas em estados de baixa renda',
+        cost: 20,
+        // Concentrado onde a renda é menor: é a política mais regional da lista.
+        impactsPer10bi: { productivity: 0.5, unemployment: -0.45, businessConfidence: 1.2, primaryBalance: -10 },
+      },
+    ],
+  },
+
   // ------------------------------------------------------------- Programas
   // Um painel só para todo programa do jogo. As opções são as operações do §9:
   // dinheiro, alcance, regras e fim. Qual programa está sendo editado vem do

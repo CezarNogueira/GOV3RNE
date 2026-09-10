@@ -411,6 +411,16 @@ function buildStates(rng: Rng, party: PartyProfile): FederalUnit[] {
       hdi: profile.hdi,
       crime: profile.crime,
       infrastructure: profile.infrastructure,
+      // A produtividade de partida acompanha o que o estado já é: renda,
+      // escolaridade e infraestrutura são o retrato do que ele consegue
+      // produzir por hora trabalhada. É a base sobre a qual a política vai (ou
+      // não) construir alguma coisa.
+      productivity: round(
+        clamp100(
+          22 + (profile.income / 1980) * 26 + profile.hdi * 34 + profile.infrastructure * 0.16,
+        ),
+        1,
+      ),
       unrest: clamp100(profile.poverty * 0.3 + rng.range(0, 12)),
     };
   });

@@ -2,6 +2,8 @@ import type { EntityRecord, GameState, RecognizedEntity } from '../../types/inde
 import { COMPANY_ALIASES, COMPANY_BLUEPRINTS } from '../../data/companies/index';
 import { MINISTRIES } from '../../data/ministries';
 import { SOCIAL_GROUPS } from '../../data/social-groups';
+import { STATES } from '../../data/states';
+import { REGIONS, REGION_LABEL } from '../../types/common';
 import { NUMERIC_TARGETS } from '../../data/numeric-targets';
 import { canonical, ngrams } from './text';
 import { similarity } from './fuzzy';
@@ -66,6 +68,24 @@ const PROGRAM_ALIASES: Record<string, string[]> = {
   credito_produtivo: ['credito produtivo popular', 'microcredito', 'credito popular', 'pronampe'],
   seguranca_integrada: ['fronteira integrada', 'seguranca de fronteira', 'seguranca integrada'],
   floresta_viva: ['floresta viva', 'protecao da floresta'],
+};
+
+/** Apelidos de estado que o cadastro oficial não traz. */
+const STATE_ALIASES: Record<string, string[]> = {
+  SP: ['sao paulo', 'paulista'],
+  RJ: ['rio', 'rio de janeiro', 'fluminense'],
+  MG: ['minas', 'minas gerais', 'mineiro'],
+  BA: ['bahia', 'baiano'],
+  RS: ['rio grande do sul', 'gaucho'],
+  PE: ['pernambuco', 'pernambucano'],
+  CE: ['ceara', 'cearense'],
+  PR: ['parana', 'paranaense'],
+  SC: ['santa catarina', 'catarinense'],
+  GO: ['goias', 'goiano'],
+  PA: ['para', 'paraense'],
+  MA: ['maranhao', 'maranhense'],
+  AM: ['amazonas', 'amazonense'],
+  DF: ['distrito federal'],
 };
 
 /** Como o jogador chama cada pasta quando não usa o nome oficial. */
@@ -304,6 +324,34 @@ export function buildEntityRegistry(state: GameState): EntityRecord[] {
         beneficiaries: program.beneficiaries,
         active: program.active,
       },
+    });
+  }
+
+  // ------------------------------------------------------- Estados e regiões
+  // O ONDE de uma medida. Sem isto, "investir na Bahia" e "investir no Brasil"
+  // eram a mesma frase para o jogo, e o dinheiro caía sempre no país inteiro.
+  for (const unidade of STATES) {
+    records.push({
+      kind: 'STATE',
+      id: unidade.id,
+      name: unidade.name,
+      // A capital entra como apelido — menos no DF, onde "Brasília" é
+      // próximo demais de "Brasil" e faria toda medida nacional virar medida
+      // do Distrito Federal.
+      aliases: mergeAliases(
+        [unidade.name, unidade.id, ...(unidade.id === 'DF' ? [] : [unidade.capital])],
+        STATE_ALIASES[unidade.id],
+      ),
+      meta: { region: unidade.region, population: unidade.population },
+    });
+  }
+
+  for (const regiao of REGIONS) {
+    records.push({
+      kind: 'REGION',
+      id: regiao,
+      name: REGION_LABEL[regiao],
+      aliases: mergeAliases([REGION_LABEL[regiao], regiao.replace('-', ' ')]),
     });
   }
 

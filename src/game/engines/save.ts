@@ -162,6 +162,21 @@ export function migrate(state: GameState): GameState {
     }
   }
 
+  // Save anterior à produtividade estadual: o campo é reconstruído a partir do
+  // que o estado já é — renda, IDH e infraestrutura —, pela mesma fórmula que
+  // cria a produtividade de uma partida nova. Quem já estava jogando não perde
+  // o retrato do país dele.
+  for (const unit of migrated.states ?? []) {
+    if (typeof unit.productivity !== 'number') {
+      unit.productivity = Number(
+        Math.max(
+          0,
+          Math.min(100, 22 + (unit.income / 1980) * 26 + unit.hdi * 34 + unit.infrastructure * 0.16),
+        ).toFixed(1),
+      );
+    }
+  }
+
   if (!migrated.consequences) migrated.consequences = [];
   if (!migrated.posts) migrated.posts = [];
   // Saves anteriores ao registro de decisões: a lista começa vazia e passa a
