@@ -1,6 +1,7 @@
 import type { LegalInstrument, MinistryId, PolicyCategory, PolicyImpact } from '../types/index';
 import { ESTADO_TOPICS } from './interpreter-topics-estado';
 import { FUTURO_TOPICS } from './interpreter-topics-futuro';
+import { PLATFORM_TOPICS } from './interpreter-topics-plataforma';
 
 /**
  * CATÁLOGO DE ASSUNTOS DO INTERPRETADOR LOCAL
@@ -642,7 +643,11 @@ export const CORE_TOPICS: readonly Topic[] = [
     taxable: true,
     keywords: [
       'primeiro emprego', 'contratar jovens', 'contratacao de jovens', 'bonus tributario para empresas',
-      'subsidio salarial', 'efetivacao', 'efetivar temporarios', 'temporarios em efetivos', 'efetivos', 'aprendiz', 'estagio',
+      // "aprendiz" sozinho casava "aprendizagem" e "aprendizado", porque a
+      // busca aceita sufixo: uma meta de aprendizagem escolar virava incentivo
+      // a contratacao. O programa tem nome, e o nome e que vale.
+      'subsidio salarial', 'efetivacao', 'efetivar temporarios', 'temporarios em efetivos', 'efetivos',
+      'jovem aprendiz', 'menor aprendiz', 'contrato de aprendizagem', 'estagio',
       'contratarem funcionarios', 'contratarem jovens', 'impostos para quem contrata',
       'reducao de impostos para contratacao', 'desempregados ha mais de um ano',
       'desemprego de longa duracao', 'pessoas desempregadas',
@@ -2305,4 +2310,9 @@ export const CORE_TOPICS: readonly Topic[] = [
  * A ordem não importa para o casamento: quem decide o assunto principal é a
  * `specificity` de cada entrada, e depois a posição do termo na frase.
  */
-export const TOPICS: readonly Topic[] = [...CORE_TOPICS, ...ESTADO_TOPICS, ...FUTURO_TOPICS];
+export const TOPICS: readonly Topic[] = [
+  ...CORE_TOPICS,
+  ...ESTADO_TOPICS,
+  ...FUTURO_TOPICS,
+  ...PLATFORM_TOPICS,
+];

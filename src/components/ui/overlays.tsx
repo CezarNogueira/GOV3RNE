@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react';
@@ -12,6 +12,48 @@ import { cx } from './primitives';
  * aparece quando o jogo precisa de uma decisão ou entrega um resultado, e o
  * toast some sozinho.
  */
+
+/**
+ * A TRAVA DE ROLAGEM, CONTADA
+ *
+ * Travar a rolagem é mexer num recurso GLOBAL — `document.body` é um só —, e
+ * quem mexe em recurso global sozinho quebra quando aparece um segundo dono.
+ * Aqui apareceram dois:
+ *
+ *   1. modais empilhados. A ficha da empresa abre um Modal e, de dentro dela, a
+ *      audiência e a venda abrem outros. Com cada instância guardando "o que
+ *      havia antes", a de dentro guardava `hidden` (posto pela de fora) e, ao
+ *      fechar, restaurava `hidden` — deixando a página travada com tudo fechado;
+ *
+ *   2. re-render do pai. O efeito dependia de `onClose`, e a ficha da empresa
+ *      passa `() => setX(false)`, uma função nova a cada render. O efeito era
+ *      desmontado e remontado o tempo todo, e em algum desses ciclos ele
+ *      "guardava" o próprio `hidden` como valor anterior.
+ *
+ * A contagem resolve os dois: o primeiro modal guarda o valor real e trava; o
+ * último a fechar devolve. Quem fecha no meio não devolve nada.
+ */
+let openModals = 0;
+let overflowBeforeFirstModal = '';
+
+function lockPageScroll(): () => void {
+  if (openModals === 0) {
+    overflowBeforeFirstModal = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+  openModals += 1;
+
+  // Só a primeira chamada do liberador conta: em modo estrito o React monta e
+  // desmonta o efeito duas vezes, e um decremento a mais destravaria a página
+  // com um modal ainda aberto.
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    openModals = Math.max(0, openModals - 1);
+    if (openModals === 0) document.body.style.overflow = overflowBeforeFirstModal;
+  };
+}
 
 export function Modal({
   open,
@@ -33,23 +75,27 @@ export function Modal({
   size?: 'sm' | 'md' | 'lg' | 'xl';
   locked?: boolean;
 }) {
+  // O handler vive numa ref para NÃO entrar nas dependências: quem usa o modal
+  // passa `() => setAberto(false)`, e uma função nova a cada render remontaria
+  // o efeito a cada render.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
     if (!open) return;
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !locked) onClose();
+      if (event.key === 'Escape' && !locked) onCloseRef.current();
     };
     document.addEventListener('keydown', onKey);
 
-    // Trava a rolagem do fundo enquanto o modal está aberto.
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const releaseScroll = lockPageScroll();
 
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = previous;
+      releaseScroll();
     };
-  }, [open, onClose, locked]);
+  }, [open, locked]);
 
   const width = {
     sm: 'max-w-md',

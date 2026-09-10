@@ -63,6 +63,56 @@ export const AGENDA_ACTIONS: readonly AgendaAction[] = [
     consequence: 'Sobe aprovação naquele estado e na região.',
   },
   {
+    id: 'reuniao_lideres',
+    label: 'Receber os líderes da base',
+    description:
+      'Chamar os líderes de bancada ao Planalto para acertar a pauta da semana. Ninguém sai de lá sem pedir alguma coisa.',
+    cost: 2,
+    energyCost: 8,
+    category: 'articulacao',
+    consequence: 'Melhora a boa vontade do Congresso e destrava a votação seguinte.',
+  },
+  {
+    id: 'reuniao_ministro',
+    label: 'Cobrar um ministro',
+    description:
+      'Chamar o titular de uma pasta para explicar por que a entrega não saiu. Aperta o desempenho e gasta a lealdade dele.',
+    cost: 1,
+    energyCost: 6,
+    category: 'articulacao',
+    consequence: 'A pasta rende mais no mês seguinte, e o ministro guarda a mágoa.',
+  },
+  {
+    id: 'reuniao_governador',
+    label: 'Receber um governador',
+    description:
+      'Sentar com um governador para acertar repasse e palanque. Sai caro, mas troca inimigo por aliado no estado.',
+    cost: 1,
+    energyCost: 7,
+    category: 'articulacao',
+    consequence: 'Melhora a relação com o estado e a aprovação na região.',
+  },
+  {
+    id: 'tratar_com_a_rua',
+    label: 'Receber quem está na rua',
+    description:
+      'Abrir o Planalto para o movimento mais mobilizado do momento. Desmobiliza quem entrou e irrita quem ficou de fora.',
+    cost: 2,
+    energyCost: 10,
+    category: 'articulacao',
+    consequence: 'Derruba a mobilização do grupo, e parte do país lê o gesto como fraqueza.',
+  },
+  {
+    id: 'noite_com_conjuge',
+    label: 'Passar a noite com o cônjuge',
+    description:
+      'Desmarcar o que der para desmarcar e dedicar a noite a quem divide a vida com você. É a única coisa que baixa o estresse dela de verdade.',
+    cost: 2,
+    energyCost: 4,
+    category: 'pessoal',
+    consequence: 'Reduz de 15% a 30% do estresse do cônjuge — e evita o que vem quando ele chega a 100%.',
+  },
+  {
     id: 'descansar',
     label: 'Guardar o fim de semana',
     description: 'Recupera energia e humor. O país continua andando sem você por 48 horas.',

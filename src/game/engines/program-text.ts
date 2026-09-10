@@ -90,19 +90,43 @@ export function readProgramAbolition(text: string, state: GameState): string[] {
 
 /** Todas as posições em que o programa é citado no texto. */
 function posicoesDoPrograma(normalized: string, program: GovernmentProgram): number[] {
-  const alvos = [program.name, ...apelidosDe(program)];
-  const posicoes: number[] = [];
+  // O nome inteiro é distintivo o bastante para aceitar flexão no fim.
+  const posicoes = ocorrencias(normalized, normalize(program.name), false);
 
-  for (const alvo of alvos) {
-    const agulha = normalize(alvo);
-    let de = normalized.indexOf(agulha);
-    while (de >= 0) {
-      posicoes.push(de);
-      de = normalized.indexOf(agulha, de + agulha.length);
-    }
+  // O apelido é UMA palavra, e quase sempre uma palavra comum. Por isso ele só
+  // vale como palavra inteira: "escola" é o apelido do Escola em Tempo
+  // Integral, e sem essa trava "acabar com a aprovação automática nas escolas"
+  // apagava o programa inteiro por causa do plural de um substantivo qualquer.
+  for (const apelido of apelidosDe(program)) {
+    posicoes.push(...ocorrencias(normalized, normalize(apelido), true));
   }
 
   return posicoes;
+}
+
+/**
+ * Posições de uma agulha no texto, sempre ancoradas em início de palavra.
+ *
+ * `palavraInteira` exige também que a agulha TERMINE numa fronteira, o que
+ * separa "escola" de "escolas".
+ */
+function ocorrencias(texto: string, agulha: string, palavraInteira: boolean): number[] {
+  if (agulha.length === 0) return [];
+  const achadas: number[] = [];
+
+  let de = 0;
+  for (;;) {
+    const posicao = texto.indexOf(agulha, de);
+    if (posicao === -1) return achadas;
+
+    const antes = posicao === 0 ? ' ' : (texto[posicao - 1] as string);
+    const depois = texto[posicao + agulha.length] ?? ' ';
+    const comecaPalavra = !/[a-z0-9]/.test(antes);
+    const terminaPalavra = !palavraInteira || !/[a-z0-9]/.test(depois);
+    if (comecaPalavra && terminaPalavra) achadas.push(posicao);
+
+    de = posicao + 1;
+  }
 }
 
 /**
