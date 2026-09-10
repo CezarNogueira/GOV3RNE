@@ -131,15 +131,6 @@ export const AGENDA_ACTIONS: readonly AgendaAction[] = [
     category: 'pessoal',
     consequence: 'Custa aprovação na proporção de quanto o país gostava dela — e metade do seu patrimônio.',
   },
-  {
-    id: 'nada',
-    label: 'Não fazer nada este mês',
-    description: 'O mês passa, a crise anda sozinha e a sua caneta fica guardada.',
-    cost: 0,
-    energyCost: -4,
-    category: 'pessoal',
-    consequence: 'Nada muda por decisão sua. Nem sempre é o pior resultado.',
-  },
 ];
 
 export const AGENDA_ACTION_BY_ID: Record<AgendaActionId, AgendaAction> = Object.fromEntries(

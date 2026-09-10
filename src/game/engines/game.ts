@@ -669,12 +669,6 @@ export function runAgendaAction(
       break;
     }
 
-    case 'nada': {
-      state.agenda.points = 0;
-      message = 'O mês passa, a crise anda sozinha e a sua caneta fica guardada.';
-      break;
-    }
-
     default:
       message = `${action.label}: ${action.consequence}`;
       break;

@@ -213,7 +213,6 @@ export const agendaActionSchema = z.object({
     'descansar',
     'noite_com_conjuge',
     'divorciar',
-    'nada',
   ]),
   targetId: z.string().max(60).optional(),
   note: z.string().max(300).optional(),
