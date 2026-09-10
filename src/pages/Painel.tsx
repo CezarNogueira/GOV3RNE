@@ -300,14 +300,9 @@ export function Painel() {
               </div>
 
               <div className="grid gap-1.5 sm:grid-cols-2">
-                {AGENDA_ACTIONS.filter(
-                  (action) => action.id !== 'escrever_medida' && action.id !== 'viagem_internacional',
-                ).map((action) => {
+                {AGENDA_ACTIONS.filter((action) => !FORA_DO_PAINEL.has(action.id)).map((action) => {
                   const affordable = state.agenda.points >= action.cost;
-                  const needsTarget =
-                    action.id === 'reuniao_ministro' ||
-                    action.id === 'reuniao_governador' ||
-                    action.id === 'visita_regional';
+                  const needsTarget = action.id === 'visita_regional';
 
                   return (
                     <button
@@ -787,7 +782,7 @@ const MEASURE_PHASE_LABEL: Record<string, string> = {
   concluido: 'Tramitação concluída',
 };
 
-/** Escolha de alvo para ações que exigem um: ministro, governador ou estado. */
+/** Escolha do estado para a visita regional, a única ação do Painel que pede alvo. */
 function TargetPicker({
   action,
   onClose,
@@ -800,68 +795,46 @@ function TargetPicker({
   const state = useGame((store) => store.state);
   if (!state || !action) return null;
 
-  const isMinister = action === 'reuniao_ministro';
-  const title = isMinister
-    ? 'Qual pasta você vai cobrar?'
-    : action === 'reuniao_governador'
-      ? 'Qual governador você vai receber?'
-      : 'Qual estado você vai visitar?';
-
   return (
-    <Modal open onClose={onClose} title={title} size="md">
+    <Modal open onClose={onClose} title="Qual estado você vai visitar?" size="md">
       <div className="grid gap-1.5 sm:grid-cols-2">
-        {isMinister
-          ? state.government.ministers.map((minister) => (
-              <button
-                key={minister.id}
-                type="button"
-                className="option"
-                onClick={() => onPick(minister.ministryId)}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="truncate text-[12px] font-semibold text-neutral-100">
-                    {minister.name}
-                  </p>
-                  <span
-                    className={cx(
-                      'shrink-0 font-mono text-[11px]',
-                      minister.delivery > 30
-                        ? 'text-gov-400'
-                        : minister.delivery > 0
-                          ? 'text-warn-400'
-                          : 'text-danger-400',
-                    )}
-                  >
-                    {minister.delivery > 0 ? '+' : ''}
-                    {minister.delivery.toFixed(0)}
-                  </span>
-                </div>
-                <p className="text-[11px] text-neutral-500">
-                  {MINISTRY_SHORT[minister.ministryId] ?? minister.ministryId} · desgaste{' '}
-                  {minister.wear.toFixed(0)}
-                </p>
-              </button>
-            ))
-          : [...state.states]
-              .sort((a, b) => b.gdpShare - a.gdpShare)
-              .map((unit) => (
-                <button key={unit.id} type="button" className="option" onClick={() => onPick(unit.id)}>
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="truncate text-[12px] font-semibold text-neutral-100">{unit.name}</p>
-                    <span className="shrink-0 font-mono text-[11px] text-neutral-400">
-                      {unit.approval.toFixed(0)}%
-                    </span>
-                  </div>
-                  <p className="truncate text-[11px] text-neutral-500">
-                    {unit.governorName} · {unit.governorParty} · relação{' '}
-                    {unit.governorRelation.toFixed(0)}
-                  </p>
-                </button>
-              ))}
+        {[...state.states]
+          .sort((a, b) => b.gdpShare - a.gdpShare)
+          .map((unit) => (
+            <button key={unit.id} type="button" className="option" onClick={() => onPick(unit.id)}>
+              <div className="flex items-start justify-between gap-2">
+                <p className="truncate text-[12px] font-semibold text-neutral-100">{unit.name}</p>
+                <span className="shrink-0 font-mono text-[11px] text-neutral-400">
+                  {unit.approval.toFixed(0)}%
+                </span>
+              </div>
+              <p className="truncate text-[11px] text-neutral-500">
+                {unit.governorName} · {unit.governorParty} · relação{' '}
+                {unit.governorRelation.toFixed(0)}
+              </p>
+            </button>
+          ))}
       </div>
     </Modal>
   );
 }
+
+/**
+ * Ações do catálogo que NÃO aparecem na agenda do Painel.
+ *
+ * O Painel é a tela de decisão do mês e não pode virar a lista de tudo o que o
+ * presidente é capaz de fazer. Cada ação daqui mora onde o contexto dela está:
+ * cobrar ministro fica ao lado do ministro, na aba Gabinete de Governo; receber
+ * governador fica ao lado do governador, na aba Governadores. Escrever medida
+ * tem o campo próprio no topo do Painel.
+ */
+const FORA_DO_PAINEL: ReadonlySet<AgendaActionId> = new Set<AgendaActionId>([
+  'escrever_medida',
+  'viagem_internacional',
+  'reuniao_lideres',
+  'reuniao_ministro',
+  'reuniao_governador',
+]);
 
 const STATUS_LABEL: Record<string, string> = {
   pendente: 'Parada',
@@ -904,17 +877,4 @@ const OCCUPATION_LABEL: Record<string, string> = {
   politico_carreira: 'Político de carreira',
   servidor_publico: 'Servidor público',
   advogado: 'Advogado',
-};
-
-const MINISTRY_SHORT: Record<string, string> = {
-  casa_civil: 'Casa Civil',
-  fazenda: 'Fazenda',
-  justica: 'Justiça',
-  saude: 'Saúde',
-  educacao: 'Educação',
-  defesa: 'Defesa',
-  infraestrutura: 'Infraestrutura',
-  desenvolvimento_social: 'Desenvolvimento Social',
-  agricultura: 'Agricultura e Meio Ambiente',
-  relacoes_exteriores: 'Relações Exteriores',
 };

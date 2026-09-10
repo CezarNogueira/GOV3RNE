@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Scale } from 'lucide-react';
 import {
+  AGENDA_ACTION_BY_ID,
   INSTRUMENT_RULES,
   MINISTRY_BY_ID,
   PARTY_BY_ID,
@@ -118,6 +119,11 @@ function GabineteTab({
 }) {
   const gov = state.government;
   const delivering = [...gov.ministers].sort((a, b) => b.delivery - a.delivery);
+  // Cobrar ministro saiu da agenda do Painel e mora só aqui, ao lado do
+  // ministro. Por isso o botão mostra o custo e trava sem pontos, como a
+  // agenda fazia.
+  const custoCobrar = AGENDA_ACTION_BY_ID.reuniao_ministro.cost;
+  const podeCobrar = state.agenda.points >= custoCobrar;
 
   return (
     <div className="space-y-4">
@@ -253,11 +259,16 @@ function GabineteTab({
                     </span>
                     <button
                       type="button"
-                      className="btn-ghost btn-sm"
+                      className={cx('btn-ghost btn-sm', !podeCobrar && 'opacity-40')}
+                      disabled={!podeCobrar}
                       onClick={() => onPressure(minister.ministryId)}
-                      title="Cobrar entrega: sobe a produção da pasta e o desgaste do titular"
+                      title={
+                        podeCobrar
+                          ? 'Cobrar entrega: sobe a produção da pasta e o desgaste do titular'
+                          : `Faltam pontos de agenda: cobrar custa ${custoCobrar} pt`
+                      }
                     >
-                      Cobrar
+                      Cobrar · {custoCobrar} pt
                     </button>
                   </div>
                 </div>
@@ -674,6 +685,9 @@ function SupremoTab({ state }: { state: State }) {
 // ----------------------------------------------------------- Governadores
 function GovernadoresTab({ state, onVisit }: { state: State; onVisit: (id: string) => void }) {
   const sorted = [...state.states].sort((a, b) => b.governorRelation - a.governorRelation);
+  // Receber governador saiu da agenda do Painel e mora só aqui.
+  const custoReceber = AGENDA_ACTION_BY_ID.reuniao_governador.cost;
+  const podeReceber = state.agenda.points >= custoReceber;
 
   return (
     <Section title="Os 27 governadores">
@@ -718,8 +732,18 @@ function GovernadoresTab({ state, onVisit }: { state: State; onVisit: (id: strin
                   {unit.approval.toFixed(0)}%
                 </td>
                 <td className="py-1.5 text-right">
-                  <button type="button" className="btn-ghost btn-sm" onClick={() => onVisit(unit.id)}>
-                    Receber
+                  <button
+                    type="button"
+                    className={cx('btn-ghost btn-sm', !podeReceber && 'opacity-40')}
+                    disabled={!podeReceber}
+                    onClick={() => onVisit(unit.id)}
+                    title={
+                      podeReceber
+                        ? `Receber ${unit.governorName} no Planalto`
+                        : `Faltam pontos de agenda: receber custa ${custoReceber} pt`
+                    }
+                  >
+                    Receber · {custoReceber} pt
                   </button>
                 </td>
               </tr>
