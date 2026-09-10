@@ -9,6 +9,7 @@ import type {
 import { NUMERIC_TARGETS } from '../../data/numeric-targets';
 import { buildNumericChange, computeNumericImpact } from '../numeric/numeric-policy-engine';
 import { interpretLocally } from '../fallback-interpreter';
+import { analyzeProgramMeasure } from '../program-measure';
 import { BUILDER_BY_ID } from './registry';
 import { round } from '../../utils/math';
 
@@ -54,10 +55,30 @@ export function composeMeasureText(plan: MeasurePlan, state: GameState): string 
   // lugar: "acabar com o programa" + Bolsa Família vira exatamente a frase que
   // o jogador teria escrito, e o leitor de extinção a reconhece igual.
   if (builder.shape === 'PROGRAMA' && plan.entityName) {
+    const programa = plan.entityId
+      ? state.programs.find((entry) => entry.id === plan.entityId)
+      : undefined;
+
+    // O motor de programa escreve a frase a partir dos números reais do
+    // programa. É mais preciso do que colar a quantia em qualquer cláusula:
+    // "alterar os critérios de elegibilidade EM R$ 10 BILHÕES POR ANO" era o
+    // que saia daqui antes, e não quer dizer nada.
+    if (programa) {
+      const montada = analyzeProgramMeasure(
+        {
+          program: programa,
+          optionIds: plan.optionIds,
+          ...(plan.amount === undefined ? {} : { amount: plan.amount }),
+          ...(plan.ruleValues ? { ruleValues: plan.ruleValues } : {}),
+        },
+        state,
+      );
+      if (montada) return montada.text;
+    }
+
     const nomeadas = clauses.map((clause) => clause.replace('o programa', `o ${plan.entityName}`));
-    const quanto = plan.amount ? ` em R$ ${plan.amount} bilhões por ano` : '';
     return nomeadas.length > 0
-      ? `${capitalize(nomeadas.join(', '))}${quanto}.`
+      ? `${capitalize(nomeadas.join(', '))}.`
       : `${plan.title}: ${plan.entityName}.`;
   }
 
@@ -115,6 +136,33 @@ export function buildMeasureFromPlan(
   plan: MeasurePlan,
   state: GameState,
 ): { analysis: ProposalAnalysis; text: string } {
+  // ------------------------------------------------------------- PROGRAMA
+  // O painel de programa não passa mais pela ida e volta em português. Ele já
+  // sabe qual programa é, qual operação é e em que valor cada régua ficou;
+  // reescrever isso como frase e tentar readivinhar do outro lado era o que
+  // produzia um benefício de R$ -9.999.999.336 a partir de um corte de R$ 10 bi.
+  const builderDoPlano = BUILDER_BY_ID[plan.builderId];
+  if (builderDoPlano?.shape === 'PROGRAMA' && plan.entityId) {
+    const programa = state.programs.find((entry) => entry.id === plan.entityId);
+    if (programa) {
+      const montada = analyzeProgramMeasure(
+        {
+          program: programa,
+          optionIds: plan.optionIds,
+          ...(plan.amount === undefined ? {} : { amount: plan.amount }),
+          ...(plan.ruleValues ? { ruleValues: plan.ruleValues } : {}),
+        },
+        state,
+      );
+      if (montada) {
+        return {
+          text: montada.text,
+          analysis: { ...montada.analysis, title: plan.title.slice(0, 120) },
+        };
+      }
+    }
+  }
+
   const text = composeMeasureText(plan, state);
   const base = interpretLocally(text, state);
   const builder: BuilderSpec | undefined = BUILDER_BY_ID[plan.builderId];

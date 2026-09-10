@@ -4,7 +4,10 @@ import {
   budgetAccounts,
   buildMeasureFromPlan,
   composeMeasureText,
+  rulesForProgram,
+  stepsFromBaseline,
   taxAccounts,
+  type ProgramRule,
   type GameState,
   type MeasurePlan,
   type PlannedChange,
@@ -92,11 +95,29 @@ export function MeasureBuilderModal({
   const [areas, setAreas] = useState<string[]>(preselectedAreas);
   const [areaAmounts, setAreaAmounts] = useState<Record<string, number>>({});
   const [taxRates, setTaxRates] = useState<Record<string, number>>({});
+  // As réguas de regra de entrada começam no valor que vale HOJE. O jogador
+  // regula a partir do Brasil real, e não de um zero que não existe.
+  const [ruleValues, setRuleValues] = useState<Record<string, number>>({});
 
   if (!builder) return null;
 
   const contas = budgetAccounts(state);
   const tributos = taxAccounts(state);
+  const conjuntoDeRegras = programaAlvo
+    ? rulesForProgram(programaAlvo.id, programaAlvo.category)
+    : null;
+  const regrasAbertas =
+    builder.shape === 'PROGRAMA' &&
+    conjuntoDeRegras !== null &&
+    builder.options.some((option) => option.opensProgramRules && options.includes(option.id));
+  const valorDaRegra = (rule: ProgramRule) => ruleValues[rule.id] ?? rule.baseline;
+
+  // No painel de programa, só algumas operações mexem em dinheiro. Nas outras
+  // a quantia não pode nem aparecer nem viajar no plano.
+  const usaQuantia =
+    builder.shape === 'PROGRAMA'
+      ? builder.options.some((option) => option.usesAmount && options.includes(option.id))
+      : builder.shape === 'OPCOES';
   const corte = builder.id === 'corte_orcamento';
 
   // --------------------------------------------------------------- plano
@@ -134,12 +155,19 @@ export function MeasureBuilderModal({
     builderId: builder.id,
     title: builder.title,
     optionIds: options,
-    ...(builder.amount ? { amount } : {}),
+    ...(builder.amount && usaQuantia ? { amount } : {}),
     changes,
     // O programa citado viaja com o plano: é o nome dele que entra na frase
     // final, e é por isso que clicar produz exatamente a medida que digitar
     // produziria.
     ...(programaAlvo ? { entityId: programaAlvo.id, entityName: programaAlvo.name } : {}),
+    ...(regrasAbertas && conjuntoDeRegras
+      ? {
+          ruleValues: Object.fromEntries(
+            conjuntoDeRegras.rules.map((rule) => [rule.id, valorDaRegra(rule)]),
+          ),
+        }
+      : {}),
   };
 
   const pronto =
@@ -227,6 +255,94 @@ export function MeasureBuilderModal({
                   );
                 })}
               </div>
+
+              {/* ------------------------------------------ regras de entrada
+                  As três réguas reais do programa, com o valor que vale HOJE
+                  marcado. Cada uma diz o que acontece quando sobe e quando
+                  desce, porque nenhuma delas é boa ou ruim sozinha: abrir a
+                  linha de renda combate pobreza e custa caro, apertar a
+                  frequência escolar melhora a escola e exclui família. */}
+              {regrasAbertas && conjuntoDeRegras && (
+                <div className="mt-3 border border-gov-700/50 bg-gov-900/10 p-3">
+                  <p className="label mb-1">Regras de entrada</p>
+                  <p className="mb-3 text-[11px] leading-snug text-neutral-500">
+                    {conjuntoDeRegras.intro}
+                  </p>
+
+                  <div className="grid gap-3">
+                    {conjuntoDeRegras.rules.map((rule) => {
+                      const valor = valorDaRegra(rule);
+                      const passos = stepsFromBaseline(rule, valor);
+                      const mudou = Math.abs(passos) > 0.001;
+                      return (
+                        <div key={rule.id} className="border border-ink-700 bg-ink-900/40 p-2.5">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-[12px] font-semibold text-neutral-100">
+                              {rule.label}
+                            </span>
+                            <span
+                              className={cx(
+                                'font-mono text-[12px] tabular-nums',
+                                !mudou && 'text-neutral-400',
+                                mudou && passos > 0 && 'text-emerald-400',
+                                mudou && passos < 0 && 'text-red-400',
+                              )}
+                            >
+                              {rule.format(valor)}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">
+                            {rule.description}
+                          </p>
+
+                          <input
+                            type="range"
+                            min={rule.min}
+                            max={rule.max}
+                            step={rule.step}
+                            value={valor}
+                            onChange={(event) =>
+                              setRuleValues((current) => ({
+                                ...current,
+                                [rule.id]: Number(event.target.value),
+                              }))
+                            }
+                            className="mt-2 w-full"
+                            aria-label={rule.label}
+                          />
+
+                          <div className="flex items-center justify-between text-[10px] text-neutral-600">
+                            <span>{rule.format(rule.min)}</span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setRuleValues((current) => ({ ...current, [rule.id]: rule.baseline }))
+                              }
+                              className="text-neutral-500 underline-offset-2 hover:text-neutral-300 hover:underline"
+                            >
+                              hoje: {rule.format(rule.baseline)}
+                            </button>
+                            <span>{rule.format(rule.max)}</span>
+                          </div>
+
+                          {mudou && (
+                            <p
+                              className={cx(
+                                'mt-1.5 border-l-2 pl-2 text-[11px] leading-snug',
+                                passos > 0
+                                  ? 'border-emerald-700/60 text-emerald-300/80'
+                                  : 'border-red-700/60 text-red-300/80',
+                              )}
+                            >
+                              {passos > 0 ? rule.higher : rule.lower}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
@@ -424,7 +540,12 @@ export function MeasureBuilderModal({
           )}
 
           {/* ------------------------------------------------- quantia */}
-          {builder.shape === 'OPCOES' && builder.amount && (
+          {/* O controle de quantia só aparece quando alguma opção marcada usa
+              dinheiro. No painel de programa ele existia mas era invisível: o
+              valor padrão de R$ 10 bi entrava na medida sem que ninguém
+              tivesse escolhido nada, e era ele que aparecia colado até em
+              "alterar os critérios de elegibilidade". */}
+          {usaQuantia && builder.amount && (
             <div className="mt-3 rule pt-3">
               <p className="label mb-1.5">{builder.amount.label}</p>
               <div className="flex items-center gap-3">

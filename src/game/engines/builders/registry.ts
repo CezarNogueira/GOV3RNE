@@ -168,7 +168,7 @@ export const BUILDERS: readonly BuilderSpec[] = [
       max: 120,
       step: 1,
       default: 10,
-      hint: 'R$ bilhões por ano. Vale para ampliar e para cortar — a direção vem da opção escolhida.',
+      hint: 'R$ bilhões por ano, sobre o custeio atual do programa. Só vale para as opções que mexem em dinheiro — mudar a regra de entrada não usa este controle.',
     },
     options: [
       {
@@ -177,6 +177,7 @@ export const BUILDERS: readonly BuilderSpec[] = [
         detail: 'Mais dinheiro por mês, mesma regra e mesmo público.',
         clause: 'ampliar o orçamento do programa',
         cost: 12,
+        usesAmount: true,
       },
       {
         id: 'reduzir_orcamento',
@@ -184,6 +185,7 @@ export const BUILDERS: readonly BuilderSpec[] = [
         detail: 'Menos dinheiro por mês. O programa continua existindo, atendendo pior.',
         clause: 'reduzir o orçamento do programa',
         cost: -12,
+        usesAmount: true,
       },
       {
         id: 'ampliar_beneficio',
@@ -191,6 +193,7 @@ export const BUILDERS: readonly BuilderSpec[] = [
         detail: 'Cada beneficiário recebe mais. Custa na proporção de quantos são.',
         clause: 'aumentar o valor do benefício pago pelo programa',
         cost: 14,
+        usesAmount: true,
       },
       {
         id: 'ampliar_publico',
@@ -198,6 +201,7 @@ export const BUILDERS: readonly BuilderSpec[] = [
         detail: 'Mais gente entra. O custo por pessoa não muda; o número de pessoas, sim.',
         clause: 'expandir o público atendido pelo programa',
         cost: 16,
+        usesAmount: true,
       },
       {
         id: 'restringir_publico',
@@ -209,9 +213,11 @@ export const BUILDERS: readonly BuilderSpec[] = [
       {
         id: 'alterar_regras',
         label: 'Mudar as regras de entrada',
-        detail: 'Muda quem pode receber e o que precisa cumprir para continuar recebendo.',
+        detail:
+          'Abre as três réguas reais do programa — quem entra, o que precisa cumprir e o que acontece com quem melhora de vida. Não mexe em um centavo do orçamento: mexe no desenho.',
         clause: 'alterar os critérios de elegibilidade do programa',
         cost: 0,
+        opensProgramRules: true,
       },
       {
         id: 'condicionalidades',

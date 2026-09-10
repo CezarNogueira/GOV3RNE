@@ -14,6 +14,7 @@ export * from './campaign';
 export * from './difficulty';
 export * from './avatar';
 export * from './programs';
+export * from './program-rules';
 export * from './companies/index';
 export * from './events';
 export * from './dynamic-events/index';

@@ -99,11 +99,34 @@ export interface ProposalAnalysis {
    * exatamente o que não acontece na vida real.
    */
   numericExtras?: NumericPolicyChange[];
+  /**
+   * O que esta medida faz com o DESENHO de um programa: quanta gente entra ou
+   * sai, quanto a focalização melhora ou piora, quanto o custeio muda e em que
+   * valor cada regra de entrada ficou.
+   *
+   * Existe porque mexer num programa não é só mexer num número macro: o
+   * programa em si precisa mudar na lista, senão a tela seguinte mostra as
+   * regras antigas e o motor econômico cobra o custeio antigo.
+   */
+  programChange?: ProgramChange;
   /** Justificativa curta da leitura feita pelo interpretador. */
   rationale: string;
   /** true quando o texto foi lido pelo fallback heurístico, sem IA. */
   fallback: boolean;
   warnings: string[];
+}
+
+/** A alteração que uma medida faz no desenho de um programa de governo. */
+export interface ProgramChange {
+  programId: string;
+  /** Variação do público atendido, em % do total de beneficiários. */
+  coverageDelta: number;
+  /** Variação da focalização do programa, em pontos de 0-100. */
+  efficiencyDelta: number;
+  /** Variação do custeio, R$ bilhões por mês. */
+  monthlyCostDelta: number;
+  /** Em que valor cada régua de regra de entrada ficou. */
+  ruleValues: Record<string, number>;
 }
 
 export interface DelayedEffect {
@@ -176,6 +199,12 @@ export interface Policy {
    * de assinar é exatamente o que vai valer se o Congresso aprovar.
    */
   abolishProgramIds?: string[];
+  /**
+   * A alteração de desenho de programa que esta medida aplica quando entrar em
+   * vigor. Guardada na medida pelo mesmo motivo de `abolishProgramIds`: o que o
+   * presidente leu antes de assinar é o que vale se o Congresso aprovar.
+   */
+  programChange?: ProgramChange;
 
   /** Fase fina da tramitação. Só existe enquanto `requiresCongress` for true. */
   stage?: LegislativeStage;

@@ -135,7 +135,16 @@ export function createPolicy(
     status: rules.needsVote && !congressDissolved(state) ? 'tramitando' : 'assinada',
     cost: analysis.estimatedCost,
     // O custo total é diluído pelo prazo de execução.
-    monthlyCost: round(costInBillions / months, 3),
+    // CUSTO MENSAL DA MEDIDA
+    //
+    // Medida que muda o desenho de um programa não tem custo próprio: o gasto
+    // novo passa a morar no `monthlyCost` do PROGRAMA, e o motor econômico já
+    // cobra esse custeio todo mês. Cobrar também aqui pagaria a conta duas
+    // vezes enquanto a medida estivesse em execução. `estimatedCost` continua
+    // valendo o número cheio, porque é ele que a ficha mostra ao presidente.
+    monthlyCost: analysis.programChange?.monthlyCostDelta
+      ? 0
+      : round(costInBillions / months, 3),
     executionMonths: months,
     monthsRemaining: months,
     impacts: analysis.impacts,
@@ -161,6 +170,9 @@ export function createPolicy(
     // e devolvê-lo se ela cair.
     ...(analysis.numericImpact ? { numericImpact: analysis.numericImpact } : {}),
     ...(analysis.numericExtras?.length ? { numericExtras: analysis.numericExtras } : {}),
+    // A alteração de desenho de programa viaja junto pelo mesmo motivo: quem
+    // aplica é o motor, quando a medida entra em vigor.
+    ...(analysis.programChange ? { programChange: analysis.programChange } : {}),
     // A matéria já nasce em negociação: o governo convoca a sessão no ato da
     // assinatura, e o presidente decide na hora se negocia, vota ou deixa
     // correr. O que continua valendo é a consequência — o efeito só entra no

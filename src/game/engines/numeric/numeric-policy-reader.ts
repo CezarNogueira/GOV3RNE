@@ -2,6 +2,7 @@ import type { GameState } from '../../types/index';
 import type { NumericOperation } from '../../types/numeric-policy';
 import { NUMERIC_TARGETS, type NumericTargetSpec } from '../../data/numeric-targets';
 import { detectDirection, findKeyword, normalize } from '../text-direction';
+import { clamp } from '../../utils/math';
 import { findNumbers, type ParsedNumber } from './number-parser';
 
 /**
@@ -298,6 +299,23 @@ export function readNumericIntent(text: string, state: GameState): NumericIntent
 
   const current = target.read(state);
   const value = toTargetUnit(picked.value, target);
+
+  // NÚMERO QUE NÃO CABE NA UNIDADE DA ALAVANCA
+  //
+  // "Reduzir o orçamento do Bolsa Família em R$ 10 bilhões" fala do ORÇAMENTO do
+  // programa, mas a alavanca que o nome do programa encontra é o valor mensal
+  // por família — R$ 664. Aplicar o número como variação absoluta dava um
+  // benefício de R$ -9.999.999.336 e uma medida de R$ 1,5 tri, sem que nada no
+  // caminho reclamasse.
+  //
+  // Um acréscimo ou corte muitas vezes maior que a faixa inteira do alvo não é
+  // uma política radical: é um número em outra unidade. Melhor devolver null e
+  // deixar o interpretador temático ler a frase do que inventar uma conta.
+  if (operation === 'INCREASE_ABSOLUTE' || operation === 'DECREASE_ABSOLUTE') {
+    const faixa = Math.max(1, target.plausible.max - target.plausible.min);
+    if (Math.abs(value) > faixa * 4) return null;
+  }
+
   return {
     target,
     operation,
@@ -366,6 +384,22 @@ function describeReading(
  * o valor atual entra, sempre lido do GameState, nunca do texto.
  */
 export function resolveProposedValue(intent: NumericIntent, currentValue: number): number {
+  const bruto = valorBruto(intent, currentValue);
+
+  // A FAIXA PLAUSÍVEL É UM LIMITE, NÃO UMA SUGESTÃO
+  //
+  // Todo alvo declara a faixa em que faz sentido existir: salário mínimo não é
+  // negativo, alíquota não passa de 100%, benefício mensal não vale bilhões.
+  // Sem esta trava, um número mal lido atravessava o motor inteiro e chegava na
+  // tela como "R$ -9.999.999.336 (-1.506.024.096,4%)".
+  //
+  // Grampear aqui, no último ponto em que o valor ainda é um número solto, vale
+  // mais do que confiar em quem chama: a conta seguinte, a manchete e o efeito
+  // no estado todos usam este valor.
+  return clamp(bruto, intent.target.plausible.min, intent.target.plausible.max);
+}
+
+function valorBruto(intent: NumericIntent, currentValue: number): number {
   switch (intent.operation) {
     case 'SET_VALUE':
       return intent.value;

@@ -164,6 +164,16 @@ export interface BuilderOption {
   impactsPer10bi?: PolicyImpact;
   /** Efeito que só aparece meses depois, na mesma escala. */
   delayedPer10bi?: { monthsAhead: number; label: string; impacts: PolicyImpact };
+  /**
+   * A opção abre as réguas de regra de entrada do programa ao lado dela.
+   *
+   * É o que separa "mudar as regras" das outras opções do painel: as demais
+   * pedem um valor em reais, esta pede três decisões de desenho que não são
+   * dinheiro nenhum.
+   */
+  opensProgramRules?: boolean;
+  /** A opção usa o controle de quantia em R$ bilhões por ano. */
+  usesAmount?: boolean;
 }
 
 export interface BuilderAmountSpec {
@@ -223,6 +233,13 @@ export interface MeasurePlan {
   /** Entidade central da medida, quando existe (empresa, pasta). */
   entityId?: string;
   entityName?: string;
+  /**
+   * Em que valor o jogador deixou cada régua de regra de entrada.
+   *
+   * Chave é o id da regra em `program-rules.ts`. Só existe no painel de
+   * programa, e só quando a opção de mudar as regras está marcada.
+   */
+  ruleValues?: Record<string, number>;
 }
 
 /** Uma alteração numérica montada pelo painel, já no alvo do jogo. */

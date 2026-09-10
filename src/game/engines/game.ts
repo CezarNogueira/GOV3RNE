@@ -171,6 +171,39 @@ export function tickMonth(input: GameState): TickOutcome {
     // A medida que acaba com um programa acaba com ele de verdade: ele sai da
     // lista no mesmo mês, o dinheiro volta ao caixa e a conta política chega
     // inteira, de uma vez.
+    // Mexer nas regras de um programa muda o programa de verdade: o público
+    // atendido, a focalização e o custeio mudam na lista, e a partir daí o motor
+    // econômico e o social cobram e entregam pelo desenho NOVO. Sem isto, a
+    // medida aprovada mudava indicadores e deixava o programa igual.
+    if (policy.programChange) {
+      const alvo = state.programs.find(
+        (entry) => entry.id === policy.programChange!.programId && entry.active,
+      );
+      if (alvo) {
+        const mudanca = policy.programChange;
+        const antes = alvo.beneficiaries;
+        alvo.beneficiaries = Math.max(
+          0,
+          Math.round(alvo.beneficiaries * (1 + mudanca.coverageDelta / 100)),
+        );
+        alvo.efficiency = clamp100(alvo.efficiency + mudanca.efficiencyDelta);
+        alvo.coverage = clamp100(alvo.coverage + mudanca.coverageDelta * 0.4);
+        alvo.monthlyCost = Math.max(
+          0,
+          Number((alvo.monthlyCost + mudanca.monthlyCostDelta).toFixed(3)),
+        );
+
+        const diferenca = alvo.beneficiaries - antes;
+        if (Math.abs(diferenca) >= 1000) {
+          notes.push(
+            diferenca > 0
+              ? `${(diferenca / 1e6).toFixed(1)} milhoes de pessoas entraram no ${alvo.name} com a regra nova.`
+              : `${(-diferenca / 1e6).toFixed(1)} milhoes de pessoas sairam do ${alvo.name} com a regra nova.`,
+          );
+        }
+      }
+    }
+
     if (policy.abolishProgramIds?.length) {
       const fim = abolishPrograms(state, policy.abolishProgramIds);
 

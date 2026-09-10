@@ -8,6 +8,7 @@ export * from './approval';
 export * from './congress';
 export * from './policy';
 export * from './program-text';
+export * from './program-measure';
 export * from './legislative';
 export * from './government';
 export * from './diplomacy';
