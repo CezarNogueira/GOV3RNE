@@ -65,6 +65,10 @@ interface GameStore {
   advanceMonth: () => void;
   decideEvent: (eventId: string, optionId: string) => boolean;
   runAction: (actionId: AgendaActionId, targetId?: string) => void;
+  /** Gasta o dinheiro pessoal: restaurante, lazer, carro ou imóvel. */
+  spendPersonal: (itemId: string) => void;
+  /** Vende um carro ou imóvel pelo valor de mercado. */
+  sellPossession: (possessionId: string) => void;
   companyAction: (action: CompanyAction) => void;
   /** Executa uma ação extraordinária de regime ou de guerra. */
   regimeAction: (action: RegimeAction) => void;
@@ -199,6 +203,28 @@ export const useGame = create<GameStore>((set, get) => ({
       set({ state: outcome.state, lastDecision: outcome.decision });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Ação não executada', detail: messageOf(error) });
+    }
+  },
+
+  spendPersonal: (itemId) => {
+    const current = get().state;
+    if (!current) return;
+    try {
+      const outcome = repository.spendPersonal(current.id, itemId);
+      set({ state: outcome.state, lastDecision: outcome.decision });
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Gasto não feito', detail: messageOf(error) });
+    }
+  },
+
+  sellPossession: (possessionId) => {
+    const current = get().state;
+    if (!current) return;
+    try {
+      const outcome = repository.sellPossession(current.id, possessionId);
+      set({ state: outcome.state, lastDecision: outcome.decision });
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Venda não feita', detail: messageOf(error) });
     }
   },
 

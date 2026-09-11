@@ -57,6 +57,7 @@ const KIND_LABEL: Record<DecisionEntry['kind'], string> = {
   eleicao: 'Eleição',
   regime: 'Poder e ordem',
   mes: 'Fechamento do mês',
+  pessoal: 'Vida pessoal',
 };
 
 function DecisionBody({ decision, onClose }: { decision: DecisionEntry; onClose: () => void }) {

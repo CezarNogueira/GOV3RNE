@@ -30,3 +30,4 @@ export * from './game';
 export * from './save';
 export * from './bills';
 export * from './country-risk';
+export * from './personal-spending';

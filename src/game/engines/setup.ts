@@ -284,6 +284,8 @@ function buildPresident(input: NewGameInput): President {
     personalApproval: GAME_CALIBRATION.startingApproval + 3,
     personalWealth: startingPersonalWealth(draft.occupation, draft.age),
     monthlySalary: 46_366,
+    possessions: [],
+    lastSpendMonth: {},
   };
 }
 

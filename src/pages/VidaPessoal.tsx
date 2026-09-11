@@ -1,8 +1,16 @@
 import { useState } from 'react';
-import { conditionLabel, formatMoney, physicalMultiplier, momentumLabel } from '@/game';
+import {
+  PERSONAL_SALARY_SAVINGS,
+  conditionLabel,
+  formatMoney,
+  momentumLabel,
+  physicalMultiplier,
+  possessionsSummary,
+} from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader } from '@/components/layout/PageHeader';
 import { Avatar } from '@/components/game/Avatar';
+import { PersonalShop } from '@/components/game/PersonalShop';
 import { Bar, Badge, Empty, Section, StatRow, cx } from '@/components/ui/primitives';
 
 /**
@@ -27,6 +35,7 @@ export function VidaPessoal() {
   const [confirmandoDivorcio, setConfirmandoDivorcio] = useState(false);
   const primeiroNome = spouse?.name.split(' ')[0] ?? '';
   const multiplier = physicalMultiplier(state);
+  const bens = possessionsSummary(state);
 
   return (
     <>
@@ -107,9 +116,26 @@ export function VidaPessoal() {
 
             <Section title="Conta pessoal">
               <p className="metric text-gov-400">{formatMoney(president.personalWealth)}</p>
-              <p className="mt-1 text-[11px] leading-snug text-neutral-600">
-                Salário de {formatMoney(president.monthlySalary)} cai todo mês. É daqui que sai
-                jantar, terapia e amizade — não confunda com o caixa do Tesouro.
+              <div className="mt-2">
+                <StatRow
+                  label="Sobra do salário por mês"
+                  value={`+${formatMoney(Math.round(president.monthlySalary * PERSONAL_SALARY_SAVINGS))}`}
+                  tone="pos"
+                />
+                {bens.count > 0 && (
+                  <>
+                    <StatRow
+                      label="Manutenção dos bens por mês"
+                      value={`−${formatMoney(bens.monthlyCost)}`}
+                      tone="neg"
+                    />
+                    <StatRow label={`Bens no seu nome (${bens.count})`} value={formatMoney(bens.marketValue)} />
+                  </>
+                )}
+              </div>
+              <p className="mt-2 text-[11px] leading-snug text-neutral-600">
+                Do salário de {formatMoney(president.monthlySalary)}, o que sobra depois de imposto e
+                despesa cai aqui todo mês. É dinheiro seu — não confunda com o caixa do Tesouro.
               </p>
             </Section>
 
@@ -358,6 +384,10 @@ export function VidaPessoal() {
               />
             </Section>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <PersonalShop />
         </div>
       </PageBody>
     </>

@@ -57,6 +57,15 @@ export interface PresidentTraitEffects {
   technicalQuality: number;
 }
 
+/** Um carro ou imóvel comprado com o dinheiro pessoal do presidente. */
+export interface PersonalPossession {
+  id: string;
+  /** Item da vitrine (`PERSONAL_SHOP`). */
+  itemId: string;
+  boughtMonth: number;
+  pricePaid: number;
+}
+
 export interface President {
   firstName: string;
   lastName: string;
@@ -76,6 +85,10 @@ export interface President {
   personalApproval: number;
   personalWealth: number;
   monthlySalary: number;
+  /** Carros e imóveis no nome do presidente. Save antigo não tem: vale lista vazia. */
+  possessions?: PersonalPossession[];
+  /** Último mês em que cada restaurante ou lazer foi usado — um de cada por mês. */
+  lastSpendMonth?: Record<string, number>;
 }
 
 export type SpouseStance = 'fora_dos_holofotes' | 'palanque_permanente' | 'programa_proprio' | 'conselheira_de_fato';

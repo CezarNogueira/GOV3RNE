@@ -52,3 +52,4 @@ export {
   type Party as CongressParty,
 } from './people';
 export * from './bills';
+export * from './personal-shop';

@@ -20,7 +20,8 @@ export type DecisionKind =
   | 'campanha'
   | 'eleicao'
   | 'regime'
-  | 'mes';
+  | 'mes'
+  | 'pessoal';
 
 /** Uma variação medida entre antes e depois. */
 export interface DecisionDelta {

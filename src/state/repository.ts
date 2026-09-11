@@ -21,6 +21,8 @@ import {
   beginSecondTerm,
   decideCandidacy,
   runAgendaAction,
+  sellPossession,
+  spendPersonal,
   runCampaignMove,
   runCompanyAction,
   runRegimeAction,
@@ -622,6 +624,50 @@ class GameRepository {
 
     this.persist(next);
     return { state: next, message: outcome.message, decision };
+  }
+
+  /** Gasta o dinheiro pessoal do presidente: restaurante, lazer, carro ou imóvel. */
+  spendPersonal(id: string, itemId: string): ActionResponse {
+    const state = this.draft(id);
+    const before = takeSnapshot(state);
+    const rng = new Rng(state.seed, state.rngCursor);
+    const outcome = spendPersonal(state, itemId, rng);
+    if (!outcome.ok) throw new Error(outcome.message);
+    state.rngCursor = rng.cursor;
+
+    const decision = recordDecision(state, before, {
+      kind: 'pessoal',
+      title: outcome.title,
+      choice: outcome.choice,
+      message: outcome.message,
+      notes: outcome.notes,
+    });
+
+    state.updatedAt = new Date().toISOString();
+    this.persist(state);
+    return { state, message: outcome.message, decision };
+  }
+
+  /** Vende um carro ou imóvel do presidente pelo valor de mercado. */
+  sellPossession(id: string, possessionId: string): ActionResponse {
+    const state = this.draft(id);
+    const before = takeSnapshot(state);
+    const rng = new Rng(state.seed, state.rngCursor);
+    const outcome = sellPossession(state, possessionId, rng);
+    if (!outcome.ok) throw new Error(outcome.message);
+    state.rngCursor = rng.cursor;
+
+    const decision = recordDecision(state, before, {
+      kind: 'pessoal',
+      title: outcome.title,
+      choice: outcome.choice,
+      message: outcome.message,
+      notes: outcome.notes,
+    });
+
+    state.updatedAt = new Date().toISOString();
+    this.persist(state);
+    return { state, message: outcome.message, decision };
   }
 
   /**

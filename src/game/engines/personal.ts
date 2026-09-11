@@ -5,6 +5,7 @@ import { SPOUSE_BREAKDOWN_EVENTS, SPOUSE_BREAKDOWN_IDS } from '../data/dynamic-e
 import { approach, clamp, clamp100, round } from '../utils/math';
 import { nudgeApproval } from './approval';
 import { nudgeGroup } from './social';
+import { PERSONAL_SALARY_SAVINGS, processPossessions } from './personal-spending';
 import { makeId, monthLabel } from '../utils/index';
 
 /**
@@ -130,7 +131,11 @@ export function processPersonalLife(state: GameState, rng: Rng): TimelineEntry[]
   president.mood = round(clamp100(approach(president.mood, moodTarget, 0.22) + rng.noise(1.2)), 1);
 
   // ------------------------------------------------------------ Patrimônio
-  president.personalWealth = Math.round(president.personalWealth + president.monthlySalary * 0.42);
+  president.personalWealth = Math.round(
+    president.personalWealth + president.monthlySalary * PERSONAL_SALARY_SAVINGS,
+  );
+  // Carro e imóvel cobram todo mês: IPVA, seguro, condomínio, IPTU.
+  entries.push(...processPossessions(state, rng));
 
   // ------------------------------------------------------------ Família
   for (const member of state.family) {
