@@ -1,4 +1,4 @@
-import type { Difficulty, PolicyCategory, Region } from './common';
+import type { PolicyCategory, Region } from './common';
 import type {
   AvatarConfig,
   CampaignPromise,
@@ -103,7 +103,6 @@ export interface ResultHighlight {
 }
 
 export interface GameSettings {
-  difficulty: Difficulty;
   animations: boolean;
   volume: number;
   eventFrequency: number;
@@ -244,7 +243,6 @@ export interface SaveSlotMeta {
   month: number;
   monthLabel: string;
   approval: number;
-  difficulty: Difficulty;
   updatedAt: string;
   presidentName: string;
   party: string;

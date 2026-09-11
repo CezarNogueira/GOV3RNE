@@ -1,5 +1,12 @@
 import type { Region, StateInfo } from '../types/index';
-import { STATE_GDP_SHARE, STATE_POPULATION, STATE_SEATS } from './generated/baseline';
+import {
+  STATE_GDP_SHARE,
+  STATE_INCOME,
+  STATE_POPULATION,
+  STATE_SEATS,
+  STATE_UNEMPLOYMENT,
+} from './generated/baseline';
+import { BRASIL_HOJE } from './brasil-hoje';
 
 interface StateSeed {
   id: string;
@@ -65,9 +72,13 @@ export const STATES_BY_REGION: Record<Region, StateInfo[]> = STATES.reduce(
 );
 
 /**
- * Perfil socioeconômico relativo de cada UF, numa escala 0-100 interna ao jogo.
- * Não são estatísticas oficiais: são parâmetros de simulação calibrados para
- * reproduzir de forma plausível as desigualdades regionais conhecidas.
+ * Perfil socioeconômico de cada UF.
+ *
+ * Desemprego e renda são os oficiais do estado (PNAD Contínua, baixados pelo
+ * script de dados). Pobreza, violência e IDH não têm série estadual com API
+ * estável: partem de um perfil relativo — quem é mais pobre, mais violento ou
+ * mais desenvolvido que quem — ajustado para que a média dos estados, ponderada
+ * pela população, bata com o número nacional real de BRASIL_HOJE.
  */
 export interface StateProfileSeed {
   poverty: number;
@@ -78,7 +89,7 @@ export interface StateProfileSeed {
   infrastructure: number;
 }
 
-export const STATE_PROFILE: Record<string, StateProfileSeed> = {
+const PERFIL_RELATIVO: Record<string, StateProfileSeed> = {
   AC: { poverty: 42, unemployment: 9.2, income: 1180, hdi: 0.71, crime: 38, infrastructure: 34 },
   AL: { poverty: 45, unemployment: 10.4, income: 1090, hdi: 0.68, crime: 42, infrastructure: 38 },
   AP: { poverty: 40, unemployment: 11.8, income: 1210, hdi: 0.72, crime: 44, infrastructure: 33 },
@@ -107,3 +118,35 @@ export const STATE_PROFILE: Record<string, StateProfileSeed> = {
   SE: { poverty: 42, unemployment: 12.6, income: 1220, hdi: 0.72, crime: 43, infrastructure: 42 },
   TO: { poverty: 33, unemployment: 8.2, income: 1420, hdi: 0.75, crime: 29, infrastructure: 41 },
 };
+
+/** Média de um campo do perfil relativo, ponderada pela população de cada UF. */
+function mediaPonderada(campo: 'poverty' | 'crime' | 'hdi'): number {
+  let soma = 0;
+  let peso = 0;
+  for (const [uf, perfil] of Object.entries(PERFIL_RELATIVO)) {
+    const populacao = STATE_POPULATION[uf] ?? 0;
+    soma += perfil[campo] * populacao;
+    peso += populacao;
+  }
+  return peso > 0 ? soma / peso : 1;
+}
+
+const ESCALA = {
+  poverty: BRASIL_HOJE.povertyRate.value / mediaPonderada('poverty'),
+  crime: BRASIL_HOJE.homicideRate.value / mediaPonderada('crime'),
+  hdi: BRASIL_HOJE.hdi.value / mediaPonderada('hdi'),
+};
+
+export const STATE_PROFILE: Record<string, StateProfileSeed> = Object.fromEntries(
+  Object.entries(PERFIL_RELATIVO).map(([uf, perfil]) => [
+    uf,
+    {
+      ...perfil,
+      unemployment: STATE_UNEMPLOYMENT[uf] ?? perfil.unemployment,
+      income: STATE_INCOME[uf] ?? perfil.income,
+      poverty: Math.round(perfil.poverty * ESCALA.poverty * 10) / 10,
+      crime: Math.round(perfil.crime * ESCALA.crime * 10) / 10,
+      hdi: Math.min(0.95, Math.round(perfil.hdi * ESCALA.hdi * 1000) / 1000),
+    },
+  ]),
+);

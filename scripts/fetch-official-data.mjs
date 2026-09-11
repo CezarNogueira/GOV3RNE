@@ -44,6 +44,18 @@ async function sgs(series, label) {
   return { value: Number(last.valor), date: last.data, series, label };
 }
 
+// Algumas series do SGS (PIB mensal, por exemplo) recusam o atalho /ultimos/N
+// e so respondem com intervalo de datas. O ultimo ponto do intervalo e o dado.
+async function sgsDesde(series, label, meses = 14) {
+  const d = new Date();
+  d.setMonth(d.getMonth() - meses);
+  const inicio = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${series}/dados?formato=json&dataInicial=${inicio}`;
+  const data = await getJson(url, label);
+  const last = data[data.length - 1];
+  return { value: Number(last.valor), date: last.data, series, label };
+}
+
 // ---------------------------------------------------------------------------
 // 1. Malha territorial -> paths SVG
 // ---------------------------------------------------------------------------
@@ -198,13 +210,16 @@ async function buildGeo() {
 // 2. Baseline macro + estados
 // ---------------------------------------------------------------------------
 async function buildBaseline() {
-  const [selic, ipca12, usd, debt, reserves, primary] = await Promise.all([
+  const [selic, ipca12, usd, debt, reserves, primary, minimumWage, gdp12m] = await Promise.all([
     sgs(432, 'Selic meta % a.a.'),
     sgs(13522, 'IPCA acumulado 12 meses %'),
     sgs(1, 'Cambio R$/US$'),
     sgs(13762, 'Divida bruta do governo geral % PIB'),
     sgs(3546, 'Reservas internacionais US$ milhoes'),
-    sgs(5793, 'Resultado primario acumulado 12 meses % PIB'),
+    // NFSP: POSITIVO = DEFICIT. O sinal e invertido na hora de gravar.
+    sgs(5793, 'NFSP resultado primario acumulado 12 meses % PIB'),
+    sgs(1619, 'Salario minimo R$'),
+    sgsDesde(4382, 'PIB acumulado 12 meses R$ milhoes'),
   ]);
 
   const pnad = await getJson(
@@ -216,9 +231,30 @@ async function buildBaseline() {
   const unemployment = Number(pnadSerie[pnadPeriod]);
 
   const popRaw = await getJson(
-    'https://servicodados.ibge.gov.br/api/v3/agregados/4709/periodos/2022/variaveis/93?localidades=N3%5Ball%5D',
-    'IBGE populacao',
+    'https://servicodados.ibge.gov.br/api/v3/agregados/6579/periodos/-1/variaveis/9324?localidades=N3%5Ball%5D',
+    'IBGE populacao estimada',
   );
+  const popYear = Object.keys(popRaw[0].resultados[0].series[0].serie)[0];
+
+  // Desemprego e rendimento por UF, PNAD Continua trimestral.
+  const ufUnemploymentRaw = await getJson(
+    'https://servicodados.ibge.gov.br/api/v3/agregados/4099/periodos/-1/variaveis/4099?localidades=N3%5Ball%5D',
+    'IBGE PNAD desemprego por UF',
+  );
+  const ufIncomeRaw = await getJson(
+    'https://servicodados.ibge.gov.br/api/v3/agregados/5436/periodos/-1/variaveis/5935?localidades=N3%5Ball%5D&classificacao=2%5B6794%5D',
+    'IBGE PNAD rendimento por UF',
+  );
+  const porUf = (raw) => {
+    const out = {};
+    for (const serie of raw[0].resultados[0].series) {
+      out[UF_BY_CODE[Number(serie.localidade.id)]] = Number(Object.values(serie.serie)[0]);
+    }
+    return out;
+  };
+  const ufUnemployment = porUf(ufUnemploymentRaw);
+  const ufIncome = porUf(ufIncomeRaw);
+  const ufPnadPeriod = Object.keys(ufUnemploymentRaw[0].resultados[0].series[0].serie)[0];
   const pibRaw = await getJson(
     'https://servicodados.ibge.gov.br/api/v3/agregados/5938/periodos/-1/variaveis/37?localidades=N3%5Ball%5D',
     'IBGE PIB estadual',
@@ -276,13 +312,16 @@ async function buildBaseline() {
     `  usd: s(${usd.value}, 'BCB/SGS 1', '${usd.date}'),`,
     `  debtToGdp: s(${debt.value}, 'BCB/SGS 13762', '${debt.date}'),`,
     `  reservesUsdBillion: s(${Number((reserves.value / 1000).toFixed(1))}, 'BCB/SGS 3546', '${reserves.date}'),`,
-    `  primaryBalancePctGdp: s(${primary.value}, 'BCB/SGS 5793', '${primary.date}'),`,
+    `  /** Resultado primario do setor publico consolidado. POSITIVO = SUPERAVIT (a NFSP do BCB usa o sinal oposto e ja foi invertida aqui). */`,
+    `  primaryBalancePctGdp: s(${-primary.value}, 'BCB/SGS 5793 (NFSP, sinal invertido)', '${primary.date}'),`,
     `  unemployment: s(${unemployment}, 'IBGE/PNAD Continua', '${pnadPeriod}'),`,
-    `  gdpNominalBillion: s(${Number((gdpTotal / 1000000).toFixed(0))}, 'IBGE/Contas Regionais', '${gdpYear}'),`,
-    `  population: s(${popTotal}, 'IBGE/Censo', '2022'),`,
+    `  /** PIB acumulado em 12 meses, valores correntes. */`,
+    `  gdpNominalBillion: s(${Number((gdp12m.value / 1000).toFixed(0))}, 'BCB/SGS 4382', '${gdp12m.date}'),`,
+    `  minimumWage: s(${minimumWage.value}, 'BCB/SGS 1619', '${minimumWage.date}'),`,
+    `  population: s(${popTotal}, 'IBGE/Estimativas de Populacao', '${popYear}'),`,
     `} as const;`,
     ``,
-    `/** Populacao residente por UF (IBGE, Censo 2022). */`,
+    `/** Populacao residente estimada por UF (IBGE, ${popYear}). */`,
     `export const STATE_POPULATION: Record<string, number> = ${JSON.stringify(population, null, 2)};`,
     ``,
     `/** Participacao de cada UF no PIB nacional, em % (IBGE, ${gdpYear}). */`,
@@ -291,11 +330,17 @@ async function buildBaseline() {
     `/** Cadeiras na Camara por UF (Camara dos Deputados, dados abertos). */`,
     `export const STATE_SEATS: Record<string, number> = ${JSON.stringify(seatsByUf, null, 2)};`,
     ``,
+    `/** Taxa de desocupacao por UF, % (IBGE/PNAD Continua, ${ufPnadPeriod}). */`,
+    `export const STATE_UNEMPLOYMENT: Record<string, number> = ${JSON.stringify(ufUnemployment, null, 2)};`,
+    ``,
+    `/** Rendimento medio mensal real do trabalho por UF, R$ (IBGE/PNAD Continua, ${ufPnadPeriod}). */`,
+    `export const STATE_INCOME: Record<string, number> = ${JSON.stringify(ufIncome, null, 2)};`,
+    ``,
     `/** Composicao partidaria da Camara usada como ponto de partida. */`,
     `export const PARTY_SEATS: Record<string, number> = ${JSON.stringify(seatsByParty, null, 2)};`,
     ``,
     `export const DATA_SOURCES = [`,
-    `  'IBGE - Malhas territoriais, Censo 2022, Contas Regionais e PNAD Continua',`,
+    `  'IBGE - Malhas territoriais, Estimativas de Populacao, Contas Regionais e PNAD Continua',`,
     `  'Banco Central do Brasil - Sistema Gerenciador de Series Temporais (SGS)',`,
     `  'Camara dos Deputados - Portal de Dados Abertos',`,
     `] as const;`,

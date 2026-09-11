@@ -1,4 +1,5 @@
 import type { Company, CompanySector, GameState } from '../../types/index';
+import { BRASIL_HOJE } from '../../data/brasil-hoje';
 import { Rng } from '../../utils/rng';
 import { approach, clamp, clamp100, round } from '../../utils/math';
 
@@ -129,7 +130,10 @@ export function processCompanyMarket(state: GameState, rng: Rng): MarketOutcome 
  * jogo sobe enquanto todas as empresas perdem lucro, alguma coisa está errada.
  */
 export function reconcileIbovespa(state: GameState, marketIndex: number): void {
-  const implied = 142_000 * (marketIndex / 100);
+  // O índice das empresas vale 100 na posse, e na posse o Ibovespa é o real.
+  // A base era um 142 mil fixo — o fechamento antigo —, e puxava a bolsa da
+  // posse de 185,6 mil para baixo sem nenhum motivo de mercado.
+  const implied = BRASIL_HOJE.ibovespa.value * (marketIndex / 100);
   state.economy.ibovespa = Math.round(
     clamp(approach(state.economy.ibovespa, implied, 0.35), 30_000, 600_000),
   );

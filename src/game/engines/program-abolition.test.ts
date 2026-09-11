@@ -28,7 +28,7 @@ function newGame(seed = 4242): GameState {
       cabinet: defaultCabinet(MINISTRY_IDS),
       family: { hasSpouse: false, childrenCount: 0 },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal', startYear: 2027, reelection: true, seed,
+      startYear: 2027, reelection: true, seed,
     }),
   );
 }
@@ -157,8 +157,9 @@ describe('a leitura da extincao', () => {
 
     expect(analysis.title).toContain('Extinção');
     expect(analysis.title).toContain('Bolsa Família');
-    expect(analysis.summary).toContain('21.4');
-    expect(analysis.summary).toContain('14.2');
+    const programa = state.programs.find((entry) => entry.id === 'renda_base')!;
+    expect(analysis.summary).toContain((programa.beneficiaries / 1e6).toFixed(1));
+    expect(analysis.summary).toContain(programa.monthlyCost.toFixed(1));
     expect(analysis.warnings.some((aviso) => aviso.includes('não volta'))).toBe(true);
   });
 

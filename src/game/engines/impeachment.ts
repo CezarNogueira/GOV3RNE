@@ -1,5 +1,5 @@
 import type { GameState, ImpeachmentStage } from '../types/index';
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
 import { TOTAL_CHAMBER_SEATS } from '../data/parties';
 import { runVote } from './congress';
 import { congressDissolved } from './regime';
@@ -53,7 +53,7 @@ export interface ImpeachmentUpdate {
 }
 
 export function processImpeachment(state: GameState, rng: Rng): ImpeachmentUpdate {
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  const preset = GAME_CALIBRATION;
   const congress = state.congress;
   const previousStage = congress.impeachmentStage;
 

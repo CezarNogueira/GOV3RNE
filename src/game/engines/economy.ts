@@ -1,5 +1,5 @@
 import type { GameState } from '../types/index';
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
 import { Rng } from '../utils/rng';
 import { approach, clamp, clamp100, round } from '../utils/math';
 
@@ -85,7 +85,7 @@ export interface EconomyDelta {
  */
 export function processEconomy(state: GameState, rng: Rng): EconomyDelta {
   const eco = state.economy;
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  const preset = GAME_CALIBRATION;
   const sensitivity = preset.economySensitivity;
 
   const before = {
@@ -263,7 +263,9 @@ export function processEconomy(state: GameState, rng: Rng): EconomyDelta {
   );
 
   const iboTarget =
-    130_000 + (eco.businessConfidence - 50) * 1_600 - (eco.countryRisk - 200) * 42 + eco.gdpGrowth * 4_200;
+    // Base calibrada para que o equilíbrio da posse seja o fechamento real do
+    // Ibovespa (185,6 mil pontos em 09/09/2026), e não 147 mil.
+    168_225 + (eco.businessConfidence - 50) * 1_600 - (eco.countryRisk - 200) * 42 + eco.gdpGrowth * 4_200;
   eco.ibovespa = Math.round(clamp(approach(eco.ibovespa, iboTarget, 0.3) + rng.noise(2_400), 30_000, 600_000));
 
   // ------------------------------------------------------- 13. Reservas e caixa

@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { DIFFICULTIES } from '../types/common';
 import { MAX_PROMISES, PROMISE_CATALOG } from '../data/promises';
 import { STATES } from '../data/states';
 import { PARTIES } from '../data/parties';
@@ -157,7 +156,6 @@ export const newGameSchema = z
     cabinet: cabinetDraftSchema,
     family: familyDraftSchema,
     promises: z.array(z.enum(promiseIds)).length(MAX_PROMISES),
-    difficulty: z.enum(DIFFICULTIES),
     startYear: z.number().int().min(2024).max(2099).default(2027),
     seed: z.number().int().optional(),
     reelection: z.boolean().default(true),
@@ -223,6 +221,5 @@ export const settingsSchema = z.object({
   volume: z.number().min(0).max(100).optional(),
   eventFrequency: z.number().min(0.25).max(2).optional(),
   dataMode: z.enum(['inicial_real', 'ficcional']).optional(),
-  difficulty: z.enum(DIFFICULTIES).optional(),
   tutorialDone: z.boolean().optional(),
 });

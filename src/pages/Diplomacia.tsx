@@ -209,11 +209,27 @@ export function Diplomacia() {
                 </table>
               </div>
 
-              {diplomacy.treaties.length > 0 && (
+              {diplomacy.treaties.some((treaty) => treaty.inherited) && (
+                <div className="mt-3 rule pt-3">
+                  <p className="label mb-1.5">Acordos que o Brasil já tinha na posse</p>
+                  <ul className="space-y-1">
+                    {diplomacy.treaties
+                      .filter((treaty) => treaty.inherited)
+                      .map((treaty) => (
+                        <li key={treaty.id} className="text-[12px] text-neutral-400">
+                          {treaty.countryFlag} {treaty.countryName} — {treaty.label}
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
+
+              {diplomacy.treaties.some((treaty) => !treaty.inherited) && (
                 <div className="mt-3 rule pt-3">
                   <p className="label mb-1.5">Acordos assinados neste mandato</p>
                   <ul className="space-y-1">
-                    {[...diplomacy.treaties]
+                    {diplomacy.treaties
+                      .filter((treaty) => !treaty.inherited)
                       .sort((a, b) => b.signedMonth - a.signedMonth)
                       .map((treaty) => (
                         <li key={treaty.id} className="flex items-baseline justify-between gap-2 text-[12px] text-neutral-400">
@@ -412,7 +428,10 @@ function Visitas({
           tone={state.diplomacy.isolation < 30 ? 'pos' : state.diplomacy.isolation > 50 ? 'neg' : 'flat'}
           tip="Acima de 55, o isolamento encarece o crédito externo e sobe o risco-país todo mês."
         />
-        <StatRow label="Acordos assinados" value={String(state.diplomacy.treaties.length)} />
+        <StatRow
+          label="Acordos assinados"
+          value={String(state.diplomacy.treaties.filter((treaty) => !treaty.inherited).length)}
+        />
         <StatRow
           label="Alinhamento"
           value={
@@ -439,7 +458,9 @@ function Acordos({
   onRespond: (offerId: string, accept: boolean) => void;
 }) {
   const pending = state.diplomacy.pendingOffers.filter((offer) => offer.status === 'pendente');
-  const signed = [...state.diplomacy.treaties].sort((a, b) => b.signedMonth - a.signedMonth);
+  const signed = state.diplomacy.treaties
+    .filter((treaty) => !treaty.inherited)
+    .sort((a, b) => b.signedMonth - a.signedMonth);
 
   return (
     <div className="space-y-4">

@@ -11,7 +11,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
-import { DATA_SOURCES, MACRO_BASELINE, DIFFICULTY_PRESETS } from '@/game';
+import { DATA_SOURCES, MACRO_BASELINE } from '@/game';
 import { useGame } from '@/state/game-store';
 import { storageAvailable } from '@/state/repository';
 import { ConfirmDialog } from '@/components/ui/overlays';
@@ -166,7 +166,6 @@ export function Landing() {
             <h2 className="label-strong mb-2">Mandatos em curso</h2>
             <ul className="grid gap-1.5 sm:grid-cols-2">
               {saves.map((save) => {
-                const preset = DIFFICULTY_PRESETS[save.difficulty];
                 const tone =
                   save.approval >= 55 ? 'text-gov-400' : save.approval >= 40 ? 'text-warn-400' : 'text-danger-400';
                 return (
@@ -181,7 +180,7 @@ export function Landing() {
                         <span className="ml-1.5 font-normal text-neutral-500">{save.party}</span>
                       </p>
                       <p className="truncate text-[11px] text-neutral-500">
-                        {save.monthLabel} · mês {save.month}/48 · {preset?.label ?? save.difficulty}
+                        {save.monthLabel} · mês {save.month}/48
                       </p>
                     </button>
                     <span className={cx('shrink-0 font-mono text-sm tabular', tone)}>

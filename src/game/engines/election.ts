@@ -14,7 +14,7 @@ import { CAMPAIGN_MOVES, CAMPAIGN_MOVE_BY_ID } from '../data/campaign';
 import { PARTY_BY_ID, TOTAL_CHAMBER_SEATS } from '../data/parties';
 import { FIRST_NAMES, LAST_NAMES, OPPOSITION_LEADERS } from '../data/people';
 import { MAX_PROMISES, PROMISE_CATALOG } from '../data/promises';
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
 import { nudgeGroup } from './social';
 import { resetPromiseBaselines } from './promises';
 import { Rng } from '../utils/rng';
@@ -1006,7 +1006,7 @@ export function beginSecondTerm(
 
   // A campanha cansou, mas a posse renova: agenda cheia e fôlego de quem
   // acabou de ganhar.
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  const preset = GAME_CALIBRATION;
   state.agenda.maxPoints = preset.agendaPoints;
   state.agenda.points = preset.agendaPoints;
   state.agenda.scheduled = [];

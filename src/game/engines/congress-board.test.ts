@@ -29,7 +29,7 @@ function newGame(sriId?: string): GameState {
       partyId: 'PSB', customParty: null, viceId: 'vp_almeida', cabinet,
       family: { hasSpouse: false, childrenCount: 0 },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal', startYear: 2027, reelection: true, seed: 606,
+      startYear: 2027, reelection: true, seed: 606,
     }),
   );
 }

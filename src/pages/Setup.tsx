@@ -6,8 +6,11 @@ import {
   ACCESSORIES,
   BACKGROUND_COLORS,
   BEARD_STYLES,
+  BRASIL_HOJE,
   DEFAULT_AVATAR,
-  DIFFICULTY_LIST,
+  GAME_CALIBRATION,
+  MACRO_BASELINE,
+  SNAPSHOT_DATE,
   EYE_COLORS,
   HAIR_COLORS,
   HAIR_STYLES,
@@ -36,7 +39,6 @@ import {
   formatBRL,
   newGameSchema,
   type AvatarConfig,
-  type Difficulty,
   type MinistryId,
   type NewGameInput,
   type PolicyCategory,
@@ -95,7 +97,6 @@ interface Draft {
   spouseName: string;
   childrenCount: number;
   promises: string[];
-  difficulty: Difficulty;
 }
 
 const OCCUPATIONS = [
@@ -193,7 +194,6 @@ function emptyDraft(): Draft {
     spouseName: '',
     childrenCount: 2,
     promises: [],
-    difficulty: 'normal',
   };
 }
 
@@ -271,7 +271,6 @@ export function Setup() {
         childrenCount: draft.childrenCount,
       },
       promises: draft.promises,
-      difficulty: draft.difficulty,
       startYear: 2027,
       seed: createSeed(),
       reelection: true,
@@ -1465,28 +1464,32 @@ function StepPromises({
         </div>
       </section>
 
+      {/* Não há dificuldade para escolher: o mandato começa no país real. */}
       <section className="card p-4">
-        <h2 className="label-strong mb-1">Dificuldade</h2>
+        <h2 className="label-strong mb-1">O país que você recebe</h2>
         <p className="mb-3 text-[12px] text-neutral-500">
-          Nenhuma delas muda as regras. Todas mudam a sua margem de erro.
+          Não há dificuldade para escolher. A partida começa com o Brasil como ele está em{' '}
+          {SNAPSHOT_DATE}, com os números oficiais — e o quanto isso é difícil é o próprio país
+          que decide.
         </p>
-        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
-          {DIFFICULTY_LIST.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              className={cx('option', draft.difficulty === preset.id && 'option-selected')}
-              onClick={() => update('difficulty', preset.id)}
-            >
-              <p className="text-[13px] font-semibold text-neutral-100">{preset.label}</p>
-              <p className="text-[11px] text-gov-400">{preset.tagline}</p>
-              <p className="mt-1 text-[11px] leading-snug text-neutral-500">{preset.description}</p>
-              <div className="mt-2 space-y-0.5 font-mono text-[10px] text-neutral-600">
-                <p>Aprovação inicial · {preset.startingApproval}%</p>
-                <p>Caixa inicial · R$ {preset.startingTreasury} bi</p>
-                <p>Agenda · {preset.agendaPoints} pontos/mês</p>
-              </div>
-            </button>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+          {[
+            ['Selic', `${MACRO_BASELINE.selic.value.toLocaleString('pt-BR')}%`],
+            ['Inflação 12 meses', `${MACRO_BASELINE.inflation12m.value.toLocaleString('pt-BR')}%`],
+            ['Desemprego', `${MACRO_BASELINE.unemployment.value.toLocaleString('pt-BR')}%`],
+            ['Dívida bruta', `${MACRO_BASELINE.debtToGdp.value.toLocaleString('pt-BR')}% do PIB`],
+            [
+              MACRO_BASELINE.primaryBalancePctGdp.value < 0 ? 'Déficit primário' : 'Superávit primário',
+              `${Math.abs(MACRO_BASELINE.primaryBalancePctGdp.value).toLocaleString('pt-BR')}% do PIB`,
+            ],
+            ['Salário mínimo', `R$ ${MACRO_BASELINE.minimumWage.value.toLocaleString('pt-BR')}`],
+            ['Renda média do trabalho', `R$ ${BRASIL_HOJE.averageIncome.value.toLocaleString('pt-BR')}`],
+            ['Pobreza', `${BRASIL_HOJE.povertyRate.value.toLocaleString('pt-BR')}%`],
+          ].map(([rotulo, valor]) => (
+            <div key={rotulo} className="border border-ink-700 bg-ink-900/40 p-2">
+              <p className="label">{rotulo}</p>
+              <p className="mt-0.5 font-mono text-[13px] text-neutral-100">{valor}</p>
+            </div>
           ))}
         </div>
       </section>
@@ -1498,7 +1501,7 @@ function StepPromises({
 // Painel lateral — consequência das escolhas em tempo real
 // ===========================================================================
 function SidePanel({ draft, party }: { draft: Draft; party: (typeof PARTIES)[number] | null }) {
-  const preset = DIFFICULTY_LIST.find((entry) => entry.id === draft.difficulty)!;
+  const preset = GAME_CALIBRATION;
   const vice = VICE_POOL.find((candidate) => candidate.id === draft.viceId);
 
   const cabinetParties = new Set(

@@ -49,7 +49,8 @@ const INHERITED_PROGRAM_ANNUAL_COST = INHERITED_PROGRAMS.reduce(
   (total, program) => total + program.monthlyCost * 12,
   0,
 );
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
+import { BRASIL_HOJE, INHERITED_TREATIES } from '../data/brasil-hoje';
 import { Rng, createSeed } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
 import { makeId, monthLabel } from '../utils/index';
@@ -64,21 +65,21 @@ export const GAME_STATE_VERSION = 3;
 /**
  * Monta uma partida inteira a partir das escolhas de campanha.
  *
- * Os indicadores macro partem de dados oficiais (ver MACRO_BASELINE) e são
- * ajustados pela dificuldade escolhida: em Realista o presidente herda um país
- * pior do que o real, em Fácil herda um melhor. Do primeiro tick em diante,
- * nenhum número aqui corresponde mais à realidade.
+ * O país da posse é o Brasil real: os indicadores macro vêm das séries
+ * oficiais (MACRO_BASELINE) e os sociais, dos levantamentos em BRASIL_HOJE,
+ * sem ajuste nenhum. Do primeiro tick em diante, nenhum número aqui corresponde
+ * mais à realidade.
  */
 export function createGame(input: NewGameInput): GameState {
   const seed = input.seed ?? createSeed();
   const rng = new Rng(seed);
-  const preset = DIFFICULTY_PRESETS[input.difficulty];
+  const preset = GAME_CALIBRATION;
   const now = new Date().toISOString();
 
   const party = resolveParty(input);
   const president = buildPresident(input);
   const family = buildFamily(input, rng);
-  const economy = buildEconomy(preset.startingTreasury, input.difficulty);
+  const economy = buildEconomy(preset.startingTreasury);
   const nation = buildNation();
   const states = buildStates(rng, party);
   const socialGroups = buildSocialGroups(president, party);
@@ -123,7 +124,6 @@ export function createGame(input: NewGameInput): GameState {
     totalMonths: 48,
     term: 1,
     settings: {
-      difficulty: input.difficulty,
       animations: true,
       volume: 70,
       eventFrequency: 1,
@@ -255,7 +255,7 @@ function buildPresident(input: NewGameInput): President {
     energy: clamp100(92 - (heavySchedule ? 10 : 0) + (hasHealthyHabit ? 5 : 0)),
     mood: 74,
     stress: 18,
-    personalApproval: DIFFICULTY_PRESETS[input.difficulty].startingApproval + 3,
+    personalApproval: GAME_CALIBRATION.startingApproval + 3,
     personalWealth: 650_000,
     monthlySalary: 46_366,
   };
@@ -299,38 +299,40 @@ function buildFamily(input: NewGameInput, rng: Rng): FamilyMember[] {
 // ---------------------------------------------------------------------------
 // Economia
 // ---------------------------------------------------------------------------
-function buildEconomy(startingTreasury: number, difficulty: string): EconomyState {
+function buildEconomy(startingTreasury: number): EconomyState {
   const b = MACRO_BASELINE;
-  // A dificuldade piora (ou melhora) a herança, sem inventar um país diferente.
-  const drag =
-    difficulty === 'realista' ? 1 : difficulty === 'dificil' ? 0.55 : difficulty === 'normal' ? 0 : -0.5;
+  const hoje = BRASIL_HOJE;
 
-  const gdpNominal = b.gdpNominalBillion.value * 1.18; // projeção nominal até o ano da posse
-  const debtToGdp = clamp(b.debtToGdp.value + drag * 4, 40, 140);
-  const primaryPct = b.primaryBalancePctGdp.value - drag * 1.6;
+  // PIB dos últimos 12 meses em valores correntes, direto do Banco Central.
+  const gdpNominal = b.gdpNominalBillion.value;
+  // Já no sinal de resultado: negativo é déficit. A série do BCB é NFSP, que
+  // usa o sinal oposto — era por isso que o jogo mostrava superávit onde havia
+  // déficit.
+  const primaryPct = b.primaryBalancePctGdp.value;
 
   return {
     gdpNominal: round(gdpNominal, 0),
-    gdpGrowth: round(2.2 - drag * 0.9, 2),
-    inflation: round(b.inflation12m.value + drag * 1.1, 2),
-    unemployment: round(b.unemployment.value + drag * 1.4, 2),
-    selic: round(b.selic.value + drag * 0.75, 2),
+    gdpGrowth: hoje.gdpGrowth.value,
+    inflation: b.inflation12m.value,
+    unemployment: b.unemployment.value,
+    selic: b.selic.value,
     inflationTarget: 3,
-    usd: round(b.usd.value * (1 + drag * 0.06), 4),
-    fxAnchor: round(b.usd.value * (1 + drag * 0.06), 4),
-    debtToGdp: round(debtToGdp, 2),
+    usd: b.usd.value,
+    fxAnchor: b.usd.value,
+    debtToGdp: b.debtToGdp.value,
     primaryBalance: round((primaryPct / 100) * gdpNominal, 1),
     revenue: round(gdpNominal * 0.212, 1),
     // Despesa OBRIGATÓRIA apenas. Os programas herdados são contados à parte,
     // via custo mensal, para não entrarem duas vezes no resultado primário.
     spending: round(gdpNominal * (0.212 - primaryPct / 100) - INHERITED_PROGRAM_ANNUAL_COST, 1),
-    reserves: round(b.reservesUsdBillion.value, 1),
-    ibovespa: Math.round(142_000 - drag * 12_000),
-    countryRisk: Math.round(215 + drag * 55),
-    fiscalCredibility: clamp100(58 - drag * 11),
-    businessConfidence: clamp100(54 - drag * 10),
+    reserves: b.reservesUsdBillion.value,
+    ibovespa: hoje.ibovespa.value,
+    countryRisk: hoje.countryRisk.value,
+    // Índices internos do jogo, sem série oficial equivalente.
+    fiscalCredibility: 58,
+    businessConfidence: 54,
     commodityIndex: 74,
-    minimumWage: 1_620,
+    minimumWage: b.minimumWage.value,
     treasuryCash: startingTreasury,
     pipeline: {
       fiscalImpulse: 0,
@@ -343,22 +345,24 @@ function buildEconomy(startingTreasury: number, difficulty: string): EconomyStat
 }
 
 function buildNation(): NationState {
+  const hoje = BRASIL_HOJE;
   return {
     population: MACRO_BASELINE.population.value,
-    hdi: 0.786,
-    lifeExpectancy: 75.5,
-    literacy: 93.2,
-    povertyRate: 27.4,
-    gini: 0.518,
-    homicideRate: 22.6,
-    corruptionPerception: 38,
+    hdi: hoje.hdi.value,
+    lifeExpectancy: hoje.lifeExpectancy.value,
+    literacy: hoje.literacy.value,
+    povertyRate: hoje.povertyRate.value,
+    gini: hoje.gini.value,
+    homicideRate: hoje.homicideRate.value,
+    corruptionPerception: hoje.corruptionPerception.value,
+    // Índices internos do jogo (0-100), sem série oficial equivalente.
     healthIndex: 56,
     educationIndex: 54,
     securityIndex: 48,
     sanitationIndex: 52,
     infrastructureIndex: 55,
     environmentIndex: 51,
-    averageIncome: 1_980,
+    averageIncome: hoje.averageIncome.value,
     origin: 'inicial',
   };
 }
@@ -417,7 +421,7 @@ function buildStates(rng: Rng, party: PartyProfile): FederalUnit[] {
       // não) construir alguma coisa.
       productivity: round(
         clamp100(
-          22 + (profile.income / 1980) * 26 + profile.hdi * 34 + profile.infrastructure * 0.16,
+          22 + (profile.income / BRASIL_HOJE.averageIncome.value) * 26 + profile.hdi * 34 + profile.infrastructure * 0.16,
         ),
         1,
       ),
@@ -476,7 +480,7 @@ function originAffinity(president: President, groupId: string): number {
 // Congresso
 // ---------------------------------------------------------------------------
 function buildCongress(rng: Rng, party: PartyProfile, input: NewGameInput): CongressState {
-  const preset = DIFFICULTY_PRESETS[input.difficulty];
+  const preset = GAME_CALIBRATION;
   const vice = VICE_POOL.find((candidate) => candidate.id === input.viceId);
   const viceParty = partyKey(vice?.party);
 
@@ -691,7 +695,25 @@ function buildDiplomacy(): DiplomacyState {
     countries: COUNTRIES.map((country) => ({ ...country, treatyAffinity: [...country.treatyAffinity] })),
     blocs: DIPLOMATIC_BLOCS.map((bloc) => ({ ...bloc })),
     visits: [],
-    treaties: [],
+    // O que o Brasil já tem assinado no dia da posse.
+    treaties: INHERITED_TREATIES.flatMap((acordo) => {
+      const pais = COUNTRIES.find((country) => country.id === acordo.countryId);
+      return pais
+        ? [
+            {
+              id: `herdado_${acordo.countryId}_${acordo.treatyId}`,
+              treatyId: acordo.treatyId,
+              countryId: pais.id,
+              countryName: pais.name,
+              countryFlag: pais.flag,
+              signedMonth: 0,
+              monthlyCost: 0,
+              label: acordo.label,
+              inherited: true,
+            },
+          ]
+        : [];
+    }),
     pendingOffers: [],
   };
 }

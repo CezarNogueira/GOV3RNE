@@ -119,7 +119,6 @@ function toMeta(state: GameState): SaveSlotMeta {
     month: state.month,
     monthLabel: monthLabel(state.month, state.startYear),
     approval: state.approval.overall,
-    difficulty: state.settings.difficulty,
     updatedAt: state.updatedAt,
     presidentName: state.president.politicalName,
     party: state.party.acronym,

@@ -38,7 +38,6 @@ const MAX_TOKENS = Number(process.env.AI_MAX_TOKENS ?? 1600);
 interface Brief {
   month: number;
   monthLabel: string;
-  difficulty: string;
   approval: number;
   inflation: number;
   unemployment: number;
@@ -94,7 +93,7 @@ Selic: ${brief.selic.toFixed(2)}% | Dívida bruta: ${brief.debtToGdp.toFixed(1)}
 Resultado primário (12m): R$ ${brief.primaryBalance.toFixed(0)} bi | Credibilidade fiscal: ${brief.fiscalCredibility.toFixed(0)}/100
 Caixa discricionário: R$ ${brief.treasuryCash.toFixed(1)} bi
 Base na Câmara: ${brief.congressSeats} de 513 | Boa vontade do Congresso: ${brief.congressGoodwill.toFixed(0)}/100
-Partido do presidente: ${brief.partyAcronym} | Dificuldade: ${brief.difficulty}
+Partido do presidente: ${brief.partyAcronym}
 
 <proposta_do_presidente>
 ${text}

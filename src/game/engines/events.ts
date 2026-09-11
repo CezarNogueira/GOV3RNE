@@ -10,7 +10,7 @@ import type {
 } from '../types/index';
 import { EVENT_CATALOG } from '../data/events';
 import { agendaEventById, agendaEvents } from '../data/dynamic-events/index';
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
 import { applyImpacts } from './policy';
 import { nudgeGroup } from './social';
 import { nudgeApproval } from './approval';
@@ -157,7 +157,7 @@ const MAX_AGENDA_PER_MONTH = 1;
  * tem mais. É o que sobrou de configurável depois que o teto virou um.
  */
 function cleanMonthChance(state: GameState): number {
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  const preset = GAME_CALIBRATION;
   const pressure = preset.eventPressure * state.settings.eventFrequency;
   return clamp(CLEAN_MONTH_CHANCE / clamp(pressure, 0.4, 2), 0.02, 0.45);
 }

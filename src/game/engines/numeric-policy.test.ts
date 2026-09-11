@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { MACRO_BASELINE } from '../data/generated/baseline';
 import {
   analyzeNumericPolicy,
   buildNumericChange,
@@ -59,7 +60,6 @@ function newGame(seed = 4242): GameState {
       cabinet,
       family: { hasSpouse: false, childrenCount: 0 },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal',
       startYear: 2027,
       reelection: false,
       seed,
@@ -181,12 +181,15 @@ describe('salário mínimo: 1.700 e 1.800 não podem ser a mesma medida', () => 
   const caseB = analyzeNumericPolicy('Aumentar o salário mínimo para R$ 1.800', state)!;
 
   it('calcula o delta e a variação corretos em cada caso', () => {
-    expect(caseA.change.currentValue).toBe(1620);
-    expect(caseA.change.absoluteDelta).toBe(80);
-    expect(caseA.change.percentageDelta).toBeCloseTo(4.938, 2);
+    // O piso atual vem do dado oficial da partida, e nao de um numero fixo:
+    // quando o salario minimo real muda, o teste continua valendo.
+    const piso = MACRO_BASELINE.minimumWage.value;
+    expect(caseA.change.currentValue).toBe(piso);
+    expect(caseA.change.absoluteDelta).toBe(1700 - piso);
+    expect(caseA.change.percentageDelta).toBeCloseTo(((1700 - piso) / piso) * 100, 2);
 
-    expect(caseB.change.absoluteDelta).toBe(180);
-    expect(caseB.change.percentageDelta).toBeCloseTo(11.111, 2);
+    expect(caseB.change.absoluteDelta).toBe(1800 - piso);
+    expect(caseB.change.percentageDelta).toBeCloseTo(((1800 - piso) / piso) * 100, 2);
   });
 
   it('produz impacto fiscal, empresarial e econômico diferentes', () => {
@@ -445,7 +448,7 @@ describe('determinismo e aplicação', () => {
     state.policies.push(policy);
 
     // Assinada, mas ainda não vigente: o piso continua onde estava.
-    expect(state.economy.minimumWage).toBe(1620);
+    expect(state.economy.minimumWage).toBe(MACRO_BASELINE.minimumWage.value);
 
     policy.status = 'assinada';
     processPolicies(state, rng);
@@ -453,7 +456,7 @@ describe('determinismo e aplicação', () => {
 
     // Revogada: volta ao valor anterior.
     revokePolicy(state, policy.id);
-    expect(state.economy.minimumWage).toBe(1620);
+    expect(state.economy.minimumWage).toBe(MACRO_BASELINE.minimumWage.value);
   });
 });
 

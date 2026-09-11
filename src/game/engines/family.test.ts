@@ -41,7 +41,7 @@ function newGame(seed = 4242, hasSpouse = true): GameState {
         spouseStance: 'fora_dos_holofotes',
       },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal', startYear: 2027, reelection: true, seed,
+      startYear: 2027, reelection: true, seed,
     }),
   );
 }

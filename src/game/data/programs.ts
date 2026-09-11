@@ -12,19 +12,20 @@ export const INHERITED_PROGRAMS: readonly Omit<GovernmentProgram, 'createdMonth'
     name: 'Bolsa Família',
     ministryId: 'desenvolvimento_social',
     category: 'social',
-    monthlyCost: 14.2,
-    beneficiaries: 21_400_000,
+    // 19,34 milhões de famílias com benefício médio de R$ 680 (MDS, 2026).
+    monthlyCost: 13.15,
+    beneficiaries: 19_340_000,
     efficiency: 74,
     popularity: 78,
     coverage: 82,
     active: true,
-    impacts: { poverty: -0.09, approval: 0.22, primaryBalance: -14.2, hdi: 0.0004 },
+    impacts: { poverty: -0.09, approval: 0.22, primaryBalance: -13.15, hdi: 0.0004 },
     groupImpacts: [
       { groupId: 'baixa_renda', delta: 0.9, reason: 'Transferência direta chega todo dia 20' },
       { groupId: 'mercado_financeiro', delta: -0.25, reason: 'Gasto obrigatório sem contrapartida' },
     ],
     description:
-      'Transferência direta para 21 milhões de famílias',
+      'Transferência direta para 19,3 milhões de famílias, com benefício médio de R$ 680',
     origin: 'herdado',
   },
   {

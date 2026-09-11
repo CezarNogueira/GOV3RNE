@@ -45,7 +45,6 @@ function baseInput(overrides: Partial<NewGameInput> = {}): NewGameInput {
     cabinet,
     family: { hasSpouse: true, spouseName: 'Jorge Ribeiro', childrenCount: 1 },
     promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'pobreza', 'fila_saude'],
-    difficulty: 'normal',
     startYear: 2027,
     seed: 123456,
     reelection: false,
@@ -79,16 +78,6 @@ describe('criação de partida', () => {
     expect(state.economy.unemployment).toBeLessThan(25);
     expect(state.approval.overall).toBeGreaterThan(30);
     expect(state.approval.overall).toBeLessThan(75);
-  });
-
-  it('a dificuldade Realista entrega um país pior que a Fácil', () => {
-    const easy = createGame(baseInput({ difficulty: 'facil' }));
-    const hard = createGame(baseInput({ difficulty: 'realista' }));
-
-    expect(hard.economy.debtToGdp).toBeGreaterThan(easy.economy.debtToGdp);
-    expect(hard.economy.fiscalCredibility).toBeLessThan(easy.economy.fiscalCredibility);
-    expect(hard.approval.overall).toBeLessThan(easy.approval.overall);
-    expect(hard.agenda.maxPoints).toBeLessThan(easy.agenda.maxPoints);
   });
 
   it('partido fundado pelo jogador nasce sem bancada herdada', () => {
@@ -169,7 +158,7 @@ describe('avanço de mês', () => {
   });
 
   it('encerra o mandato no mês 48', () => {
-    let state = createGame(baseInput({ difficulty: 'facil' }));
+    let state = createGame(baseInput({ }));
     for (let i = 0; i < 60 && !state.flags.gameOver; i += 1) {
       state = tickMonth(state).state;
     }
@@ -185,7 +174,10 @@ describe('laço macroeconômico', () => {
     // Injeta um impulso fiscal grande e sustentado, sem receita nova.
     for (let i = 0; i < 12; i += 1) {
       state.economy.pipeline.fiscalImpulse += 60;
-      state.economy.primaryBalance -= 40;
+      // Choque grande o bastante para nao depender de detalhe da calibragem:
+      // com o pais real ja em deficit, R$ 40 bi/mes empatava com o crescimento
+      // que o proprio impulso gera.
+      state.economy.primaryBalance -= 80;
       state = tickMonth(state).state;
     }
 
@@ -558,7 +550,7 @@ describe('save e load', () => {
 
 describe('avaliação final', () => {
   it('produz nota, legado e balanço de promessas', () => {
-    let state = createGame(baseInput({ difficulty: 'facil' }));
+    let state = createGame(baseInput({ }));
     const start = snapshotInauguration(state);
 
     for (let i = 0; i < 48 && !state.flags.gameOver; i += 1) {

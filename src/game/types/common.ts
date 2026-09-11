@@ -24,9 +24,6 @@ export const REGION_LABEL: Record<Region, string> = {
   sul: 'Sul',
 };
 
-export const DIFFICULTIES = ['facil', 'normal', 'dificil', 'realista'] as const;
-
-export type Difficulty = (typeof DIFFICULTIES)[number];
 
 /** Eixo econômico: -100 estatizante <-> +100 liberal. */
 export type EconomicAxis = number;

@@ -1,6 +1,7 @@
 import type { FederalUnit, GameState, SocialGroup, SocialSensitivity } from '../types/index';
 import { REGIONS } from '../types/common';
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
+import { BRASIL_HOJE } from '../data/brasil-hoje';
 import { Rng } from '../utils/rng';
 import { approach, clamp, clamp100, round } from '../utils/math';
 
@@ -56,13 +57,41 @@ function readPressures(state: GameState): PressureReadings {
   };
 }
 
+
+/**
+ * ÂNCORAS DO PONTO DE PARTIDA
+ *
+ * Cada fórmula de equilíbrio deste arquivo tem inclinação (quanto o desemprego
+ * mexe na pobreza, quanto a segurança mexe no homicídio) e um nível de base. As
+ * inclinações são do modelo. O nível de base é calibrado para que, no dia da
+ * posse, o equilíbrio seja o próprio Brasil real de BRASIL_HOJE.
+ *
+ * Sem isso o país da posse não parava de pé: partindo dos números reais de
+ * set/2026, o motor puxava sozinho a renda de R$ 3.762 para perto de R$ 3.100,
+ * a pobreza de 23% para 13%, os homicídios de 19 para 26 por 100 mil e o IDH
+ * de 0,805 para 0,757 já no primeiro mês — sem decisão nenhuma do jogador.
+ *
+ * Rodou o script de dados oficiais de novo? Recalcule estes números. O teste
+ * `brasil-hoje.test.ts` falha quando o equilíbrio da posse se afasta do ponto de
+ * partida, justamente para ninguém esquecer.
+ */
+const ANCORA = {
+  rendaPorProdutividade: 1188,
+  pobreza: 28.12,
+  gini: 0.447,
+  homicidio: 26.92,
+  expectativaDeVida: 72.23,
+  alfabetizacao: 87.54,
+  ajusteIdh: 0.0485,
+} as const;
+
 export interface SocialDelta {
   groupChanges: { groupId: string; delta: number }[];
   unrest: number;
 }
 
 export function processSocialGroups(state: GameState, rng: Rng): SocialDelta {
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  const preset = GAME_CALIBRATION;
   const pressures = readPressures(state);
   const changes: { groupId: string; delta: number }[] = [];
 
@@ -180,7 +209,7 @@ export function processNation(state: GameState, rng: Rng): void {
   // Pobreza responde a emprego, inflação e transferência direta.
   const transfers = spendByCategory('social');
   const povertyTarget = clamp(
-    18 + (eco.unemployment - 6) * 1.5 + (eco.inflation - 4) * 0.55 - transfers * 0.35,
+    ANCORA.pobreza + (eco.unemployment - 6) * 1.5 + (eco.inflation - 4) * 0.55 - transfers * 0.35,
     4,
     62,
   );
@@ -203,7 +232,7 @@ export function processNation(state: GameState, rng: Rng): void {
   const ocupacao = clamp(1 - (eco.unemployment - 6) * 0.018, 0.82, 1.12);
 
   const incomeTarget =
-    980 * (1 + produtividadeNacional / 42) * ocupacao +
+    ANCORA.rendaPorProdutividade * (1 + produtividadeNacional / 42) * ocupacao +
     // Transferência entra na renda média porque ela É renda de quem recebe,
     // mas não vira produtividade: programa social eleva o piso, não o teto.
     transfers * 7 +
@@ -212,22 +241,26 @@ export function processNation(state: GameState, rng: Rng): void {
 
   nation.averageIncome = Math.round(approach(nation.averageIncome, incomeTarget, 0.05));
 
-  const giniTarget = clamp(0.42 + nation.povertyRate * 0.0032 - transfers * 0.0014, 0.34, 0.68);
+  const giniTarget = clamp(ANCORA.gini + nation.povertyRate * 0.0032 - transfers * 0.0014, 0.34, 0.68);
   nation.gini = round(approach(nation.gini, giniTarget, 0.05), 4);
 
   // ------------------------------------------------------------- Violência
   const homicideTarget = clamp(
-    34 - nation.securityIndex * 0.24 + nation.povertyRate * 0.16,
+    ANCORA.homicidio - nation.securityIndex * 0.24 + nation.povertyRate * 0.16,
     5,
     62,
   );
   nation.homicideRate = round(approach(nation.homicideRate, homicideTarget, 0.06), 2);
 
   // ------------------------------------------------------------- Saúde da população
-  const lifeTarget = clamp(70 + nation.healthIndex * 0.09 - nation.homicideRate * 0.035, 62, 86);
+  const lifeTarget = clamp(
+    ANCORA.expectativaDeVida + nation.healthIndex * 0.09 - nation.homicideRate * 0.035,
+    62,
+    86,
+  );
   nation.lifeExpectancy = round(approach(nation.lifeExpectancy, lifeTarget, 0.035), 2);
 
-  const literacyTarget = clamp(86 + nation.educationIndex * 0.14, 80, 99.5);
+  const literacyTarget = clamp(ANCORA.alfabetizacao + nation.educationIndex * 0.14, 80, 99.5);
   nation.literacy = round(approach(nation.literacy, literacyTarget, 0.03), 2);
 
   // ------------------------------------------------------------- IDH
@@ -239,7 +272,10 @@ export function processNation(state: GameState, rng: Rng): void {
     0,
     1,
   );
-  nation.hdi = round((incomeComponent + lifeComponent + educationComponent) / 3, 4);
+  nation.hdi = round(
+    clamp((incomeComponent + lifeComponent + educationComponent) / 3 + ANCORA.ajusteIdh, 0.3, 0.99),
+    4,
+  );
 
   // ------------------------------------------------------------- Corrupção percebida
   // Cai com escândalo e com emenda liberada; sobe devagar com governo limpo.
@@ -359,7 +395,7 @@ export function processStates(state: GameState, rng: Rng): void {
       2,
     );
 
-    const povertyTarget = state.nation.povertyRate * (unit.poverty / 27.4);
+    const povertyTarget = state.nation.povertyRate * (unit.poverty / BRASIL_HOJE.povertyRate.value);
     unit.poverty = round(clamp(approach(unit.poverty, povertyTarget, 0.05), 3, 70), 2);
 
     // A renda do estado era `nacional * (renda dele / 1980)` — uma razão
@@ -381,11 +417,11 @@ export function processStates(state: GameState, rng: Rng): void {
       approach(unit.income, state.nation.averageIncome * razao, 0.06),
     );
     unit.hdi = round(
-      clamp(approach(unit.hdi, state.nation.hdi * (unit.hdi / 0.786), 0.04), 0.45, 0.95),
+      clamp(approach(unit.hdi, state.nation.hdi * (unit.hdi / BRASIL_HOJE.hdi.value), 0.04), 0.45, 0.95),
       4,
     );
     unit.crime = round(
-      clamp(approach(unit.crime, state.nation.homicideRate * (unit.crime / 22.6), 0.05), 3, 90),
+      clamp(approach(unit.crime, state.nation.homicideRate * (unit.crime / BRASIL_HOJE.homicideRate.value), 0.05), 3, 90),
       1,
     );
     unit.infrastructure = round(

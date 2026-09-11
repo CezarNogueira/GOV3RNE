@@ -293,7 +293,7 @@ function buildCompany(blueprint: CompanyBlueprint, ideology: IdeologyVector): Co
  *
  * `reference` congela a macro da posse: é contra ela que toda empresa mede o
  * cenário depois. Sem essa âncora, "juro alto" viraria um número absoluto e a
- * mesma Selic significaria coisas diferentes em dificuldades diferentes.
+ * mesma Selic significaria coisas diferentes em pontos de partida diferentes.
  */
 export function buildCompaniesState(
   ideology: IdeologyVector,

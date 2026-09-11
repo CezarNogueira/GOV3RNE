@@ -1,6 +1,6 @@
 import type { GameState, Region } from '../types/index';
 import { REGIONS } from '../types/common';
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
 import { TOTAL_CHAMBER_SEATS } from '../data/parties';
 import { spreadApproval } from './social';
 import { Rng } from '../utils/rng';
@@ -20,7 +20,7 @@ import { approach, clamp, clamp100, round, weightedAverage } from '../utils/math
  * econômico sentido no bolso e pelo desgaste natural do cargo.
  */
 export function calculateApproval(state: GameState, rng: Rng): number {
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  const preset = GAME_CALIBRATION;
   const before = state.approval.overall;
 
   // ---------------------------------------------------- 1. Base: grupos sociais

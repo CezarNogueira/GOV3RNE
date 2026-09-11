@@ -204,6 +204,12 @@ export function migrate(state: GameState): GameState {
   // está no mês 30 de um save antigo vai encontrar a urna no quarto ano.
   if (typeof migrated.term !== 'number') migrated.term = 1;
   if (migrated.election === undefined) migrated.election = null;
+  // Saves anteriores ao fim da escolha de dificuldade: o campo sai do save. A
+  // partida continua com a calibragem única do jogo.
+  if (migrated.settings && 'difficulty' in migrated.settings) {
+    delete (migrated.settings as { difficulty?: unknown }).difficulty;
+  }
+
   if (typeof migrated.settings?.reelection !== 'boolean') {
     migrated.settings = { ...migrated.settings, reelection: true };
   }
@@ -296,7 +302,6 @@ export function toSlotMeta(state: GameState, autosave = false): SaveSlotMeta {
     month: state.month,
     monthLabel: monthLabel(state.month, state.startYear),
     approval: state.approval.overall,
-    difficulty: state.settings.difficulty,
     updatedAt: state.updatedAt,
     presidentName: state.president.politicalName,
     party: state.party.acronym,

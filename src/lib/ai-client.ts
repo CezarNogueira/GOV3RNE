@@ -30,7 +30,6 @@ function toBrief(state: GameState) {
   return {
     month: state.month,
     monthLabel: monthLabel(state.month, state.startYear),
-    difficulty: state.settings.difficulty,
     approval: state.approval.overall,
     inflation: state.economy.inflation,
     unemployment: state.economy.unemployment,

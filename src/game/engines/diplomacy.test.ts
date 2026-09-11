@@ -39,7 +39,7 @@ function buildState(): GameState {
       partyId: 'PSB', customParty: null, viceId: 'vp_almeida', cabinet,
       family: { hasSpouse: false, childrenCount: 0 },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal', startYear: 2027, seed: 99, reelection: false,
+      startYear: 2027, seed: 99, reelection: false,
     }),
   );
 }
@@ -48,6 +48,15 @@ function countryOf(state: GameState, id: string) {
   const country = state.diplomacy.countries.find((candidate) => candidate.id === id);
   if (!country) throw new Error(`país de teste ausente: ${id}`);
   return country;
+}
+
+/**
+ * Acordos assinados durante a partida. A posse ja traz os acordos que o Brasil
+ * tem em vigor (Mercosul-UE, Mercosul, Chile, Colombia, swap com a China), e
+ * eles nao sao o assunto destes testes.
+ */
+function assinados<T extends { inherited?: boolean }>(state: { diplomacy: { treaties: T[] } }): T[] {
+  return state.diplomacy.treaties.filter((treaty) => !treaty.inherited);
 }
 
 describe('faixas de relação', () => {
@@ -198,9 +207,9 @@ describe('assinatura de acordo', () => {
     expect(usa.trade).toBeGreaterThan(tradeBefore);
     expect(usa.relation).toBeGreaterThan(40);
 
-    expect(state.diplomacy.treaties).toHaveLength(1);
-    expect(state.diplomacy.treaties[0]?.treatyId).toBe('livre_comercio');
-    expect(state.diplomacy.treaties[0]?.countryId).toBe('usa');
+    expect(assinados(state)).toHaveLength(1);
+    expect(assinados(state)[0]?.treatyId).toBe('livre_comercio');
+    expect(assinados(state)[0]?.countryId).toBe('usa');
 
     const resolved = state.diplomacy.pendingOffers.find((entry) => entry.id === offerId);
     expect(resolved?.status).toBe('aceita');
@@ -219,7 +228,7 @@ describe('assinatura de acordo', () => {
 
     expect(outcome.ok).toBe(true);
     expect(state.economy.treasuryCash).toBe(treasuryBefore);
-    expect(state.diplomacy.treaties).toHaveLength(0);
+    expect(assinados(state)).toHaveLength(0);
     expect(usa.cooperation).toBeLessThanOrEqual(cooperationBefore);
 
     const resolved = state.diplomacy.pendingOffers.find((entry) => entry.id === offerId);
@@ -238,7 +247,7 @@ describe('assinatura de acordo', () => {
     expect(outcome.ok).toBe(false);
     const resolved = state.diplomacy.pendingOffers.find((entry) => entry.id === offerId);
     expect(resolved?.status).toBe('pendente');
-    expect(state.diplomacy.treaties).toHaveLength(0);
+    expect(assinados(state)).toHaveLength(0);
   });
 
   it('reconfere a relação no momento do aceite: se ela caiu, o acordo não sai', () => {
@@ -252,7 +261,7 @@ describe('assinatura de acordo', () => {
 
     const outcome = respondToTreatyOffer(state, offerId, true);
     expect(outcome.ok).toBe(false);
-    expect(state.diplomacy.treaties).toHaveLength(0);
+    expect(assinados(state)).toHaveLength(0);
   });
 
   it('não deixa assinar duas vezes a mesma oferta', () => {
@@ -294,7 +303,7 @@ describe('assinatura de acordo', () => {
     const outcome = respondToTreatyOffer(state, offerId, true);
 
     expect(outcome.ok).toBe(false);
-    expect(state.diplomacy.treaties).toHaveLength(0);
+    expect(assinados(state)).toHaveLength(0);
   });
 });
 

@@ -178,6 +178,11 @@ export interface ActiveTreaty {
   /** R$ bilhões por mês; 0 quando o acordo não tem custeio recorrente. */
   monthlyCost: number;
   label: string;
+  /**
+   * Acordo que o Brasil já tinha no dia da posse. Aparece em Diplomacia, mas
+   * não conta como conquista do mandato.
+   */
+  inherited?: boolean;
 }
 
 /**

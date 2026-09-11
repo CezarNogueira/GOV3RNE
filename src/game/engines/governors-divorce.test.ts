@@ -37,7 +37,7 @@ function newGame(seed = 4242, partyId = 'PSB', comConjuge = true): GameState {
           : {}),
       },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal', startYear: 2027, reelection: true, seed,
+      startYear: 2027, reelection: true, seed,
     }),
   );
 }

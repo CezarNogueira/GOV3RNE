@@ -54,7 +54,6 @@ function newGame(seed = 77, reelection = true): GameState {
       cabinet,
       family: { hasSpouse: false, childrenCount: 0 },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal',
       startYear: 2027,
       reelection,
       seed,

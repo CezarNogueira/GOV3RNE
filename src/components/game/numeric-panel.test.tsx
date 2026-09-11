@@ -47,7 +47,6 @@ function newGame(): GameState {
       cabinet,
       family: { hasSpouse: false, childrenCount: 0 },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal',
       startYear: 2027,
       reelection: false,
       seed: 909,
@@ -64,10 +63,11 @@ describe('painel da medida numérica', () => {
     const texto = container.textContent ?? '';
 
     expect(screen.getAllByText('Novo valor').length).toBeGreaterThan(0);
-    expect(texto).toContain('R$ 1.620');
+    const piso = state.economy.minimumWage;
+    expect(texto).toContain('R$ ' + piso.toLocaleString('pt-BR'));
     expect(texto).toContain('R$ 1.800');
-    expect(texto).toContain('R$ 180');
-    expect(texto).toContain('11,1%');
+    expect(texto).toContain('R$ ' + (1800 - piso).toLocaleString('pt-BR'));
+    expect(texto).toContain((((1800 - piso) / piso) * 100).toFixed(1).replace('.', ',') + '%');
   });
 
   it('nunca mostra multiplicador de intensidade', () => {

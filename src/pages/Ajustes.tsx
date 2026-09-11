@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Cpu, Download, Sparkles, Upload } from 'lucide-react';
-import { DATA_SOURCES, DIFFICULTY_PRESETS, MACRO_BASELINE } from '@/game';
+import { BRASIL_HOJE, DATA_SOURCES, MACRO_BASELINE, SNAPSHOT_DATE } from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader } from '@/components/layout/PageHeader';
 import { ConfirmDialog } from '@/components/ui/overlays';
@@ -33,7 +33,6 @@ export function Ajustes() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!state) return null;
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
   // Faixa escolhida que não existe mais na pasta cai na primeira, igual ao tocador.
   const faixaAtual = TRACKS.find((track) => track.id === trackId) ?? TRACKS[0];
 
@@ -70,7 +69,11 @@ export function Ajustes() {
             <StatRow label="Presidente" value={state.president.politicalName} />
             <StatRow label="Partido" value={state.party.acronym} />
             <StatRow label="Mês" value={`${state.month} de ${state.totalMonths}`} />
-            <StatRow label="Dificuldade" value={`${preset.label} — ${preset.tagline}`} />
+            <StatRow
+              label="Ponto de partida"
+              value={`Brasil real em ${SNAPSHOT_DATE}`}
+              tip="Não existe escolha de dificuldade: toda partida começa com os números oficiais do país nesta data."
+            />
             <StatRow label="Semente da simulação" value={String(state.seed)} tip="A mesma semente com as mesmas decisões produz exatamente a mesma história." />
             <StatRow
               label="Reeleição"
@@ -210,11 +213,11 @@ export function Ajustes() {
               mês jogado.
             </p>
             <div className="mt-2.5 rule pt-2">
-              {Object.entries(MACRO_BASELINE).map(([metric, entry]) => (
+              {[...Object.entries(MACRO_BASELINE), ...Object.entries(BRASIL_HOJE)].map(([metric, entry]) => (
                 <div key={metric} className="flex items-baseline justify-between gap-3 py-1">
                   <span className="text-[12px] text-neutral-400">{METRIC_LABEL[metric] ?? metric}</span>
                   <span className="shrink-0 text-right">
-                    <span className="font-mono text-[12px] text-neutral-200">{entry.value}</span>
+                    <span className="font-mono text-[12px] text-neutral-200">{entry.value.toLocaleString('pt-BR')}</span>
                     <span className="ml-2 text-[10px] text-neutral-600">
                       {entry.source} · {entry.reference}
                     </span>
@@ -255,6 +258,21 @@ const METRIC_LABEL: Record<string, string> = {
   reservesUsdBillion: 'Reservas (US$ bi)',
   primaryBalancePctGdp: 'Primário (% PIB)',
   unemployment: 'Desemprego',
-  gdpNominalBillion: 'PIB nominal (R$ bi)',
+  gdpNominalBillion: 'PIB 12 meses (R$ bi)',
+  minimumWage: 'Salário mínimo (R$)',
+  gdpGrowth: 'Crescimento do PIB (%)',
+  averageIncome: 'Rendimento médio do trabalho (R$)',
+  povertyRate: 'Pobreza (%)',
+  extremePovertyRate: 'Extrema pobreza (%)',
+  gini: 'Índice de Gini',
+  hdi: 'IDH',
+  lifeExpectancy: 'Expectativa de vida (anos)',
+  literacy: 'Alfabetização (%)',
+  homicideRate: 'Mortes violentas por 100 mil',
+  corruptionPerception: 'Percepção de corrupção (0-100)',
+  ibovespa: 'Ibovespa (pontos)',
+  countryRisk: 'Risco-país (pontos)',
+  bolsaFamiliaFamilies: 'Bolsa Família (famílias)',
+  bolsaFamiliaAverageBenefit: 'Bolsa Família (benefício médio, R$)',
   population: 'População',
 };

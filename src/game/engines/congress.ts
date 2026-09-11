@@ -1,6 +1,6 @@
 import type { GameState, PartyBloc, Policy, VoteResult } from '../types/index';
 import { PARTY_BY_ID, TOTAL_CHAMBER_SEATS, TOTAL_SENATE_SEATS } from '../data/parties';
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
 
@@ -186,7 +186,7 @@ export function workTheVotes(state: GameState, budget: number, rng: Rng): {
   gained: number;
   narrative: string;
 } {
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  const preset = GAME_CALIBRATION;
   const available = Math.min(budget, state.economy.treasuryCash);
   if (available <= 0) {
     return {
@@ -256,7 +256,7 @@ export function workTheVotes(state: GameState, budget: number, rng: Rng): {
 /** Evolução mensal do humor do Congresso, sem ação do jogador. */
 export function processCongress(state: GameState, rng: Rng): number {
   const before = state.congress.goodwill;
-  const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  const preset = GAME_CALIBRATION;
 
   // A SRI trabalhando segura parte do desgaste natural: é o telefonema que
   // ninguém vê e que evita a bancada acordar contra o governo.

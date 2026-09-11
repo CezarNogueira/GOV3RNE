@@ -102,7 +102,7 @@ export function evaluateMandate(state: GameState, start: InaugurationSnapshot): 
     average([
       scoreDelta(start.isolation, state.diplomacy.isolation, 25, true),
       clamp100(100 - state.diplomacy.isolation),
-      clamp100(40 + state.diplomacy.treaties.length * 9),
+      clamp100(40 + state.diplomacy.treaties.filter((treaty) => !treaty.inherited).length * 9),
     ]),
   );
 

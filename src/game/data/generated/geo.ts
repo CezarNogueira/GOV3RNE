@@ -1,7 +1,7 @@
 /**
  * ARQUIVO GERADO AUTOMATICAMENTE - nao edite a mao.
  * Origem: scripts/fetch-official-data.mjs
- * Gerado em: 2026-09-02T22:22:47.485Z
+ * Gerado em: 2026-09-11T01:11:13.799Z
  *
  * Os valores abaixo sao DADO INICIAL, extraidos de fontes publicas oficiais.
  * Durante a partida, o motor de simulacao assume e os numeros deixam de

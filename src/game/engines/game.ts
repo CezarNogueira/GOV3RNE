@@ -9,7 +9,7 @@ import type {
   TimelineEntry,
 } from '../types/index';
 import { AGENDA_ACTION_BY_ID } from '../data/agenda';
-import { DIFFICULTY_PRESETS } from '../data/difficulty';
+import { GAME_CALIBRATION } from '../data/calibration';
 import { processEconomy } from './economy';
 import {
   acquisitionCost,
@@ -404,7 +404,7 @@ export function tickMonth(input: GameState): TickOutcome {
     state.month += 1;
     state.phase = 'mandato';
 
-    const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+    const preset = GAME_CALIBRATION;
     // Agenda do mês seguinte: o presidente exausto simplesmente rende menos.
     const energyFactor = clamp(state.president.energy / 80, 0.55, 1.15);
     state.agenda.maxPoints = Math.max(3, Math.round(preset.agendaPoints * energyFactor));

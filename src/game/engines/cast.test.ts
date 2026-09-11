@@ -54,7 +54,7 @@ function newGame(viceId: string, gabinete: 'partido' | 'fora'): GameState {
       partyId: 'PSB', customParty: null, viceId, cabinet,
       family: { hasSpouse: false, childrenCount: 0 },
       promises: ['divida_controlada', 'inflacao_na_meta', 'desemprego_baixo', 'fila_saude', 'pobreza'],
-      difficulty: 'normal', startYear: 2027, reelection: true, seed: 808,
+      startYear: 2027, reelection: true, seed: 808,
     }),
   );
 }
