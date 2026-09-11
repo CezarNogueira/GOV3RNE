@@ -5,7 +5,9 @@ import { DATA_SOURCES, DIFFICULTY_PRESETS, MACRO_BASELINE } from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader } from '@/components/layout/PageHeader';
 import { ConfirmDialog } from '@/components/ui/overlays';
-import { Badge, Section, StatRow } from '@/components/ui/primitives';
+import { Badge, Empty, Section, StatRow, cx } from '@/components/ui/primitives';
+import { TRACKS } from '@/lib/music';
+import { useMusic } from '@/state/music-store';
 
 /**
  * AJUSTES
@@ -22,12 +24,18 @@ export function Ajustes() {
   const deleteGame = useGame((store) => store.deleteGame);
   const toast = useGame((store) => store.toast);
   const ai = useGame((store) => store.ai);
+  const volume = useMusic((store) => store.volume);
+  const trackId = useMusic((store) => store.trackId);
+  const setVolume = useMusic((store) => store.setVolume);
+  const selectTrack = useMusic((store) => store.selectTrack);
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   if (!state) return null;
   const preset = DIFFICULTY_PRESETS[state.settings.difficulty];
+  // Faixa escolhida que não existe mais na pasta cai na primeira, igual ao tocador.
+  const faixaAtual = TRACKS.find((track) => track.id === trackId) ?? TRACKS[0];
 
   const handleExport = () => {
     const payload = exportSave();
@@ -70,6 +78,63 @@ export function Ajustes() {
               tip="Com a reeleição habilitada, a eleição entra no calendário no quarto ano: você decide se disputa, faz campanha e, ganhando, governa mais 48 meses."
             />
             <StatRow label="Mandato" value={state.term > 1 ? 'Segundo' : 'Primeiro'} />
+          </Section>
+
+          <Section title="Música">
+            {TRACKS.length === 0 ? (
+              <Empty>Nenhuma música encontrada na pasta de trilhas.</Empty>
+            ) : (
+              <>
+                <div className="flex items-baseline justify-between gap-3">
+                  <label htmlFor="volume-musica" className="text-[12px] text-neutral-400">
+                    Volume
+                  </label>
+                  <span className="font-mono text-[12px] text-neutral-200">
+                    {volume === 0 ? 'Mudo' : `${volume}%`}
+                  </span>
+                </div>
+                <input
+                  id="volume-musica"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={volume}
+                  onChange={(event) => setVolume(Number(event.target.value))}
+                  className="mt-1.5 w-full"
+                />
+
+                <p className="label mb-1.5 mt-3">Faixa</p>
+                <div className="grid gap-1.5">
+                  {TRACKS.map((track) => {
+                    const tocando = track.id === faixaAtual?.id;
+                    return (
+                      <button
+                        key={track.id}
+                        type="button"
+                        aria-pressed={tocando}
+                        onClick={() => selectTrack(track.id)}
+                        className={cx(
+                          'option flex items-center justify-between gap-2 text-left',
+                          tocando && 'border-gov-700/60 bg-gov-900/20',
+                        )}
+                      >
+                        <span className="text-[12px] font-semibold text-neutral-100">
+                          {track.title}
+                        </span>
+                        {tocando && <Badge tone="gov">Tocando</Badge>}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <p className="mt-2 text-[11px] leading-relaxed text-neutral-600">
+                  As faixas tocam em ciclo: quando uma termina, começa a próxima, e depois da última
+                  volta para a primeira. A escolha fica guardada neste navegador e vale para todas as
+                  partidas.
+                </p>
+              </>
+            )}
           </Section>
 
           <Section title="Save">

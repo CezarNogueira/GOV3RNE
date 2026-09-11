@@ -5,6 +5,7 @@ import { TopNavigation } from '@/components/layout/TopNavigation';
 import { Toaster } from '@/components/ui/overlays';
 import { MonthResultModal } from '@/components/game/MonthResultModal';
 import { DecisionFeedback } from '@/components/game/DecisionFeedback';
+import { MusicPlayer } from '@/components/audio/MusicPlayer';
 import { Landing } from '@/pages/Landing';
 
 /**
@@ -122,6 +123,8 @@ export default function App() {
         </Routes>
       </Suspense>
       <Toaster />
+      {/* Fora das rotas: trocar de página não reinicia a música. */}
+      <MusicPlayer />
     </>
   );
 }
