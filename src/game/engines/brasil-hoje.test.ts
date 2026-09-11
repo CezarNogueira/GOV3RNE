@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createGame } from './setup';
 import { tickMonth } from './index';
 import { eligibleTreaties } from './diplomacy';
+import { grossDebt } from './economy';
 import { BRASIL_HOJE, INHERITED_TREATIES } from '../data/brasil-hoje';
 import { GAME_CALIBRATION } from '../data/calibration';
 import {
@@ -82,6 +83,14 @@ describe('o ponto de partida é o Brasil real', () => {
       (MACRO_BASELINE.primaryBalancePctGdp.value / 100) * MACRO_BASELINE.gdpNominalBillion.value,
       0,
     );
+  });
+
+  it('a dívida bruta em reais é o percentual real aplicado ao PIB real', () => {
+    const esperado = (MACRO_BASELINE.debtToGdp.value / 100) * MACRO_BASELINE.gdpNominalBillion.value;
+    expect(grossDebt(state)).toBeCloseTo(esperado, 6);
+    // Ordem de grandeza do Brasil de 2026: perto de R$ 11 trilhões.
+    expect(grossDebt(state)).toBeGreaterThan(9_000);
+    expect(grossDebt(state)).toBeLessThan(13_000);
   });
 
   it('os indicadores sociais da posse são os medidos', () => {

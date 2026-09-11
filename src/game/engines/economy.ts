@@ -334,6 +334,17 @@ export function monthlyFiscalResult(
   return eco.revenue / 12 - eco.spending / 12 - spend;
 }
 
+/**
+ * DÍVIDA BRUTA EM REAIS — R$ bilhões.
+ *
+ * O motor acompanha a dívida como fração do PIB, que é o que pesa no risco-país.
+ * O Painel mostra o valor em reais: o percentual aplicado ao PIB nominal dos
+ * últimos 12 meses, o mesmo PIB que o motor usa em todo o resto.
+ */
+export function grossDebt(state: GameState): number {
+  return (state.economy.debtToGdp / 100) * state.economy.gdpNominal;
+}
+
 /** Carga tributária efetiva, usada pela promessa de baixar imposto. */
 export function taxBurden(state: GameState): number {
   return round((state.economy.revenue / state.economy.gdpNominal) * 100, 2);

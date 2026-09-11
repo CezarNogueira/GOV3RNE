@@ -18,6 +18,7 @@ import {
   impeachmentLabel,
   momentumLabel,
   monthlyFiscalResult,
+  grossDebt,
   promiseReading,
   type AgendaActionId,
 } from '@/game';
@@ -179,12 +180,18 @@ export function Painel() {
           />
           <MetricCard
             label="Dívida bruta"
-            value={state.economy.debtToGdp}
-            unit="% PIB"
-            decimals={0}
+            value={grossDebt(state)}
+            format={(valor) =>
+              'R$ ' +
+              (valor / 1000).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+            }
+            unit="tri"
             lowerIsBetter
             tone={toneOf(80 - state.economy.debtToGdp)}
-            tip="Dívida bruta do governo geral. Acima de 78% do PIB, cada ponto adicional encarece o risco-país."
+            tip="Dívida bruta do governo geral, em reais. Quanto maior ela é em relação ao tamanho da economia, mais caro fica o risco-país."
             footer={<span className="label">Risco {state.economy.countryRisk}</span>}
           />
         </div>

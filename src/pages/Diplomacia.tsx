@@ -568,35 +568,6 @@ function Acordos({
           </ul>
         </Section>
       )}
-
-      {/* ------------------------------------------------------ catálogo */}
-      <Section title="Catálogo de acordos">
-        <p className="mb-3 text-[12px] leading-relaxed text-neutral-500">
-          Os dez formatos de acordo bilateral que existem no jogo. Cada um exige uma faixa mínima
-          de relação com o parceiro — veja a coluna "Faixa" na Mesa Diplomática para saber onde
-          cada país está.
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {TREATY_CATALOG.map((definition) => {
-            const tier = RELATION_TIERS.find((candidate) => candidate.min === definition.minRelation);
-            return (
-              <article key={definition.id} className="border border-ink-700 bg-ink-900/40 p-2.5">
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-[13px] font-semibold text-neutral-100">
-                    {definition.icon} {definition.title}
-                  </p>
-                  {tier && (
-                    <Badge tone={tier.tone}>
-                      {tier.emoji} {tier.label}+
-                    </Badge>
-                  )}
-                </div>
-                <TreatyBody definition={definition} compact />
-              </article>
-            );
-          })}
-        </div>
-      </Section>
     </div>
   );
 }
