@@ -89,8 +89,6 @@ export function tickMonth(input: GameState): TickOutcome {
     };
   }
 
-  const before = snapshot(state);
-
   // ---------------------------------------------------------------- 1. Eventos
   // O que o jogador não decidiu, o país decide por ele.
   notes.push(...resolveUnattendedEvents(state, rng));
@@ -329,7 +327,7 @@ export function tickMonth(input: GameState): TickOutcome {
     congressDelta: round(congressDelta, 2),
     treasuryDelta: economyDelta.treasuryCash,
     headlines: [],
-    highlights: buildHighlights(state, before, economyDelta, approvalDelta, congressDelta),
+    highlights: buildHighlights(state, economyDelta, approvalDelta),
   };
   state.lastResult = result;
 
@@ -693,38 +691,18 @@ export function runAgendaAction(
 // Auxiliares
 // ---------------------------------------------------------------------------
 
-interface Snapshot {
-  approval: number;
-  inflation: number;
-  unemployment: number;
-  gdpGrowth: number;
-  debtToGdp: number;
-  congressGoodwill: number;
-  treasury: number;
-  baseSeats: number;
-}
-
-function snapshot(state: GameState): Snapshot {
-  return {
-    approval: state.approval.overall,
-    inflation: state.economy.inflation,
-    unemployment: state.economy.unemployment,
-    gdpGrowth: state.economy.gdpGrowth,
-    debtToGdp: state.economy.debtToGdp,
-    congressGoodwill: state.congress.goodwill,
-    treasury: state.economy.treasuryCash,
-    baseSeats: state.congress.governmentSeatsChamber,
-  };
-}
-
+/**
+ * Os números do modal de resultado do mês.
+ *
+ * Só o que o jogador sente no mês: aprovação, preço, emprego e caixa. PIB,
+ * Congresso e dividendos das estatais continuam no motor e nas páginas deles —
+ * aqui eles só ocupavam espaço no fechamento do mês.
+ */
 function buildHighlights(
   state: GameState,
-  before: Snapshot,
-  economyDelta: { gdpGrowth: number; inflation: number; unemployment: number; treasuryCash: number },
+  economyDelta: { inflation: number; unemployment: number; treasuryCash: number },
   approvalDelta: number,
-  congressDelta: number,
 ): ResultHighlight[] {
-  const aggregate = state.companies.aggregate;
   const tone = (value: number, lowerIsBetter = false): ResultHighlight['tone'] => {
     const good = lowerIsBetter ? value < 0 : value > 0;
     if (Math.abs(value) < 0.05) return 'neutro';
@@ -739,12 +717,6 @@ function buildHighlights(
       tone: tone(approvalDelta),
     },
     {
-      label: 'PIB',
-      value: `${state.economy.gdpGrowth.toFixed(2)}%`,
-      delta: economyDelta.gdpGrowth,
-      tone: tone(economyDelta.gdpGrowth),
-    },
-    {
       label: 'Inflação',
       value: `${state.economy.inflation.toFixed(2)}%`,
       delta: economyDelta.inflation,
@@ -757,28 +729,10 @@ function buildHighlights(
       tone: tone(economyDelta.unemployment, true),
     },
     {
-      label: 'Congresso',
-      value: `${state.congress.governmentSeatsChamber} dep.`,
-      delta: round(state.congress.governmentSeatsChamber - before.baseSeats, 0),
-      tone: tone(state.congress.governmentSeatsChamber - before.baseSeats),
-    },
-    {
       label: 'Caixa',
       value: `R$ ${state.economy.treasuryCash.toFixed(1)} bi`,
       delta: economyDelta.treasuryCash,
       tone: tone(economyDelta.treasuryCash),
-    },
-    {
-      label: 'Boa vontade no Congresso',
-      value: state.congress.goodwill.toFixed(0),
-      delta: round(congressDelta, 1),
-      tone: tone(congressDelta),
-    },
-    {
-      label: 'Dividendos das estatais',
-      value: `R$ ${(aggregate.stateDividends / 1000).toFixed(2)} bi`,
-      delta: round(aggregate.stateDividends / 1000, 2),
-      tone: tone(aggregate.stateDividends),
     },
   ];
 }

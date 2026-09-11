@@ -357,8 +357,9 @@ describe('Diplomacia — acordos internacionais', () => {
     renderPage(<Diplomacia />);
     await userEvent.click(screen.getByRole('tab', { name: /acordos internacionais/i }));
     expect(screen.getByText(/nada em aberto agora/i)).toBeInTheDocument();
-    // O catálogo de referência sempre aparece, mesmo sem nenhuma oferta.
-    expect(screen.getByText(/acordo de livre comércio/i)).toBeInTheDocument();
+    // O catálogo de referência saiu da aba (commit ed7034f): os acordos só
+    // aparecem quando entram na mesa numa visita ou quando já estão em vigor.
+    expect(screen.queryByText(/catálogo de acordos/i)).not.toBeInTheDocument();
   });
 
   it('uma oferta pendente mostra a ficha do acordo com os botões de decisão', async () => {
