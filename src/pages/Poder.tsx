@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { riskPointsToPercent } from '@/game';
 import { useSearchParams } from 'react-router-dom';
 import {
   MINISTRY_BY_ID,
@@ -615,7 +616,11 @@ function WarConfirmation({ state, countryId }: { state: GameState; countryId: st
       <div className="mt-3">
         <StatRow label="Custo militar estimado" value={`R$ ${forecast.monthlyCost.toFixed(1)} bi/mês`} tone="neg" />
         <StatRow label="Comércio perdido" value={`−${forecast.tradeLoss.toFixed(0)} de intensidade`} tone="neg" />
-        <StatRow label="Risco-país" value={`+${forecast.riskDelta} pb`} tone="neg" />
+        <StatRow
+          label="Risco-país"
+          value={'+' + riskPointsToPercent(forecast.riskDelta).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' p.p.'}
+          tone="neg"
+        />
         <StatRow label="Isolamento" value={`+${forecast.isolation}`} tone="neg" />
         <StatRow label="Relação atual" value={forecast.country.relation.toFixed(0)} />
       </div>

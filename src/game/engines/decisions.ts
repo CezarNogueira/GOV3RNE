@@ -6,6 +6,7 @@ import type {
   GameState,
 } from '../types/index';
 import { Rng } from '../utils/rng';
+import { countryRiskPercent } from './country-risk';
 import { makeId, monthLabel } from '../utils/index';
 import { round } from '../utils/math';
 
@@ -53,7 +54,7 @@ const FIELDS: readonly FieldSpec[] = [
   { label: 'Desemprego', read: (s) => s.economy.unemployment, unit: '%', decimals: 2, threshold: 0.01, lowerIsBetter: true },
   { label: 'Crescimento do PIB', read: (s) => s.economy.gdpGrowth, unit: '%', decimals: 2, threshold: 0.01 },
   { label: 'Dívida/PIB', read: (s) => s.economy.debtToGdp, unit: '%', decimals: 1, threshold: 0.05, lowerIsBetter: true },
-  { label: 'Risco-país', read: (s) => s.economy.countryRisk, unit: ' pb', decimals: 0, threshold: 1, lowerIsBetter: true },
+  { label: 'Risco-país', read: (s) => countryRiskPercent(s.economy.countryRisk), unit: '%', decimals: 1, threshold: 0.1, lowerIsBetter: true },
   { label: 'Selic', read: (s) => s.economy.selic, unit: '%', decimals: 2, threshold: 0.01, neutral: true },
   { label: 'Dólar', read: (s) => s.economy.usd, unit: '', decimals: 2, threshold: 0.01, neutral: true },
   { label: 'Credibilidade fiscal', read: (s) => s.economy.fiscalCredibility, unit: '', decimals: 1, threshold: 0.1 },

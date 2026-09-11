@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { riskPointsToPercent } from '@/game';
 import {
   AlertTriangle,
   Building2,
@@ -217,14 +218,17 @@ export function CabinetReviewModal({
         <div className="mt-3">
           <p className="label mb-1.5">Efeito esperado nos indicadores</p>
           <div className="flex flex-wrap gap-1.5">
-            {Object.entries(analysis.impacts).map(([key, value]) =>
-              typeof value === 'number' && value !== 0 ? (
+            {Object.entries(analysis.impacts).map(([key, raw]) => {
+              if (typeof raw !== 'number' || raw === 0) return null;
+              // O motor mede risco-país em pontos-base; o jogador lê em %.
+              const value = key === 'countryRisk' ? riskPointsToPercent(raw) : raw;
+              return (
                 <span key={key} className="flex items-center gap-1 border border-ink-700 bg-ink-900/60 px-1.5 py-0.5">
                   <span className="text-[11px] text-neutral-500">{IMPACT_LABEL[key] ?? key}</span>
                   <Delta value={value} decimals={Math.abs(value) < 1 ? 2 : 1} lowerIsBetter={LOWER_IS_BETTER.has(key)} showArrow={false} />
                 </span>
-              ) : null,
-            )}
+              );
+            })}
           </div>
         </div>
       )}
@@ -453,7 +457,7 @@ const IMPACT_LABEL: Record<string, string> = {
   unemployment: 'Desemprego',
   debtToGdp: 'Dívida/PIB',
   primaryBalance: 'Primário',
-  countryRisk: 'Risco-país',
+  countryRisk: 'Risco-país (p.p.)',
   fiscalCredibility: 'Credibilidade',
   businessConfidence: 'Confiança',
   selicPressure: 'Pressão Selic',

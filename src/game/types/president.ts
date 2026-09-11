@@ -16,16 +16,6 @@ export type Occupation =
   | 'servidor_publico'
   | 'advogado';
 
-export type Education =
-  | 'direito'
-  | 'economia'
-  | 'engenharia'
-  | 'medicina'
-  | 'academia_militar'
-  | 'ciencias_sociais'
-  | 'administracao'
-  | 'sem_curso_superior';
-
 export type Religion =
   | 'catolico'
   | 'evangelico'
@@ -45,16 +35,6 @@ export type TraitId =
   | 'vingativo'
   | 'austero'
   | 'midiatico';
-
-export type HabitId =
-  | 'torcedor'
-  | 'frequenta_culto'
-  | 'corredor'
-  | 'pescador'
-  | 'vive_nas_redes'
-  | 'leitor_voraz'
-  | 'churrasqueiro'
-  | 'motociclista';
 
 /** Avatar vetorial montado por partes — nada de foto realista. */
 export interface AvatarConfig {
@@ -84,12 +64,9 @@ export interface President {
   age: number;
   gender: Gender;
   homeState: string;
-  homeCity: string;
   occupation: Occupation;
-  education: Education;
   religion: Religion;
   traits: TraitId[];
-  habits: HabitId[];
   avatar: AvatarConfig;
   /** 0-100 */
   health: number;

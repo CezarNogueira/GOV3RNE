@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { countryRiskPercent } from '@/game';
 import {
   Area,
   AreaChart,
@@ -62,7 +63,7 @@ export function Economia() {
           <MetricCard label="Desemprego" value={economy.unemployment} unit="%" decimals={1} lowerIsBetter tone={toneOf(7 - economy.unemployment)} size="sm" />
           <MetricCard label="Dólar" value={economy.usd} unit="R$" decimals={2} size="sm" />
           <MetricCard label="Dívida/PIB" value={economy.debtToGdp} unit="%" decimals={0} lowerIsBetter tone={toneOf(80 - economy.debtToGdp)} size="sm" />
-          <MetricCard label="Risco-país" value={economy.countryRisk} unit="pb" decimals={0} lowerIsBetter tone={toneOf(250 - economy.countryRisk)} size="sm" />
+          <MetricCard label="Risco-país" value={countryRiskPercent(economy.countryRisk)} unit="%" decimals={0} lowerIsBetter tone={toneOf(25 - countryRiskPercent(economy.countryRisk))} size="sm" tip="Quanto o mercado duvida que o Brasil pague a dívida. Em 100%, o presidente sofre impeachment." />
         </div>
 
         <div className="mt-4">
@@ -260,7 +261,7 @@ function Series({ state }: { state: State }) {
           <YAxis yAxisId="left" stroke="#4a4a4a" tick={{ fontSize: 10 }} width={38} />
           <YAxis yAxisId="right" orientation="right" stroke="#4a4a4a" tick={{ fontSize: 10 }} width={30} />
           <Tooltip {...CHART_TOOLTIP} />
-          <Line yAxisId="left" type="monotone" dataKey="countryRisk" name="Risco (pb)" stroke="#a855f7" strokeWidth={1.6} dot={false} />
+          <Line yAxisId="left" type="monotone" dataKey={(entry: { countryRisk: number }) => Math.round(countryRiskPercent(entry.countryRisk))} name="Risco-país (%)" stroke="#a855f7" strokeWidth={1.6} dot={false} />
           <Line yAxisId="right" type="monotone" dataKey="usd" name="R$/US$" stroke="#22d3ee" strokeWidth={1.6} dot={false} />
         </LineChart>
       </ChartCard>

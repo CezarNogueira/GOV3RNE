@@ -17,6 +17,7 @@ import { nudgeApproval } from './approval';
 import { Rng } from '../utils/rng';
 import { clamp, clamp100, round } from '../utils/math';
 import { makeId } from '../utils/id';
+import { applyBillDecision, billAvailable, BILL_SHARE, buildBillEvent } from './bills';
 
 /**
  * MOTOR DE EVENTOS
@@ -267,6 +268,17 @@ export function rollEvents(state: GameState, rng: Rng): ActiveEvent[] {
     );
   }
 
+  // ------------------------------------------------------ projetos de lei
+  // A maior parte do que chega à mesa de um presidente é o que o Congresso
+  // aprovou: projeto de deputado, senador, comissão, Judiciário ou iniciativa
+  // popular, esperando sanção ou veto. Por isso eles têm a vez antes do sorteio
+  // geral na maioria dos meses — e crise, família e mundo ficam com o resto.
+  // Sem Congresso funcionando ou sem projeto novo, a chance nem entra no sorteio.
+  if (events.length < MAX_AGENDA_PER_MONTH && billAvailable(state) && rng.bool(BILL_SHARE)) {
+    const projeto = buildBillEvent(state, rng);
+    if (projeto) events.push(projeto);
+  }
+
   const size = MAX_AGENDA_PER_MONTH;
 
   for (let index = events.length; index < size; index += 1) {
@@ -390,6 +402,9 @@ export function resolveEvent(
   // Efeito familiar: muda a vida de quem mora com o presidente, que é onde
   // esse tipo de decisão realmente cai.
   if (option.family) applyFamilyEffect(state, option.family, rng);
+  // Projeto de lei: o partido do autor reage, o Supremo toma nota e o veto
+  // entra na fila da sessão conjunta do Congresso.
+  if (option.bill) applyBillDecision(state, option.bill);
 
   event.resolvedOptionId = optionId;
   event.resolution = option.warning;
@@ -471,6 +486,24 @@ export function resolveUnattendedEvents(state: GameState, rng: Rng): string[] {
 
   for (const event of state.pendingEvents) {
     if (event.resolvedOptionId) continue;
+
+    // Evento com desfecho definido para o silêncio — o projeto de lei. Não há
+    // "pior opção" aqui: passados os 15 dias úteis sem sanção nem veto, a lei é
+    // sancionada tacitamente e promulgada pelo presidente do Congresso.
+    if (event.defaultOptionId) {
+      const padrao = resolveEvent(state, event.id, event.defaultOptionId, rng);
+      if (padrao.ok) {
+        event.resolution =
+          'O prazo de 15 dias úteis terminou sem manifestação da Presidência. ' + padrao.message;
+        notes.push(
+          event.bill
+            ? '"' + event.title + '" virou lei por sanção tácita.'
+            : '"' + event.title + '" foi resolvido pelo prazo.',
+        );
+        continue;
+      }
+    }
+
     const fallbackOption = event.options[event.options.length - 1];
     if (!fallbackOption) continue;
 

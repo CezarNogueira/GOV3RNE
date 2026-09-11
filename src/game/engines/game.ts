@@ -23,6 +23,8 @@ import { revertNumericChange } from './numeric/numeric-policy-engine';
 import { processNation, processSocialGroups, processStates, nudgeGroup } from './social';
 import { calculateApproval, nudgeApproval } from './approval';
 import { processCongress, workTheVotes } from './congress';
+import { processVetoes } from './bills';
+import { countryRiskCollapsed, countryRiskPercent } from './country-risk';
 import { processPolicies } from './policy';
 import { generatePublicReaction } from './legislative';
 import { processMinisters, pressureMinister } from './government';
@@ -276,6 +278,12 @@ export function tickMonth(input: GameState): TickOutcome {
   processMinisters(state, rng);
   const congressDelta = processCongress(state, rng);
 
+  // Vetos que chegaram à sessão conjunta neste mês. Derrubado, vira lei do
+  // mesmo jeito — e a derrota política fica na conta do Planalto.
+  const vetos = processVetoes(state, rng);
+  notes.push(...vetos.notes);
+  consequences.push(...vetos.consequences);
+
   // ---------------------------------------------------------------- 6. Diplomacia
   processDiplomacy(state, rng);
 
@@ -365,6 +373,16 @@ export function tickMonth(input: GameState): TickOutcome {
   // pendentes acompanha isso para nenhum evento sorteado sumir sem aparecer.
   state.pendingEvents = state.pendingEvents.filter((event) => !event.resolvedOptionId).slice(0, 8);
 
+  // Risco-país alto é aviso, não sentença — até chegar a 100%.
+  const riscoPct = countryRiskPercent(state.economy.countryRisk);
+  if (riscoPct >= 80 && !countryRiskCollapsed(state)) {
+    notes.push(
+      'Risco-país em ' +
+        Math.round(riscoPct) +
+        '%. Se chegar a 100%, o mercado para de emprestar ao Brasil e o Congresso aprova o impeachment.',
+    );
+  }
+
   if (state.flags.gameOverReason === 'ruptura') {
     // O presidente foi deposto neste mês: o calendário não continua.
     state.flags.gameOver = true;
@@ -372,6 +390,19 @@ export function tickMonth(input: GameState): TickOutcome {
   } else if (impeachment.removed) {
     state.flags.gameOver = true;
     state.phase = 'encerrado';
+  } else if (countryRiskCollapsed(state)) {
+    // RISCO-PAÍS A 100%. O mercado trata o calote como certo, o país perde o
+    // crédito e o presidente cai. É fim de jogo e fim do save: não há mês
+    // seguinte nem partida para retomar.
+    state.flags.gameOver = true;
+    state.flags.gameOverReason = 'impeachment';
+    state.flags.gameOverCause = 'risco_pais';
+    state.flags.endsSave = true;
+    state.congress.impeachmentStage = 'processo';
+    state.phase = 'encerrado';
+    notes.unshift(
+      'O risco-país chegou a 100%. Sem crédito e com o país parado, o presidente sofreu impeachment.',
+    );
   } else if (state.month >= state.totalMonths) {
     // A vitória só abre transição enquanto o mandato conquistado nela ainda não
     // começou. Sem esta comparação, o fim do segundo mandato leria a mesma

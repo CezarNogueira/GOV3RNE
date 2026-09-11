@@ -45,7 +45,7 @@ const SECTIONS = [
     title: 'Como funciona a economia',
     body: [
       'É um laço com defasagem, e entender esse laço é entender o jogo:',
-      'Gastar sem lastro derruba a credibilidade fiscal. Credibilidade baixa sobe o risco-país. Risco alto desvaloriza o real. Real fraco encarece o importado e sobe a inflação. Inflação alta força o Copom a subir a Selic — e você não manda no Copom. Juro alto derruba o crescimento e sobe o desemprego.',
+      'Gastar sem lastro derruba a credibilidade fiscal. Credibilidade baixa sobe o risco-país. Risco alto desvaloriza o real. Real fraco encarece o importado e sobe a inflação. Inflação alta força o Copom a subir a Selic — e você não manda no Copom. Juro alto derruba o crescimento e sobe o desemprego. E se o risco-país chegar a 100%, o mercado para de emprestar ao Brasil e o presidente sofre impeachment: é o fim do jogo e do save.',
       'O laço leva de seis a doze meses para fechar. Isso é de propósito: o estrago aparece bem depois da decisão que o causou, então o presidente que só olha o mês corrente governa às cegas. Quando a inflação sobe no mês 22, a causa costuma estar escrita no mês 14.',
     ],
   },

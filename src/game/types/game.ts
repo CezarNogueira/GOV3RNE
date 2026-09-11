@@ -129,6 +129,15 @@ export interface GameFlags {
    * escândalo em CPI, em vez de deixar cada crise isolada.
    */
   pendingFollowUps?: { definitionId: string; dueMonth: number }[];
+  /** Vetos do presidente esperando a sessão conjunta do Congresso. */
+  pendingVetoes?: import('./events').PendingVeto[];
+  /** Causa específica do fim de jogo, quando a razão genérica não basta. */
+  gameOverCause?: 'risco_pais';
+  /**
+   * A partida acabou de um jeito que encerra o save: ele sai do navegador no
+   * mesmo instante e não pode ser retomado. É o impeachment por risco-país.
+   */
+  endsSave?: boolean;
   gameOverReason?: 'mandato_encerrado' | 'impeachment' | 'renuncia' | 'saude' | 'derrota_eleitoral' | 'ruptura';
 }
 

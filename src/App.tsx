@@ -27,6 +27,7 @@ const ComoJogar = lazy(() => import('@/pages/ComoJogar').then((m) => ({ default:
 const FimDeMandato = lazy(() => import('@/pages/FimDeMandato').then((m) => ({ default: m.FimDeMandato })));
 const Eleicao = lazy(() => import('@/pages/Eleicao').then((m) => ({ default: m.Eleicao })));
 const Poder = lazy(() => import('@/pages/Poder').then((m) => ({ default: m.Poder })));
+const FimDeJogo = lazy(() => import('@/pages/FimDeJogo').then((m) => ({ default: m.FimDeJogo })));
 
 /**
  * O jogo tem dois territórios: as telas de fora (início, criação, como jogar),
@@ -36,9 +37,13 @@ const Poder = lazy(() => import('@/pages/Poder').then((m) => ({ default: m.Poder
  */
 function GameShell() {
   const state = useGame((store) => store.state);
+  const showResult = useGame((store) => store.showResult);
   const location = useLocation();
 
   if (!state) return <Navigate to="/" replace state={{ from: location.pathname }} />;
+  // Save encerrado por impeachment: depois do resultado do mês, só resta a
+  // tela de fim de jogo.
+  if (state.flags.endsSave && !showResult) return <Navigate to="/fim-de-jogo" replace />;
 
   return (
     <div className="flex min-h-full select-none flex-col">
@@ -103,6 +108,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/novo-mandato" element={<Setup />} />
           <Route path="/como-jogar" element={<ComoJogar />} />
+          <Route path="/fim-de-jogo" element={<FimDeJogo />} />
 
           <Route element={<GameShell />}>
             <Route path="/painel" element={<Painel />} />

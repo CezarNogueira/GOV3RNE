@@ -59,6 +59,7 @@ export function EventCard({
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone={severity.tone}>{severity.label}</Badge>
           <Badge tone="neutral">{CATEGORY_LABEL[event.category] ?? event.category}</Badge>
+          {event.bill && <Badge tone="info">Sanção ou veto</Badge>}
           {resolved && (
             <Badge tone="gov">
               <Check size={9} aria-hidden /> Decidido
@@ -72,6 +73,15 @@ export function EventCard({
         {event.title}
       </h3>
       <p className="mt-1.5 text-[13px] leading-relaxed text-neutral-400">{event.brief}</p>
+
+      {/* Ficha do projeto: número, placar nas duas Casas. */}
+      {event.bill && (
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-y border-ink-700/60 py-1.5 font-mono text-[10px] uppercase tracking-wider text-neutral-500">
+          <span className="text-neutral-300">{event.bill.numero}</span>
+          <span>Câmara {event.bill.placarCamara}</span>
+          <span>Senado {event.bill.placarSenado}</span>
+        </div>
+      )}
 
       {resolved ? (
         <p className="mt-2.5 border-l-2 border-l-gov-600 bg-gov-900/20 p-2 text-[12px] leading-snug text-neutral-400">
@@ -93,8 +103,9 @@ export function EventCard({
             />
           ))}
           <p className="pt-1 text-[11px] leading-snug text-neutral-600">
-            Se você avançar o mês sem decidir, o país decide por você — com metade do efeito e o
-            dobro do desgaste.
+            {event.defaultOptionId
+              ? 'Se você avançar o mês sem decidir, os 15 dias úteis vencem e a lei é sancionada tacitamente.'
+              : 'Se você avançar o mês sem decidir, o país decide por você — com metade do efeito e o dobro do desgaste.'}
           </p>
         </div>
       )}

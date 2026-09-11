@@ -233,6 +233,21 @@ class GameRepository {
 
   private persist(state: GameState): void {
     this.memory.set(state.id, state);
+
+    // Impeachment por risco-país encerra o save: em vez de gravar, apaga. A
+    // partida continua só na memória, o tempo de a tela de fim de jogo mostrar
+    // o que aconteceu — recarregar a página já não encontra nada.
+    if (state.flags.endsSave) {
+      try {
+        localStorage.removeItem(SAVE_PREFIX + state.id);
+        localStorage.removeItem(INAUGURATION_PREFIX + state.id);
+      } catch {
+        /* sem armazenamento, não há o que apagar */
+      }
+      writeIndex(readIndex().filter((entry) => entry.id !== state.id));
+      return;
+    }
+
     const payload = serialize(compact(state));
 
     try {
@@ -353,6 +368,11 @@ class GameRepository {
       notes: outcome.result.headlines.slice(0, 3),
     });
 
+    // A avaliação lê a foto da posse, que o fim do save apaga: calcula antes.
+    const evaluation = outcome.gameOver
+      ? evaluateMandate(outcome.state, this.inauguration(current))
+      : null;
+
     this.persist(outcome.state);
 
     return {
@@ -361,9 +381,7 @@ class GameRepository {
       notes: outcome.notes,
       gameOver: outcome.gameOver,
       briefing: outcome.intelligenceBriefing,
-      evaluation: outcome.gameOver
-        ? evaluateMandate(outcome.state, this.inauguration(current))
-        : null,
+      evaluation,
     };
   }
 

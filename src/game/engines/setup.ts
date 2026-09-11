@@ -12,6 +12,7 @@ import type {
   Minister,
   MinistryId,
   NationState,
+  Occupation,
   PartyBloc,
   PartyProfile,
   President,
@@ -232,9 +233,37 @@ function resolveParty(input: NewGameInput): PartyProfile {
 // ---------------------------------------------------------------------------
 // Presidente e família
 // ---------------------------------------------------------------------------
+/**
+ * Quanto o presidente tem na conta pessoal no dia da posse, pela carreira que
+ * teve antes do Planalto. É a base para quem tem 35 anos, a idade mínima para
+ * disputar a Presidência.
+ */
+export const STARTING_WEALTH_BY_OCCUPATION: Record<Occupation, number> = {
+  politico_carreira: 120_000,
+  empresario: 95_000,
+  magistrado: 90_000,
+  advogado: 90_000,
+  medico: 40_000,
+  militar: 10_000,
+  professor: 4_000,
+  servidor_publico: 4_000,
+  sindicalista: 4_000,
+  lider_religioso: 4_000,
+  produtor_rural: 4_000,
+  comunicador: 2_000,
+};
+
+const IDADE_MINIMA_PRESIDENTE = 35;
+
+/** Dinheiro inicial: a base da carreira, com +1% por ano de idade acima de 35. */
+export function startingPersonalWealth(occupation: Occupation, age: number): number {
+  const base = STARTING_WEALTH_BY_OCCUPATION[occupation] ?? 0;
+  const anosAMais = Math.max(0, Math.floor(age) - IDADE_MINIMA_PRESIDENTE);
+  return Math.round(base * (1 + anosAMais / 100));
+}
+
 function buildPresident(input: NewGameInput): President {
   const draft = input.president;
-  const hasHealthyHabit = draft.habits.includes('corredor');
   const heavySchedule = draft.age > 68;
 
   return {
@@ -244,19 +273,16 @@ function buildPresident(input: NewGameInput): President {
     age: draft.age,
     gender: draft.gender,
     homeState: draft.homeState,
-    homeCity: draft.homeCity,
     occupation: draft.occupation,
-    education: draft.education,
     religion: draft.religion,
     traits: draft.traits,
-    habits: draft.habits,
     avatar: draft.avatar,
-    health: clamp100(96 - (draft.age - 45) * 0.7 + (hasHealthyHabit ? 6 : 0)),
-    energy: clamp100(92 - (heavySchedule ? 10 : 0) + (hasHealthyHabit ? 5 : 0)),
+    health: clamp100(96 - (draft.age - 45) * 0.7),
+    energy: clamp100(92 - (heavySchedule ? 10 : 0)),
     mood: 74,
     stress: 18,
     personalApproval: GAME_CALIBRATION.startingApproval + 3,
-    personalWealth: 650_000,
+    personalWealth: startingPersonalWealth(draft.occupation, draft.age),
     monthlySalary: 46_366,
   };
 }

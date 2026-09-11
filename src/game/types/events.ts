@@ -59,6 +59,57 @@ export interface EventOption {
    * durante o mandato e que ela termina.
    */
   family?: EventFamilyEffect;
+  /**
+   * Decisão sobre projeto de lei aprovado pelo Congresso: o que acontece com a
+   * lei, com o partido do autor e com o veto que volta para a sessão conjunta.
+   */
+  bill?: BillDecision;
+}
+
+/** Quem apresentou o projeto de lei que chegou à mesa do presidente. */
+export type BillOrigin = 'deputado' | 'senador' | 'comissao' | 'popular' | 'judiciario';
+
+/** O que o presidente fez com o projeto (Constituição, art. 66). */
+export type BillDecisionKind = 'sancao' | 'sancao_tacita' | 'veto_parcial' | 'veto_total';
+
+/** A ficha do projeto de lei, mostrada no card do evento. */
+export interface BillEventInfo {
+  numero: string;
+  apelido: string;
+  autoria: string;
+  origem: BillOrigin;
+  placarCamara: string;
+  placarSenado: string;
+}
+
+export interface BillDecision {
+  templateId: string;
+  numero: string;
+  apelido: string;
+  kind: BillDecisionKind;
+  authorPartyId: string | null;
+  chamberYes: number;
+  senateYes: number;
+  riscoConstitucional: number;
+  /** Efeitos da lei inteira, para o caso de o Congresso derrubar o veto. */
+  lawImpacts: PolicyImpact;
+  lawGroups: GroupImpact[];
+  /** Fração da lei que o veto segurou: 1 no veto total, a parte vetada no parcial. */
+  vetoedShare: number;
+}
+
+/** Veto esperando a sessão conjunta do Congresso. */
+export interface PendingVeto {
+  numero: string;
+  apelido: string;
+  kind: 'veto_parcial' | 'veto_total';
+  dueMonth: number;
+  chamberYes: number;
+  senateYes: number;
+  authorPartyId: string | null;
+  lawImpacts: PolicyImpact;
+  lawGroups: GroupImpact[];
+  vetoedShare: number;
 }
 
 export interface EventFamilyEffect {
@@ -134,6 +185,14 @@ export interface ActiveEvent {
   options: EventOption[];
   resolvedOptionId?: string;
   resolution?: string;
+  /**
+   * Opção aplicada quando o mês fecha sem decisão. Sem ela, vale a regra geral
+   * (pior opção, metade do efeito). Projeto de lei usa a sanção tácita, que é o
+   * que a Constituição manda quando os 15 dias úteis passam em silêncio.
+   */
+  defaultOptionId?: string;
+  /** Ficha do projeto de lei, quando o evento é um pedido de sanção ou veto. */
+  bill?: BillEventInfo;
 }
 
 /** Desdobramento tardio de uma decisão já tomada. */

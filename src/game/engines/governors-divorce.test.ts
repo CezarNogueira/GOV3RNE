@@ -21,8 +21,8 @@ function newGame(seed = 4242, partyId = 'PSB', comConjuge = true): GameState {
     newGameSchema.parse({
       president: {
         firstName: 'Cezar', lastName: 'Nogueira', politicalName: 'Cezar Nogueira', age: 40,
-        gender: 'masculino', homeState: 'SP', homeCity: 'Sao Paulo', occupation: 'empresario',
-        education: 'administracao', religion: 'sem_religiao', traits: [], habits: [],
+        gender: 'masculino', homeState: 'SP', occupation: 'empresario',
+        religion: 'sem_religiao', traits: [], 
         avatar: DEFAULT_AVATAR,
       },
       partyId, customParty: null, viceId: 'vp_almeida',

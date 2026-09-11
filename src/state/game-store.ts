@@ -297,7 +297,10 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return null;
     try {
       const outcome = repository.sign(current.id, analysis, text);
-      set({ state: outcome.state, lastDecision: outcome.decision });
+      // Sem devolutiva na tela: a medida acabou de ir para o Congresso, e o
+      // que ela muda no país só pode aparecer depois da votação. A decisão
+      // continua registrada no histórico — some só o aviso, que era spoiler.
+      set({ state: outcome.state, lastDecision: null });
       return outcome.policyId;
     } catch (error) {
       get().toast({ kind: 'erro', title: 'Não foi possível assinar', detail: messageOf(error) });
@@ -310,7 +313,8 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.revealReaction(current.id, policyId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
+      // A reação do país aparece no próprio modal da medida, e não num aviso.
+      set({ state: outcome.state, lastDecision: null });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Sem repercussão apurada', detail: messageOf(error) });
     }
@@ -332,7 +336,9 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return null;
     try {
       const outcome = repository.castMeasureVote(current.id, policyId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
+      // O placar é revelado pela apuração animada do modal; um aviso aqui
+      // entregaria o resultado antes da contagem terminar.
+      set({ state: outcome.state, lastDecision: null });
       return outcome.result ?? null;
     } catch (error) {
       get().toast({ kind: 'erro', title: 'Não foi possível votar', detail: messageOf(error) });
@@ -345,7 +351,7 @@ export const useGame = create<GameStore>((set, get) => ({
     if (!current) return;
     try {
       const outcome = repository.advanceMeasureToSenate(current.id, policyId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
+      set({ state: outcome.state, lastDecision: null });
     } catch (error) {
       get().toast({ kind: 'alerta', title: 'Não foi possível avançar', detail: messageOf(error) });
     }

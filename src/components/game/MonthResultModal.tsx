@@ -41,7 +41,9 @@ export function MonthResultModal() {
         reelected
           ? 'Último mês do primeiro mandato. Você foi reeleito.'
           : finished
-            ? 'Este foi o último mês do mandato.'
+            ? state?.flags.endsSave
+              ? 'O risco-país chegou a 100%. Este foi o último mês do mandato.'
+              : 'Este foi o último mês do mandato.'
             : 'O que mudou no país por causa do que você decidiu.'
       }
       size="lg"
@@ -63,10 +65,10 @@ export function MonthResultModal() {
             className="btn-primary"
             onClick={() => {
               dismiss();
-              navigate('/fim');
+              navigate(state?.flags.endsSave ? '/fim-de-jogo' : '/fim');
             }}
           >
-            Ver avaliação do mandato
+            {state?.flags.endsSave ? 'Ver por que o mandato acabou' : 'Ver avaliação do mandato'}
           </button>
         ) : (
           <button type="button" className="btn-primary" onClick={dismiss}>

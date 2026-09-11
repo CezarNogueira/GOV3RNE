@@ -35,8 +35,11 @@ import {
   type CandidateProfile,
   type Ministry,
   type MinisterCandidate,
+  type Occupation,
   createSeed,
   formatBRL,
+  formatMoney,
+  startingPersonalWealth,
   newGameSchema,
   type AvatarConfig,
   type MinistryId,
@@ -76,12 +79,9 @@ interface Draft {
   age: number;
   gender: 'masculino' | 'feminino' | 'nao_binario';
   homeState: string;
-  homeCity: string;
   occupation: string;
-  education: string;
   religion: string;
   traits: string[];
-  habits: string[];
   avatar: AvatarConfig;
   partyId: string | null;
   customParty: {
@@ -114,17 +114,6 @@ const OCCUPATIONS = [
   { id: 'advogado', label: 'Advogado', hint: 'Segurança jurídica nas medidas, carisma limitado.' },
 ];
 
-const EDUCATIONS = [
-  { id: 'direito', label: 'Direito' },
-  { id: 'economia', label: 'Economia' },
-  { id: 'engenharia', label: 'Engenharia' },
-  { id: 'medicina', label: 'Medicina' },
-  { id: 'academia_militar', label: 'Academia Militar' },
-  { id: 'ciencias_sociais', label: 'Ciências Sociais' },
-  { id: 'administracao', label: 'Administração' },
-  { id: 'sem_curso_superior', label: 'Sem curso superior' },
-];
-
 const RELIGIONS = [
   { id: 'catolico', label: 'Católico' },
   { id: 'evangelico', label: 'Evangélico' },
@@ -145,17 +134,6 @@ const TRAITS = [
   { id: 'vingativo', label: 'Vingativo', hint: 'Retaliação é mais eficaz, mas queima pontes.' },
   { id: 'austero', label: 'Austero', hint: 'Credibilidade fiscal se recupera mais rápido.' },
   { id: 'midiatico', label: 'Midiático', hint: 'Cada publicação alcança mais gente, para o bem e para o mal.' },
-];
-
-const HABITS = [
-  { id: 'torcedor', label: 'Torcedor fanático', hint: 'Aproxima do povo. Perder clássico estraga a semana.' },
-  { id: 'frequenta_culto', label: 'Frequenta culto', hint: 'Evangélicos e católicos gostam de ver.' },
-  { id: 'corredor', label: 'Corre todo dia', hint: 'Saúde cai mais devagar ao longo do mandato.' },
-  { id: 'pescador', label: 'Pescador', hint: 'Recupera energia mais rápido nos fins de semana.' },
-  { id: 'vive_nas_redes', label: 'Vive nas redes', hint: 'Fala direto com jovens. E erra em público mais vezes.' },
-  { id: 'leitor_voraz', label: 'Leitor voraz', hint: 'Melhora a qualidade das decisões técnicas.' },
-  { id: 'churrasqueiro', label: 'Churrasqueiro', hint: 'Bom de bastidor. Negociação em casa rende mais.' },
-  { id: 'motociclista', label: 'Motociclista', hint: 'Imagem de coragem. Risco de acidente.' },
 ];
 
 const CATEGORY_OPTIONS: { id: PolicyCategory; label: string }[] = [
@@ -179,12 +157,9 @@ function emptyDraft(): Draft {
     age: 56,
     gender: 'masculino',
     homeState: 'SP',
-    homeCity: 'São Paulo',
     occupation: 'politico_carreira',
-    education: 'direito',
     religion: 'catolico',
     traits: [],
-    habits: [],
     avatar: { ...DEFAULT_AVATAR },
     partyId: 'PSD',
     customParty: null,
@@ -220,8 +195,6 @@ export function Setup() {
       issues[1] = 'Preencha nome e sobrenome.';
     } else if (draft.politicalName.trim().length < 2) {
       issues[1] = 'Informe o nome político — é como você aparece na urna.';
-    } else if (draft.homeCity.trim().length < 2) {
-      issues[1] = 'Informe a cidade natal.';
     } else if (!draft.partyId && !draft.customParty) {
       issues[1] = 'Escolha um partido ou funde a sua legenda.';
     } else if (draft.customParty && draft.customParty.acronym.trim().length < 2) {
@@ -253,12 +226,9 @@ export function Setup() {
         age: draft.age,
         gender: draft.gender,
         homeState: draft.homeState,
-        homeCity: draft.homeCity.trim(),
         occupation: draft.occupation,
-        education: draft.education,
         religion: draft.religion,
         traits: draft.traits,
-        habits: draft.habits,
         avatar: draft.avatar,
       },
       partyId: draft.customParty ? null : draft.partyId,
@@ -499,15 +469,7 @@ function StepIdentity({
               id="cand-estado"
               className="field"
               value={draft.homeState}
-              onChange={(event) => {
-                const id = event.target.value;
-                const found = STATES.find((state) => state.id === id);
-                setDraft((current) => ({
-                  ...current,
-                  homeState: id,
-                  homeCity: found?.capital ?? current.homeCity,
-                }));
-              }}
+              onChange={(event) => update('homeState', event.target.value)}
             >
               {STATES.map((state) => (
                 <option key={state.id} value={state.id}>
@@ -515,15 +477,6 @@ function StepIdentity({
                 </option>
               ))}
             </select>
-          </Field>
-          <Field label="Cidade natal" htmlFor="cand-cidade">
-            <input
-              id="cand-cidade"
-              className="field"
-              value={draft.homeCity}
-              onChange={(event) => update('homeCity', event.target.value)}
-              maxLength={60}
-            />
           </Field>
         </div>
       </section>
@@ -845,7 +798,15 @@ function StepProfile({
   return (
     <div className="space-y-4">
       <section className="card p-4">
-        <h2 className="label-strong mb-3">De onde você veio</h2>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="label-strong">De onde você veio</h2>
+          <p className="text-[11px] text-neutral-500">
+            Conta pessoal na posse:{' '}
+            <span className="font-mono text-neutral-200">
+              {formatMoney(startingPersonalWealth(draft.occupation as Occupation, draft.age))}
+            </span>
+          </p>
+        </div>
         <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
           {OCCUPATIONS.map((option) => (
             <button
@@ -861,39 +822,21 @@ function StepProfile({
         </div>
       </section>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <section className="card p-4">
-          <h2 className="label-strong mb-3">Formação</h2>
-          <div className="grid grid-cols-2 gap-1.5">
-            {EDUCATIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={cx('option py-2 text-[12px]', draft.education === option.id && 'option-selected')}
-                onClick={() => update('education', option.id)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="card p-4">
-          <h2 className="label-strong mb-3">Religião</h2>
-          <div className="grid grid-cols-2 gap-1.5">
-            {RELIGIONS.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={cx('option py-2 text-[12px]', draft.religion === option.id && 'option-selected')}
-                onClick={() => update('religion', option.id)}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </section>
-      </div>
+      <section className="card p-4">
+        <h2 className="label-strong mb-3">Religião</h2>
+        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+          {RELIGIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={cx('option py-2 text-[12px]', draft.religion === option.id && 'option-selected')}
+              onClick={() => update('religion', option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <section className="card p-4">
         <h2 className="label-strong mb-3">
@@ -909,25 +852,6 @@ function StepProfile({
             >
               <p className="text-[12px] font-semibold text-neutral-100">{trait.label}</p>
               <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">{trait.hint}</p>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="card p-4">
-        <h2 className="label-strong mb-3">
-          Hábitos — escolha até 2 ({draft.habits.length}/2)
-        </h2>
-        <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
-          {HABITS.map((habit) => (
-            <button
-              key={habit.id}
-              type="button"
-              className={cx('option', draft.habits.includes(habit.id) && 'option-selected')}
-              onClick={() => update('habits', toggle(draft.habits, habit.id, 2))}
-            >
-              <p className="text-[12px] font-semibold text-neutral-100">{habit.label}</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">{habit.hint}</p>
             </button>
           ))}
         </div>

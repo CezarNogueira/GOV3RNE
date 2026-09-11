@@ -111,13 +111,7 @@ export function processPersonalLife(state: GameState, rng: Rng): TimelineEntry[]
     state.pendingEvents.filter((event) => event.severity === 'grave' || event.severity === 'critico').length * 2.6 +
     Math.max(0, 48 - state.approval.overall) * 0.06;
 
-  const habitRelief =
-    (president.habits.includes('corredor') ? 1.6 : 0) +
-    (president.habits.includes('pescador') ? 1.2 : 0) +
-    (president.habits.includes('churrasqueiro') ? 0.8 : 0) +
-    (president.habits.includes('frequenta_culto') ? 0.9 : 0);
-
-  president.stress = round(clamp100(president.stress + crisisLoad - habitRelief - 0.6), 1);
+  president.stress = round(clamp100(president.stress + crisisLoad - 0.6), 1);
 
   // ------------------------------------------------------------ Energia
   const energyTarget = clamp100(88 - president.stress * 0.55 - (president.age - 55) * 0.4);
@@ -126,8 +120,7 @@ export function processPersonalLife(state: GameState, rng: Rng): TimelineEntry[]
   // ------------------------------------------------------------ Saúde
   // A saúde cai devagar e quase nunca sobe: é a única variável irreversível.
   const healthDrain =
-    0.12 + president.stress * 0.006 + Math.max(0, president.age - 65) * 0.012 -
-    (president.habits.includes('corredor') ? 0.09 : 0);
+    0.12 + president.stress * 0.006 + Math.max(0, president.age - 65) * 0.012;
   president.health = round(clamp100(president.health - healthDrain), 2);
 
   // ------------------------------------------------------------ Humor

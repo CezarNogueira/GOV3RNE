@@ -139,24 +139,17 @@ export function VidaPessoal() {
               </p>
             </Section>
 
-            <Section title="Seus hábitos" dense>
+            <Section title="Seus traços" dense>
               <div className="flex flex-wrap gap-1 py-2">
-                {president.habits.length === 0 ? (
-                  <span className="text-[12px] text-neutral-600">Nenhum hábito declarado.</span>
+                {president.traits.length === 0 ? (
+                  <span className="text-[12px] text-neutral-600">Nenhum traço declarado.</span>
                 ) : (
-                  president.habits.map((habit) => (
-                    <Badge key={habit} tone="neutral">
-                      {HABIT_LABEL[habit] ?? habit}
+                  president.traits.map((trait) => (
+                    <Badge key={trait} tone="gov">
+                      {TRAIT_LABEL[trait] ?? trait}
                     </Badge>
                   ))
                 )}
-              </div>
-              <div className="flex flex-wrap gap-1 border-t border-ink-800 py-2">
-                {president.traits.map((trait) => (
-                  <Badge key={trait} tone="gov">
-                    {TRAIT_LABEL[trait] ?? trait}
-                  </Badge>
-                ))}
               </div>
             </Section>
           </aside>
@@ -435,17 +428,6 @@ const STANCE_TEXT: Record<string, string> = {
     'Assume um programa com estrutura, equipe e agenda no interior. Rende aprovação onde o governo não chega, e vira alvo de CPI se algo der errado.',
   conselheira_de_fato:
     'Está em toda reunião importante sem ter cargo nenhum. Os ministros aprendem a ligar para ele antes de ligar para você, o que é útil e é perigoso.',
-};
-
-const HABIT_LABEL: Record<string, string> = {
-  torcedor: 'Torcedor fanático',
-  frequenta_culto: 'Frequenta culto',
-  corredor: 'Corre todo dia',
-  pescador: 'Pescador',
-  vive_nas_redes: 'Vive nas redes',
-  leitor_voraz: 'Leitor voraz',
-  churrasqueiro: 'Churrasqueiro',
-  motociclista: 'Motociclista',
 };
 
 const TRAIT_LABEL: Record<string, string> = {

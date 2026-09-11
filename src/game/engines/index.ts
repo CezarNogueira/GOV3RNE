@@ -28,3 +28,5 @@ export * from './events';
 export * from './fallback-interpreter';
 export * from './game';
 export * from './save';
+export * from './bills';
+export * from './country-risk';

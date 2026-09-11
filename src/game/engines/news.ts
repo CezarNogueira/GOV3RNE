@@ -1,4 +1,5 @@
 import type { GameState, NewsItem, NewsTone, SocialPost } from '../types/index';
+import { countryRiskPercent } from './country-risk';
 import { COMMENTATORS, NEWS_OUTLETS } from '../data/people';
 import { Rng } from '../utils/rng';
 import { clamp, round } from '../utils/math';
@@ -71,7 +72,7 @@ function collectFacts(state: GameState): Fact[] {
     facts.push({
       kind: 'fiscal',
       headlinePositive: `Governo sinaliza ajuste e tenta recuperar credibilidade fiscal`,
-      headlineNegative: `Credibilidade fiscal em ${Math.round(eco.fiscalCredibility)} e risco-país acima de ${eco.countryRisk} pontos`,
+      headlineNegative: `Credibilidade fiscal em ${Math.round(eco.fiscalCredibility)} e risco-país em ${Math.round(countryRiskPercent(eco.countryRisk))}%`,
       body: `Com a dívida bruta em ${formatPercent(eco.debtToGdp)} do PIB e resultado primário de ${formatBRL(
         eco.primaryBalance,
       )}, gestores de recursos passaram a exigir prêmio maior para financiar o país.`,
@@ -241,7 +242,7 @@ function composePost(
       `Enquanto uns choram, o país tá andando. Simples assim.`,
     ],
     economista: [
-      `Risco-país em ${eco.countryRisk} pb e credibilidade fiscal em ${eco.fiscalCredibility.toFixed(
+      `Risco-país em ${Math.round(countryRiskPercent(eco.countryRisk))}% e credibilidade fiscal em ${eco.fiscalCredibility.toFixed(
         0,
       )}. Não é o cenário dos sonhos, mas é melhor do que estava sendo precificado.`,
       `A trajetória da dívida em ${eco.debtToGdp.toFixed(1)}% do PIB ainda é sustentável se o primário for mantido. Se.`,
@@ -268,7 +269,7 @@ function composePost(
       `Governo que não consegue aprovar nada no Congresso não é governo, é gabinete.`,
     ],
     economista: [
-      `Risco-país em ${eco.countryRisk} pontos. O mercado está dizendo, com dinheiro, o que acha da âncora fiscal.`,
+      `Risco-país em ${Math.round(countryRiskPercent(eco.countryRisk))}%. O mercado está dizendo, com dinheiro, o que acha da âncora fiscal.`,
       `Selic em ${eco.selic.toFixed(2)}% não é maldade do Copom. É a conta do gasto que ninguém quis compensar.`,
     ],
     cidadao: [

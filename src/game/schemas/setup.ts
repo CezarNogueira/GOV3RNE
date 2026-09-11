@@ -27,7 +27,6 @@ export const presidentDraftSchema = z.object({
   age: z.number().int().min(35).max(85),
   gender: z.enum(['masculino', 'feminino', 'nao_binario']),
   homeState: z.enum(stateIds),
-  homeCity: z.string().trim().min(2).max(60),
   occupation: z.enum([
     'empresario',
     'sindicalista',
@@ -41,16 +40,6 @@ export const presidentDraftSchema = z.object({
     'politico_carreira',
     'servidor_publico',
     'advogado',
-  ]),
-  education: z.enum([
-    'direito',
-    'economia',
-    'engenharia',
-    'medicina',
-    'academia_militar',
-    'ciencias_sociais',
-    'administracao',
-    'sem_curso_superior',
   ]),
   religion: z.enum([
     'catolico',
@@ -73,21 +62,6 @@ export const presidentDraftSchema = z.object({
         'vingativo',
         'austero',
         'midiatico',
-      ]),
-    )
-    .max(2)
-    .default([]),
-  habits: z
-    .array(
-      z.enum([
-        'torcedor',
-        'frequenta_culto',
-        'corredor',
-        'pescador',
-        'vive_nas_redes',
-        'leitor_voraz',
-        'churrasqueiro',
-        'motociclista',
       ]),
     )
     .max(2)

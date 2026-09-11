@@ -19,6 +19,7 @@ import {
   momentumLabel,
   monthlyFiscalResult,
   grossDebt,
+  countryRiskPercent,
   promiseReading,
   type AgendaActionId,
 } from '@/game';
@@ -191,8 +192,17 @@ export function Painel() {
             unit="tri"
             lowerIsBetter
             tone={toneOf(80 - state.economy.debtToGdp)}
-            tip="Dívida bruta do governo geral, em reais. Quanto maior ela é em relação ao tamanho da economia, mais caro fica o risco-país."
-            footer={<span className="label">Risco {state.economy.countryRisk}</span>}
+            tip="Dívida bruta do governo geral, em reais. Embaixo, o risco-país: quanto o mercado duvida que o Brasil pague a dívida. Em 100%, o presidente sofre impeachment."
+            footer={
+              <span
+                className={cx(
+                  'label',
+                  countryRiskPercent(state.economy.countryRisk) >= 70 && 'text-danger-400',
+                )}
+              >
+                Risco-país {Math.round(countryRiskPercent(state.economy.countryRisk))}%
+              </span>
+            }
           />
         </div>
 

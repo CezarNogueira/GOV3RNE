@@ -51,3 +51,4 @@ export {
   type Ministry as EsplanadaPasta,
   type Party as CongressParty,
 } from './people';
+export * from './bills';

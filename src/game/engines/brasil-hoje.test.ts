@@ -36,8 +36,8 @@ function newGame(seed = 11): GameState {
     newGameSchema.parse({
       president: {
         firstName: 'Marina', lastName: 'Teixeira', politicalName: 'Marina Teixeira', age: 54,
-        gender: 'feminino', homeState: 'PE', homeCity: 'Recife', occupation: 'medico',
-        education: 'medicina', religion: 'catolico', traits: [], habits: [], avatar: DEFAULT_AVATAR,
+        gender: 'feminino', homeState: 'PE', occupation: 'medico',
+        religion: 'catolico', traits: [], avatar: DEFAULT_AVATAR,
       },
       partyId: 'PSB', customParty: null, viceId: 'vp_almeida', cabinet: defaultCabinet(MINISTRY_IDS),
       family: { hasSpouse: false, childrenCount: 0 },
