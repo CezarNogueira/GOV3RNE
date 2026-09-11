@@ -102,13 +102,7 @@ export function processEconomy(state: GameState, rng: Rng): EconomyDelta {
 
   // -------------------------------------------------------------- 1. Custeio
   // Programas ativos e medidas em execução consomem caixa todo mês.
-  const programCost = state.programs
-    .filter((program) => program.active)
-    .reduce((total, program) => total + program.monthlyCost, 0);
-  const policyCost = state.policies
-    .filter((policy) => policy.status === 'vigente' && policy.monthsRemaining > 0)
-    .reduce((total, policy) => total + policy.monthlyCost, 0);
-  const monthlySpend = programCost + policyCost;
+  const monthlySpend = monthlyProgramSpend(state);
 
   // -------------------------------------------------------- 2. Choque externo
   // Commodity é a única variável realmente fora do controle do presidente.
@@ -210,7 +204,7 @@ export function processEconomy(state: GameState, rng: Rng): EconomyDelta {
   );
 
   // O primário é acumulado em 12 meses: entra o mês novo, sai o mês velho.
-  const monthlyPrimary = eco.revenue / 12 - eco.spending / 12 - monthlySpend;
+  const monthlyPrimary = monthlyFiscalResult(state, monthlySpend);
   eco.primaryBalance = round(eco.primaryBalance * (11 / 12) + monthlyPrimary, 1);
 
   // Dinâmica da dívida: juro nominal menos crescimento nominal, mais o primário.
@@ -304,6 +298,38 @@ export function processEconomy(state: GameState, rng: Rng): EconomyDelta {
     countryRisk: Math.round(eco.countryRisk - before.countryRisk),
     treasuryCash: round(eco.treasuryCash - before.treasuryCash, 2),
   };
+}
+
+/**
+ * Custeio do mês com programas ativos e medidas em execução, R$ bilhões.
+ */
+export function monthlyProgramSpend(state: GameState): number {
+  const programCost = state.programs
+    .filter((program) => program.active)
+    .reduce((total, program) => total + program.monthlyCost, 0);
+  const policyCost = state.policies
+    .filter((policy) => policy.status === 'vigente' && policy.monthsRemaining > 0)
+    .reduce((total, policy) => total + policy.monthlyCost, 0);
+  return programCost + policyCost;
+}
+
+/**
+ * RESULTADO DO MÊS — o "lucro mensal" do Painel, R$ bilhões.
+ *
+ * Arrecadação do mês menos a despesa obrigatória do mês menos o custeio de
+ * programas e medidas, antes dos juros da dívida. É a mesma conta que o motor
+ * soma ao primário acumulado a cada mês: o Painel lê daqui para nunca mostrar
+ * um número calculado de outro jeito.
+ *
+ * Não inclui os gastos pontuais (emendas, custo de assinatura de medida,
+ * escolha de evento), que caem direto no primário acumulado de 12 meses.
+ */
+export function monthlyFiscalResult(
+  state: GameState,
+  spend: number = monthlyProgramSpend(state),
+): number {
+  const eco = state.economy;
+  return eco.revenue / 12 - eco.spending / 12 - spend;
 }
 
 /** Carga tributária efetiva, usada pela promessa de baixar imposto. */

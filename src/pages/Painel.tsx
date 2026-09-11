@@ -17,12 +17,14 @@ import {
   approvalLabel,
   impeachmentLabel,
   momentumLabel,
+  monthlyFiscalResult,
   promiseReading,
   type AgendaActionId,
 } from '@/game';
 import { congressDissolved } from '@/game';
 import { useGame } from '@/state/game-store';
 import { BrazilMap } from '@/components/game/BrazilMap';
+import { StateProfileModal } from '@/components/game/StateDetail';
 import { EventCard } from '@/components/game/EventCard';
 import { ProposalEditor } from '@/components/game/ProposalEditor';
 import { MeasureFlowModal } from '@/components/game/MeasureFlowModal';
@@ -62,8 +64,13 @@ export function Painel() {
   const [actionTarget, setActionTarget] = useState<AgendaActionId | null>(null);
   const [activeMeasureId, setActiveMeasureId] = useState<string | null>(null);
   const [timelineMeasureId, setTimelineMeasureId] = useState<string | null>(null);
+  // Estado clicado no mapa pequeno. Guarda o id, e não o objeto, para o perfil
+  // continuar mostrando os números do mês corrente.
+  const [mapStateId, setMapStateId] = useState<string | null>(null);
 
   if (!state) return null;
+
+  const lucroMensal = monthlyFiscalResult(state);
 
   const pending = state.pendingEvents.filter((event) => !event.resolvedOptionId);
   const consequences = state.consequences.filter((entry) => entry.month === state.month);
@@ -122,14 +129,17 @@ export function Painel() {
 
         {/* ------------------------------------------------------- macro */}
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+          {/* PIB e inflação continuam no motor e na página de Economia. Aqui
+              ficam os dois números que o jogador lê mais rápido: quanto o
+              governo ganha ou perde no mês e quanto a população ganha. */}
           <MetricCard
-            label="Crescimento do PIB"
-            value={state.economy.gdpGrowth}
-            unit="%"
+            label="Lucro mensal"
+            value={lucroMensal}
+            unit="bi"
             decimals={1}
-            delta={state.lastResult?.gdpDelta}
-            tone={toneOf(state.economy.gdpGrowth - 2)}
-            tip="Variação real do PIB em 12 meses. O potencial da economia brasileira no jogo é de cerca de 2,1% ao ano."
+            tone={lucroMensal >= 0 ? 'pos' : 'neg'}
+            tip="Quanto o governo arrecada num mês menos o que gasta nesse mês: despesa obrigatória, programas e medidas em execução, antes dos juros da dívida. O resultado primário ao lado soma 12 meses e inclui os gastos pontuais."
+            footer={<span className="label">{lucroMensal >= 0 ? 'Lucro' : 'Prejuízo'}</span>}
           />
           <MetricCard
             label="Desemprego"
@@ -142,15 +152,17 @@ export function Painel() {
             tip="Taxa de desocupação. Responde ao juro real com seis a doze meses de atraso."
           />
           <MetricCard
-            label="Inflação"
-            value={state.economy.inflation}
-            unit="%"
-            decimals={1}
-            delta={state.lastResult?.inflationDelta}
-            lowerIsBetter
-            tone={toneOf(state.economy.inflationTarget + 1.5 - state.economy.inflation)}
-            tip={`IPCA acumulado em 12 meses. A meta perseguida pelo Banco Central é de ${state.economy.inflationTarget}%.`}
-            footer={<span className="label">Meta {state.economy.inflationTarget}%</span>}
+            label="Salário médio"
+            value={state.nation.averageIncome}
+            decimals={0}
+            format={(valor) => `R$ ${Math.round(valor).toLocaleString('pt-BR')}`}
+            unit="/mês"
+            tip="Quanto a população ganha por mês, em média, em reais. Sobe com emprego, produtividade e salário mínimo, e cai quando a economia desacelera."
+            footer={
+              <span className="label">
+                Mínimo R$ {state.economy.minimumWage.toLocaleString('pt-BR')}
+              </span>
+            }
           />
           <MetricCard
             label="Resultado primário"
@@ -521,6 +533,8 @@ export function Painel() {
                   metric="approval"
                   reference={state.approval.overall}
                   showLabels={false}
+                  onSelect={(unit) => setMapStateId(unit.id)}
+                  selectedId={mapStateId}
                 />
               </div>
             </section>
@@ -754,6 +768,11 @@ export function Painel() {
           if (actionTarget) runAction(actionTarget, target);
           setActionTarget(null);
         }}
+      />
+
+      <StateProfileModal
+        unit={state.states.find((unit) => unit.id === mapStateId) ?? null}
+        onClose={() => setMapStateId(null)}
       />
 
       <MeasureFlowModal policyId={activeMeasureId} onClose={() => setActiveMeasureId(null)} />

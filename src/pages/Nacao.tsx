@@ -10,7 +10,7 @@ import {
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader, TabBar } from '@/components/layout/PageHeader';
 import { BrazilMap, MAP_METRICS, type MapMetric } from '@/components/game/BrazilMap';
-import { Modal } from '@/components/ui/overlays';
+import { StateProfileModal } from '@/components/game/StateDetail';
 import { Badge, Bar, OriginTag, Section, StatRow, cx } from '@/components/ui/primitives';
 
 /**
@@ -218,15 +218,7 @@ export function Nacao() {
         </div>
       </PageBody>
 
-      <Modal
-        open={selected !== null}
-        onClose={() => setSelected(null)}
-        title={selected?.name ?? ''}
-        subtitle={selected ? `${selected.capital} · ${REGION_LABEL[selected.region]}` : ''}
-        size="md"
-      >
-        {selected && <StateDetail unit={selected} />}
-      </Modal>
+      <StateProfileModal unit={selected} onClose={() => setSelected(null)} />
     </>
   );
 }
@@ -365,59 +357,6 @@ function Panorama({ state }: { state: State }) {
           {economy.unemployment.toFixed(1)}% chegam de forma diferente em cada um destes grupos.
         </p>
       </Section>
-    </div>
-  );
-}
-
-function StateDetail({ unit }: { unit: FederalUnit }) {
-  return (
-    <div>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="label">Governador</p>
-          <p className="text-[15px] font-semibold text-neutral-100">{unit.governorName}</p>
-          <p className="text-[11px] text-neutral-500">{unit.governorParty}</p>
-        </div>
-        <div className="text-right">
-          <p className="label">Aprovação do federal</p>
-          <p
-            className={cx(
-              'font-mono text-2xl',
-              unit.approval >= 55 ? 'text-gov-400' : unit.approval >= 42 ? 'text-warn-400' : 'text-danger-400',
-            )}
-          >
-            {unit.approval.toFixed(1)}%
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-3 rule pt-2">
-        <StatRow label="População" value={formatCompact(unit.population)} />
-        <StatRow label="Participação no PIB" value={`${unit.gdpShare.toFixed(2)}%`} />
-        <StatRow label="Cadeiras na Câmara" value={`${unit.chamberSeats} deputados`} />
-        <StatRow label="IDH" value={unit.hdi.toFixed(3)} />
-        <StatRow label="Pobreza" value={`${unit.poverty.toFixed(1)}%`} tone={unit.poverty > 35 ? 'neg' : 'flat'} />
-        <StatRow label="Desemprego" value={`${unit.unemployment.toFixed(1)}%`} />
-        <StatRow label="Renda média" value={`R$ ${unit.income.toLocaleString('pt-BR')}`} />
-        <StatRow label="Homicídios por 100 mil" value={unit.crime.toFixed(1)} />
-        <StatRow label="Infraestrutura" value={`${unit.infrastructure.toFixed(0)}/100`} />
-        <StatRow
-          label="Relação com o Planalto"
-          value={`${unit.governorRelation.toFixed(0)}/100`}
-          tone={unit.governorRelation > 60 ? 'pos' : unit.governorRelation < 40 ? 'neg' : 'flat'}
-        />
-        <StatRow
-          label="Ambição presidencial do governador"
-          value={`${unit.governorAmbition.toFixed(0)}/100`}
-          tone={unit.governorAmbition > 65 ? 'neg' : 'flat'}
-          tip="Governador ambicioso ganha capital político atacando o Planalto quando o presidente está fraco."
-        />
-        <StatRow
-          label="Tensão social"
-          value={`${unit.unrest.toFixed(0)}/100`}
-          tone={unit.unrest > 55 ? 'neg' : 'flat'}
-        />
-      </div>
     </div>
   );
 }

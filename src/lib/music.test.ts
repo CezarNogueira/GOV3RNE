@@ -1,3 +1,5 @@
+import { readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_MUSIC_PREFS,
@@ -39,9 +41,18 @@ function bloqueado(): Storage {
 }
 
 describe('a trilha vem da pasta de músicas', () => {
-  it('as duas músicas da pasta entram no jogo, em ordem, com título legível', () => {
-    expect(TRACKS.map((track) => track.title)).toEqual(['Last Day', 'Slow Night']);
-    expect(TRACKS.map((track) => track.id)).toEqual(['LastDay', 'SlowNight']);
+  it('toda música da pasta entra no jogo, em ordem, com título legível', () => {
+    // A pasta é do jogador: pôr ou tirar um .mp3 muda a playlist. O teste
+    // compara com o que estiver lá, em vez de fixar nomes de faixa.
+    // No ambiente de DOM do teste, import.meta.url não é um caminho de arquivo;
+    // o Vitest roda a partir da raiz do projeto.
+    const pasta = join(process.cwd(), 'src', 'songs');
+    const arquivos = readdirSync(pasta)
+      .filter((nome) => nome.endsWith('.mp3'))
+      .sort((a, b) => a.localeCompare(b));
+
+    expect(TRACKS.map((track) => track.id)).toEqual(arquivos.map((nome) => nome.replace(/\.mp3$/, '')));
+    expect(TRACKS.map((track) => track.title)).toEqual(arquivos.map((nome) => titleFromFile(nome)));
     for (const track of TRACKS) expect(track.src).toMatch(/\.mp3/);
   });
 

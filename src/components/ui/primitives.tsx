@@ -72,11 +72,14 @@ export function AnimatedNumber({
   decimals = 1,
   duration = 550,
   className,
+  format,
 }: {
   value: number;
   decimals?: number;
   duration?: number;
   className?: string;
+  /** Formatação própria do número exibido (ex.: "R$ 2.041"). */
+  format?: (value: number) => string;
 }) {
   const [display, setDisplay] = useState(value);
   const fromRef = useRef(value);
@@ -114,7 +117,7 @@ export function AnimatedNumber({
     };
   }, [value, duration]);
 
-  return <span className={className}>{display.toFixed(decimals)}</span>;
+  return <span className={className}>{format ? format(display) : display.toFixed(decimals)}</span>;
 }
 
 // ---------------------------------------------------------------- Tooltip
@@ -225,9 +228,11 @@ export function MetricCard({
   tone,
   footer,
   size = 'md',
+  format,
 }: {
   label: string;
   value: number;
+  format?: (value: number) => string;
   unit?: string;
   delta?: number;
   decimals?: number;
@@ -254,7 +259,7 @@ export function MetricCard({
       </div>
       <div className="mt-1.5 flex items-baseline gap-1">
         <span className={cx('font-mono font-medium tabular', sizeClass, valueClass)}>
-          <AnimatedNumber value={value} decimals={decimals} />
+          <AnimatedNumber value={value} decimals={decimals} format={format} />
         </span>
         {unit && <span className="unit">{unit}</span>}
       </div>

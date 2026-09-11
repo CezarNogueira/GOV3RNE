@@ -191,9 +191,23 @@ describe('telas de jogo no primeiro mês', () => {
   it('o Painel mostra os indicadores macro e o botão de avançar', () => {
     renderPage(<Painel />);
     expect(screen.getByRole('button', { name: /avançar mês/i })).toBeInTheDocument();
-    expect(screen.getByText('Inflação')).toBeInTheDocument();
+    // PIB e inflação saíram do topo do Painel (continuam em Economia): no lugar
+    // deles ficam o lucro mensal do governo e o salário médio da população.
+    expect(screen.getByText('Lucro mensal')).toBeInTheDocument();
+    expect(screen.getByText('Salário médio')).toBeInTheDocument();
     expect(screen.getByText('Desemprego')).toBeInTheDocument();
+    expect(screen.getByText('Resultado primário')).toBeInTheDocument();
     expect(screen.getByText('Dívida bruta')).toBeInTheDocument();
+  });
+
+  it('clicar num estado no mapa do Painel abre o perfil dele, igual à Nação', async () => {
+    const { container } = renderPage(<Painel />);
+    const paths = container.querySelectorAll('svg path[aria-label]');
+    expect(paths.length).toBe(27);
+
+    await userEvent.click(paths[0] as Element);
+    expect(screen.getByText('Governador')).toBeInTheDocument();
+    expect(screen.getByText('Relação com o Planalto')).toBeInTheDocument();
   });
 
   it('o Painel lista as cinco promessas do mandato', () => {
