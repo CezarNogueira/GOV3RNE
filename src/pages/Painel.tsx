@@ -18,6 +18,7 @@ import {
   impeachmentLabel,
   momentumLabel,
   monthlyFiscalResult,
+  monthlyTreasuryInflow,
   grossDebt,
   countryRiskPercent,
   promiseReading,
@@ -73,6 +74,7 @@ export function Painel() {
   if (!state) return null;
 
   const lucroMensal = monthlyFiscalResult(state);
+  const entradaCaixa = monthlyTreasuryInflow(state);
 
   const pending = state.pendingEvents.filter((event) => !event.resolvedOptionId);
   const consequences = state.consequences.filter((entry) => entry.month === state.month);
@@ -140,8 +142,13 @@ export function Painel() {
             unit="bi"
             decimals={1}
             tone={lucroMensal >= 0 ? 'pos' : 'neg'}
-            tip="Quanto o governo arrecada num mês menos o que gasta nesse mês: despesa obrigatória, programas e medidas em execução, antes dos juros da dívida. O resultado primário ao lado soma 12 meses e inclui os gastos pontuais."
-            footer={<span className="label">{lucroMensal >= 0 ? 'Lucro' : 'Prejuízo'}</span>}
+            tip="Quanto o governo arrecada num mês menos o que gasta nesse mês: despesa obrigatória, programas e medidas em execução, antes dos juros da dívida. O déficit herdado na posse é coberto com dívida; tudo o que o mês render acima dele entra no caixa."
+            footer={
+              <span className="label">
+                {lucroMensal >= 0 ? 'Lucro' : 'Prejuízo'}
+                {entradaCaixa >= 0.05 && ` · +R$ ${entradaCaixa.toFixed(1)} bi no caixa`}
+              </span>
+            }
           />
           <MetricCard
             label="Desemprego"

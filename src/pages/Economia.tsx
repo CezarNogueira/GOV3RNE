@@ -168,7 +168,7 @@ function Contas({ state }: { state: State }) {
             label="Caixa discricionário"
             value={formatBRL(economy.treasuryCash, 1)}
             tone={economy.treasuryCash > 20 ? 'pos' : economy.treasuryCash > 5 ? 'flat' : 'neg'}
-            tip="O que sobra para gastar sem furar o arcabouço. Medidas e emendas saem daqui."
+            tip="O que sobra para gastar sem furar o arcabouço. Medidas e emendas saem daqui. Todo mês recebe o que o resultado render acima do déficit herdado na posse: imposto novo, corte de gasto, programa encerrado."
           />
         </Section>
 

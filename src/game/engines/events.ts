@@ -385,7 +385,7 @@ export function resolveEvent(
   state.economy.treasuryCash = round(state.economy.treasuryCash - option.cost, 2);
   if (option.cost > 0) state.economy.pipeline.fiscalImpulse += option.cost;
 
-  applyImpacts(state, option.impacts, 1);
+  applyImpacts(state, option.impacts, 1, option.bill ? 'recorrente' : 'pontual');
   for (const group of option.groupImpacts) {
     nudgeGroup(state.socialGroups, group.groupId, group.delta);
   }

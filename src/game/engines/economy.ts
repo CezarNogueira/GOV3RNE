@@ -1,6 +1,7 @@
 import type { GameState } from '../types/index';
 import { GAME_CALIBRATION } from '../data/calibration';
 import { Rng } from '../utils/rng';
+import { MACRO_BASELINE } from '../data/generated/baseline';
 import { approach, clamp, clamp100, round } from '../utils/math';
 
 /**
@@ -274,8 +275,12 @@ export function processEconomy(state: GameState, rng: Rng): EconomyDelta {
     1,
   );
 
-  // Caixa discricionário: sobra da arrecadação depois do custeio obrigatório.
-  const discretionaryInflow = Math.max(0, monthlyPrimary) * 0.55 + eco.revenue / 12 * 0.012;
+  // Caixa discricionário. O déficit que o governo herdou na posse é coberto com
+  // dívida, e isso já está na conta da dívida acima. Tudo o que o resultado do
+  // mês render acima dele entra inteiro no caixa: imposto novo, corte de gasto,
+  // programa encerrado.
+  const discretionaryInflow =
+    Math.max(0, monthlyPrimary - inheritedMonthlyResult(state)) + (eco.revenue / 12) * 0.012;
   eco.treasuryCash = round(eco.treasuryCash + discretionaryInflow - monthlySpend * 0.12, 2);
 
   // Salário mínimo é reajustado em janeiro pela inflação do ano anterior.
@@ -323,6 +328,9 @@ export function monthlyProgramSpend(state: GameState): number {
  * soma ao primário acumulado a cada mês: o Painel lê daqui para nunca mostrar
  * um número calculado de outro jeito.
  *
+ * Inclui o ganho recorrente das medidas e leis em vigor — o imposto novo entra
+ * aqui todo mês, e não de uma vez no primário.
+ *
  * Não inclui os gastos pontuais (emendas, custo de assinatura de medida,
  * escolha de evento), que caem direto no primário acumulado de 12 meses.
  */
@@ -331,7 +339,28 @@ export function monthlyFiscalResult(
   spend: number = monthlyProgramSpend(state),
 ): number {
   const eco = state.economy;
-  return eco.revenue / 12 - eco.spending / 12 - spend;
+  return eco.revenue / 12 - eco.spending / 12 - spend + (eco.recurringFiscalGain ?? 0) / 12;
+}
+
+/**
+ * O déficit mensal que o governo herdou na posse, R$ bilhões — o resultado
+ * primário oficial da data de início, corrigido pelo PIB nominal corrente.
+ * Esse rombo é financiado com dívida e não sai do caixa.
+ */
+export function inheritedMonthlyResult(state: GameState): number {
+  return Math.min(0, ((MACRO_BASELINE.primaryBalancePctGdp.value / 100) * state.economy.gdpNominal) / 12);
+}
+
+/**
+ * Quanto do resultado do mês entra no caixa, R$ bilhões: tudo o que ele render
+ * acima do déficit herdado. É o dinheiro que as decisões do presidente fizeram
+ * aparecer.
+ */
+export function monthlyTreasuryInflow(
+  state: GameState,
+  spend: number = monthlyProgramSpend(state),
+): number {
+  return Math.max(0, monthlyFiscalResult(state, spend) - inheritedMonthlyResult(state));
 }
 
 /**

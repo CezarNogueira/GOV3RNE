@@ -197,8 +197,18 @@ export function createPolicy(
 /**
  * Aplica os impactos de uma medida sobre o estado. `share` permite aplicar
  * apenas uma fração — medidas em execução entregam por mês, não de uma vez.
+ *
+ * `fiscal` diz o que é o `primaryBalance` do impacto. Numa medida ou lei
+ * (`recorrente`), o ganho é dinheiro que entra todo ano: vai para o resultado
+ * de todo mês e, por ele, para o caixa. Numa escolha de evento (`pontual`), é
+ * um valor de uma vez só, que cai no primário acumulado.
  */
-export function applyImpacts(state: GameState, impacts: PolicyImpact, share = 1): void {
+export function applyImpacts(
+  state: GameState,
+  impacts: PolicyImpact,
+  share = 1,
+  fiscal: 'pontual' | 'recorrente' = 'pontual',
+): void {
   const eco = state.economy;
   const nation = state.nation;
   const apply = (value: number | undefined) => (value ?? 0) * share;
@@ -209,7 +219,15 @@ export function applyImpacts(state: GameState, impacts: PolicyImpact, share = 1)
   eco.gdpGrowth = round(eco.gdpGrowth + apply(impacts.gdpGrowth) * 0.4, 3);
   eco.unemployment = round(clamp(eco.unemployment + apply(impacts.unemployment) * 0.4, 2, 34), 3);
   eco.debtToGdp = round(clamp(eco.debtToGdp + apply(impacts.debtToGdp), 20, 220), 3);
-  eco.primaryBalance = round(eco.primaryBalance + apply(impacts.primaryBalance), 2);
+  if (fiscal === 'recorrente' && (impacts.primaryBalance ?? 0) > 0) {
+    // Reverter a medida tira o ganho dela, mas nunca cria um rombo fantasma.
+    eco.recurringFiscalGain = round(
+      Math.max(0, (eco.recurringFiscalGain ?? 0) + apply(impacts.primaryBalance)),
+      2,
+    );
+  } else {
+    eco.primaryBalance = round(eco.primaryBalance + apply(impacts.primaryBalance), 2);
+  }
   eco.countryRisk = Math.round(clamp(eco.countryRisk + apply(impacts.countryRisk), 40, 2000));
   eco.fiscalCredibility = round(clamp100(eco.fiscalCredibility + apply(impacts.fiscalCredibility)), 2);
   eco.businessConfidence = round(clamp100(eco.businessConfidence + apply(impacts.businessConfidence)), 2);
@@ -413,7 +431,7 @@ export function processPolicies(
       for (const extra of policy.numericExtras ?? []) applyNumericChange(state, extra);
 
       // Uma parte do efeito chega de imediato: o anúncio já move expectativa.
-      applyImpacts(state, policy.impacts, 0.25);
+      applyImpacts(state, policy.impacts, 0.25, 'recorrente');
       for (const group of policy.groupImpacts) {
         nudgeGroup(state.socialGroups, group.groupId, group.delta * 0.35);
       }
@@ -422,7 +440,7 @@ export function processPolicies(
     // ------------------------------------------------------------ Execução
     if (policy.status === 'vigente' && policy.monthsRemaining > 0) {
       // O resto do efeito é entregue mês a mês, enquanto a medida executa.
-      applyImpacts(state, policy.impacts, 0.75 / policy.executionMonths);
+      applyImpacts(state, policy.impacts, 0.75 / policy.executionMonths, 'recorrente');
       for (const group of policy.groupImpacts) {
         nudgeGroup(state.socialGroups, group.groupId, (group.delta * 0.65) / policy.executionMonths);
       }
@@ -453,7 +471,7 @@ export function processPolicies(
     ) {
       policy.status = 'caducada';
       // Tudo o que a MP entregou é revertido: a medida deixou de existir.
-      applyImpacts(state, policy.impacts, -0.6);
+      applyImpacts(state, policy.impacts, -0.6, 'recorrente');
       consequences.push({
         id: makeId('cons', rng),
         sourceId: policy.id,
@@ -474,7 +492,7 @@ export function processPolicies(
       // Chance mensal pequena, mas cumulativa ao longo da vigência.
       if (rng.bool(exposure * courtHostility * 0.06)) {
         policy.status = 'derrubada_stf';
-        applyImpacts(state, policy.impacts, -0.5);
+        applyImpacts(state, policy.impacts, -0.5, 'recorrente');
         consequences.push({
           id: makeId('cons', rng),
           sourceId: policy.id,
@@ -525,7 +543,7 @@ export function revokePolicy(state: GameState, policyId: string): boolean {
   if (!policy || policy.status !== 'vigente') return false;
   policy.status = 'revogada';
   policy.monthsRemaining = 0;
-  applyImpacts(state, policy.impacts, -0.4);
+  applyImpacts(state, policy.impacts, -0.4, 'recorrente');
   // O número volta ao que era antes da medida: piso, alíquota ou dotação.
   if (policy.numericImpact) {
     revertNumericChange(state, policy.numericImpact.change);

@@ -457,7 +457,7 @@ export function processVetoes(state: GameState, rng: Rng): { notes: string[]; co
     const derrubado = deputados >= MAIORIA_ABSOLUTA_CAMARA && senadores >= MAIORIA_ABSOLUTA_SENADO;
 
     if (derrubado) {
-      applyImpacts(state, veto.lawImpacts, veto.vetoedShare);
+      applyImpacts(state, veto.lawImpacts, veto.vetoedShare, 'recorrente');
       for (const grupo of veto.lawGroups) {
         nudgeGroup(state.socialGroups, grupo.groupId, grupo.delta * veto.vetoedShare);
       }

@@ -31,6 +31,12 @@ export interface EconomyState {
   revenue: number;
   /** Despesa primária, R$ bilhões, 12 meses. */
   spending: number;
+  /**
+   * Ganho fiscal recorrente das medidas e leis em vigor, R$ bilhões por ano:
+   * imposto novo, corte de gasto, receita que a lei criou. Entra no resultado
+   * de todo mês — e, por ele, no caixa. Save antigo não tem: vale zero.
+   */
+  recurringFiscalGain?: number;
   /** Reservas internacionais, US$ bilhões. */
   reserves: number;
   /** Índice da bolsa, pontos. */
