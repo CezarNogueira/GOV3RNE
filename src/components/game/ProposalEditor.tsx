@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Cpu, Loader2, PenLine, Sparkles } from 'lucide-react';
-import { recognizeMeasure, type ProposalAnalysis } from '@/game';
+import { builderForChoice, recognizeMeasure, type ProposalAnalysis } from '@/game';
 import { useGame } from '@/state/game-store';
 import { cx } from '../ui/primitives';
 import { CabinetReviewModal } from './CabinetReviewModal';
@@ -247,8 +247,12 @@ export function ProposalEditor({ onSigned }: { onSigned?: (policyId: string | nu
           onConfigure={handleConfigure}
           onChoose={(choiceId) => {
             const choice = recognition.choices.find((entry) => entry.id === choiceId);
-            if (choice?.rewrite) editProposal(choice.rewrite);
-            else if (recognition.builder) setBuilderId(recognition.builder);
+            if (choice?.rewrite) {
+              editProposal(choice.rewrite);
+              return;
+            }
+            const builder = builderForChoice(recognition, choiceId);
+            if (builder) setBuilderId(builder);
           }}
         />
       )}

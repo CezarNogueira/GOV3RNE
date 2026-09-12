@@ -48,6 +48,20 @@ interface IntentScore {
 }
 
 /**
+ * A frase declarada passa pela mesma normalização do texto do jogador. Sem
+ * isso, "mais verba para" nunca casava: no texto, "verba" já virou "orcamento".
+ */
+const FRASES_NORMALIZADAS = new Map<string, string>();
+function canonicalPhrase(phrase: string): string {
+  let normalizada = FRASES_NORMALIZADAS.get(phrase);
+  if (normalizada === undefined) {
+    normalizada = canonical(phrase);
+    FRASES_NORMALIZADAS.set(phrase, normalizada);
+  }
+  return normalizada;
+}
+
+/**
  * Pontua uma intenção contra a frase.
  *
  * Frase inteira vale muito; verbo com complemento vale bem; verbo sozinho vale
@@ -67,7 +81,8 @@ function scoreIntent(
   let matched = '';
 
   // ---------------------------------------------------------- frase inteira
-  for (const phrase of intent.phrases) {
+  for (const declared of intent.phrases) {
+    const phrase = canonicalPhrase(declared);
     if (forms.some((form) => form.includes(phrase))) {
       const weight = 0.82 + Math.min(0.14, phrase.split(' ').length * 0.03);
       if (weight > best) {
@@ -477,4 +492,17 @@ function readNavigation(
   }
 
   return null;
+}
+
+/**
+ * O painel que uma opção de "Você quis dizer" abre.
+ *
+ * Cada opção abre o painel DELA: clicar em "Ampliar orçamento" abre o reforço,
+ * mesmo que a leitura principal tenha sido "Cortar gastos". Opção de entidade
+ * (a empresa, "outra empresa") continua no painel da leitura principal.
+ */
+export function builderForChoice(recognition: RecognizedMeasure, choiceId: string): string | undefined {
+  const intent = INTENTS.find((entry) => entry.id === choiceId);
+  if (intent) return intent.builder;
+  return recognition.builder;
 }

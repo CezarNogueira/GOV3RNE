@@ -242,12 +242,17 @@ export const INTENTS: readonly IntentSpec[] = [
     phrases: [
       'aumentar o orcamento',
       'ampliar o orcamento',
+      'aumentar orcamento',
+      'ampliar orcamento',
       'mais verba para',
       'reforcar o orcamento',
       'recompor o orcamento',
       'destinar mais recursos',
     ],
-    verbs: ['aument', 'ampli', 'reforc', 'recompor', 'destinar', 'elevar'],
+    // Verbos no infinitivo: a conjugação é gerada a partir deles. Radical solto
+    // ("ampli") não casa com palavra nenhuma, e "ampliar orçamento" caía em
+    // "Cortar gastos" pelo desempate.
+    verbs: ['aumentar', 'ampliar', 'reforcar', 'recompor', 'destinar', 'elevar', 'expandir'],
     objects: ['orcamento', 'verba', 'recursos', 'dotacao'],
     expects: ['BUDGET_AREA'],
     builder: 'reforco_orcamento',

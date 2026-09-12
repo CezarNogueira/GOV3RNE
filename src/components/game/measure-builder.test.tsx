@@ -205,3 +205,31 @@ describe('quando a frase não diz qual empresa', () => {
     expect(within(processo).getAllByText(/correios/i).length).toBeGreaterThan(0);
   });
 });
+
+describe('construtor de reforço de orçamento', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    load(newGame());
+  });
+
+  it('"ampliar orçamento" abre o painel de ampliar, e não o de corte', async () => {
+    await escrever('ampliar orçamento da educação');
+    await userEvent.click(screen.getByRole('button', { name: /montar a medida/i }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/para onde vai o dinheiro/i)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/de onde sai o dinheiro/i)).not.toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/quanto ampliar em educação/i)).toBeInTheDocument();
+  });
+
+  it('escreve uma medida que amplia a pasta', async () => {
+    const campo = await escrever('ampliar orçamento da educação');
+    await userEvent.click(screen.getByRole('button', { name: /montar a medida/i }));
+
+    const dialog = screen.getByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: /analisar a medida/i }));
+
+    expect(campo.value).toContain('ampliar');
+    expect(campo.value).not.toContain('reduzir');
+  });
+});

@@ -172,5 +172,9 @@ export function verbForms(infinitive: string): string[] {
   // inteira, então um radical que não é palavra ("abr") nunca casa com nada.
   if (!base.endsWith('ar')) formas.add(raiz);
 
-  return [...formas].map((forma) => `${forma}${cauda}`);
+  // Conjugação que coincide com palavra vazia não é verbo: "para" é a
+  // preposição de "mais verba para a saúde", e não o presente de "parar".
+  return [...formas]
+    .filter((forma) => forma === base || !STOPWORDS.has(forma))
+    .map((forma) => `${forma}${cauda}`);
 }
