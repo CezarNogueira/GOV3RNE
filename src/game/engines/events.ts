@@ -261,6 +261,9 @@ export function rollEvents(state: GameState, rng: Rng): ActiveEvent[] {
     usedDynamic.add(definition.id);
     spend(definition.category);
     (state.flags.eventCooldowns ??= {})[definition.id] = state.month;
+    // Desdobramento também conta como disparo: sem isto, um evento `once`
+    // chamado por followUp nunca entrava em firedEvents e podia voltar.
+    if (definition.once) state.flags.firedEvents.push(definition.id);
   }
   if (due.length > 0) {
     state.flags.pendingFollowUps = (state.flags.pendingFollowUps ?? []).filter(
