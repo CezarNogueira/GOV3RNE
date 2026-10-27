@@ -119,7 +119,7 @@ export function Painel() {
               {state.president.politicalName}
             </h1>
             <p className="mt-1 text-[12px] uppercase tracking-wider text-neutral-500">
-              {state.party.acronym} · {OCCUPATION_LABEL[state.president.occupation] ?? '—'} · natural de{' '}
+              {state.party.acronym} · natural de{' '}
               {state.president.homeState}
             </p>
           </div>
@@ -913,19 +913,4 @@ const STRATEGY_LABEL: Record<string, string> = {
   obstrucao: 'Obstrução regimental',
   institucional: 'Ataque institucional',
   ruptura: 'Ruptura',
-};
-
-const OCCUPATION_LABEL: Record<string, string> = {
-  empresario: 'Empresário',
-  sindicalista: 'Sindicalista',
-  militar: 'Militar da reserva',
-  magistrado: 'Magistrado',
-  lider_religioso: 'Líder religioso',
-  medico: 'Médico',
-  professor: 'Professor',
-  produtor_rural: 'Produtor rural',
-  comunicador: 'Comunicador',
-  politico_carreira: 'Político de carreira',
-  servidor_publico: 'Servidor público',
-  advogado: 'Advogado',
 };

@@ -197,7 +197,7 @@ export function VidaPessoal() {
                         {spouse.name}
                       </p>
                       <p className="text-[11px] text-neutral-500">
-                        {spouse.age} anos · {spouse.occupation}
+                        {spouse.age} anos
                       </p>
                     </div>
                     <Badge tone={spouse.stress > 75 ? 'danger' : spouse.stress > 45 ? 'warn' : 'gov'}>
