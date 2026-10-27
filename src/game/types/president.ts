@@ -83,7 +83,6 @@ export interface FamilyMember {
   name: string;
   kind: 'conjuge' | 'filho';
   age: number;
-  occupation?: string;
   approval: number;
   influence: number;
   /**
