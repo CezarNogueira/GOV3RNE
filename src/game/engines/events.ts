@@ -429,7 +429,6 @@ function applyFamilyEffect(state: GameState, effect: EventFamilyEffect, rng: Rng
         name: pessoa.name,
         kind: 'conjuge',
         age: pessoa.age,
-        occupation: pessoa.occupation,
         approval: 56,
         influence: 22,
         // Relação que começa dentro do cargo começa leve e sob holofote: o

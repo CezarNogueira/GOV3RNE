@@ -120,7 +120,7 @@ export interface EventFamilyEffect {
   /** Redefine a postura pública do cônjuge. */
   stance?: SpouseStance;
   /** Começa uma relação: entra um cônjuge na família do presidente. */
-  startRelationship?: { name: string; age: number; occupation: string };
+  startRelationship?: { name: string; age: number; };
   /** Encerra a relação em curso. O cônjuge sai da família. */
   endRelationship?: boolean;
 }

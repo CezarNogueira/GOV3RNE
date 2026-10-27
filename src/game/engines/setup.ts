@@ -282,7 +282,6 @@ function buildFamily(input: NewGameInput, rng: Rng): FamilyMember[] {
       name: draft.spouseName?.trim() || `${rng.pick(FIRST_NAMES)} ${rng.pick(LAST_NAMES)}`,
       kind: 'conjuge',
       age: draft.spouseAge ?? Math.max(25, input.president.age - rng.int(0, 8)),
-      occupation: draft.spouseOccupation || 'Sem ocupação declarada',
       approval: 53,
       influence: 48,
       stress: 12,

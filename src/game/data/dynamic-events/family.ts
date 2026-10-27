@@ -463,7 +463,7 @@ export const FAMILY_EVENTS: readonly DynamicEventDefinition[] = [
             approvalDelta: 0.8,
             congressDelta: 0,
             stressDelta: -4,
-            family: { startRelationship: { name: nome, age: idade, occupation: oficio } },
+            family: { startRelationship: { name: nome, age: idade } },
           },
           {
             id: 'discreto',
@@ -478,7 +478,7 @@ export const FAMILY_EVENTS: readonly DynamicEventDefinition[] = [
             approvalDelta: 0,
             congressDelta: 0,
             stressDelta: -2,
-            family: { startRelationship: { name: nome, age: idade, occupation: oficio } },
+            family: { startRelationship: { name: nome, age: idade } },
           },
           {
             id: 'nao',
@@ -533,7 +533,7 @@ export const FAMILY_EVENTS: readonly DynamicEventDefinition[] = [
             approvalDelta: 1.2,
             congressDelta: 0,
             stressDelta: -6,
-            family: { startRelationship: { name: nome, age: idade, occupation: oficio } },
+            family: { startRelationship: { name: nome, age: idade } },
           },
           {
             id: 'amizade',
