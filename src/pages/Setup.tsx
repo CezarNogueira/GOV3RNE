@@ -35,7 +35,6 @@ import {
   type CandidateProfile,
   type Ministry,
   type MinisterCandidate,
-  type Occupation,
   createSeed,
   formatBRL,
   formatMoney,
@@ -67,8 +66,8 @@ type Step = 1 | 2 | 3 | 4 | 5;
 const STEP_LABELS: Record<Step, string> = {
   1: 'Identidade',
   2: 'Perfil',
-  3: 'Chapa',
-  4: 'Governo',
+  3: 'Vice',
+  4: 'Ministros',
   5: 'Promessas',
 };
 
@@ -99,21 +98,6 @@ interface Draft {
   promises: string[];
 }
 
-const OCCUPATIONS = [
-  { id: 'politico_carreira', label: 'Político de carreira', hint: 'Vereador, deputado, ministro. Conhece cada gaveta e cada preço.' },
-  { id: 'empresario', label: 'Empresário', hint: 'O mercado te leva a sério. O sindicato, não.' },
-  { id: 'sindicalista', label: 'Sindicalista', hint: 'Base organizada e desconfiança permanente do empresariado.' },
-  { id: 'militar', label: 'Militar da reserva', hint: 'Caserna tranquila, universidade hostil.' },
-  { id: 'magistrado', label: 'Magistrado', hint: 'Vocabulário institucional e distância do povo.' },
-  { id: 'lider_religioso', label: 'Líder religioso', hint: 'Um bloco identitário inteiro começa do seu lado.' },
-  { id: 'medico', label: 'Médico', hint: 'Credibilidade fácil e nenhuma máquina partidária.' },
-  { id: 'professor', label: 'Professor', hint: 'Rede de educação com você desde o primeiro dia.' },
-  { id: 'produtor_rural', label: 'Produtor rural', hint: 'O agro financia. O ambientalismo declara guerra.' },
-  { id: 'comunicador', label: 'Comunicador', hint: 'Sabe falar com a câmera antes de aprender a governar.' },
-  { id: 'servidor_publico', label: 'Servidor público', hint: 'A máquina te obedece mais rápido.' },
-  { id: 'advogado', label: 'Advogado', hint: 'Segurança jurídica nas medidas, carisma limitado.' },
-];
-
 const RELIGIONS = [
   { id: 'catolico', label: 'Católico' },
   { id: 'evangelico', label: 'Evangélico' },
@@ -124,16 +108,14 @@ const RELIGIONS = [
 ];
 
 const TRAITS = [
-  { id: 'carismatico', label: 'Carismático', hint: 'Ganha a plateia em qualquer sala. Pronunciamento rende mais.' },
-  { id: 'negociador', label: 'Negociador', hint: 'O Congresso cobra menos por voto.' },
-  { id: 'tecnico', label: 'Técnico', hint: 'Números na ponta da língua. O mercado leva a sério.' },
-  { id: 'linha_dura', label: 'Linha dura', hint: 'Mão firme em segurança. A caserna gosta, a periferia não.' },
-  { id: 'reputacao_ilibada', label: 'Reputação ilibada', hint: 'Escândalos grudam menos em você.' },
-  { id: 'populista', label: 'Populista', hint: 'Fala direto com o povo, passando por cima de todo mundo.' },
-  { id: 'estadista_global', label: 'Estadista global', hint: 'Respeitado fora do país. Viagens rendem mais.' },
-  { id: 'vingativo', label: 'Vingativo', hint: 'Retaliação é mais eficaz, mas queima pontes.' },
-  { id: 'austero', label: 'Austero', hint: 'Credibilidade fiscal se recupera mais rápido.' },
-  { id: 'midiatico', label: 'Midiático', hint: 'Cada publicação alcança mais gente, para o bem e para o mal.' },
+  { id: 'carismatico', label: 'Carismático', hint: 'Pronunciamento rende mais' },
+  { id: 'negociador', label: 'Negociador', hint: 'O Congresso cobra menos por voto' },
+  { id: 'tecnico', label: 'Técnico', hint: 'O mercado te leva mais a sério' },
+  { id: 'linha_dura', label: 'Linha dura', hint: 'A militares gostam, a periferia não' },
+  { id: 'reputacao_ilibada', label: 'Reputação ilibada', hint: 'Escapa melhor dos escândalos' },
+  { id: 'populista', label: 'Populista', hint: 'Fala direto com o povo' },
+  { id: 'estadista_global', label: 'Estadista global', hint: 'Viagens rendem mais' },
+  { id: 'midiatico', label: 'Midiático', hint: 'Publicações mais eficientes' },
 ];
 
 const CATEGORY_OPTIONS: { id: PolicyCategory; label: string }[] = [
@@ -363,7 +345,7 @@ const STEP_HINTS: Record<Step, string> = {
   2: 'De onde você veio decide quem já gosta de você antes do primeiro discurso.',
   3: 'O vice é o único da lista que ganha se você cair.',
   4: 'Pasta é moeda. As dez precisam de nome antes da posse.',
-  5: 'Cinco promessas. São elas que a imprensa vai cobrar no último mês, uma por uma.',
+  5: '3 promessas. São elas que a imprensa vai cobrar no último mês, uma por uma.',
 };
 
 // ===========================================================================
@@ -799,26 +781,14 @@ function StepProfile({
     <div className="space-y-4">
       <section className="card p-4">
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="label-strong">De onde você veio</h2>
           <p className="text-[11px] text-neutral-500">
-            Conta pessoal na posse:{' '}
+            Conta pessoal:{' '}
             <span className="font-mono text-neutral-200">
-              {formatMoney(startingPersonalWealth(draft.occupation as Occupation, draft.age))}
+              {formatMoney(startingPersonalWealth(draft.age))}
             </span>
           </p>
         </div>
         <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
-          {OCCUPATIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className={cx('option', draft.occupation === option.id && 'option-selected')}
-              onClick={() => update('occupation', option.id)}
-            >
-              <p className="text-[12px] font-semibold text-neutral-100">{option.label}</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">{option.hint}</p>
-            </button>
-          ))}
         </div>
       </section>
 
@@ -861,7 +831,7 @@ function StepProfile({
 }
 
 // ===========================================================================
-// Etapa 3 — Chapa
+// Etapa 3 — Vice
 // ===========================================================================
 function StepTicket({
   draft,
@@ -872,7 +842,7 @@ function StepTicket({
 }) {
   return (
     <section className="card p-4">
-      <h2 className="label-strong">Quem vai com você na chapa</h2>
+      <h2 className="label-strong">Quem será seu Vice</h2>
       <p className="mt-1 text-[12px] text-neutral-500">
         O vice é o único da lista que ganha se você cair. Um nome com bancada compra base antes da
         posse; um nome popular compra aprovação; um nome ambicioso compra as duas coisas e cobra em
@@ -1040,7 +1010,6 @@ function StepCabinet({
                   </p>
                   <p className="font-mono text-[11px] text-neutral-500">
                     valor {ministry.weight}/10 · {formatBRL(ministry.budget)}
-                    {ministry.dirty && <span className="ml-1.5 text-warn-500">· pasta suja</span>}
                   </p>
                 </div>
                 {chosen ? (
@@ -1319,8 +1288,7 @@ function StepPromises({
               O que você promete
             </h2>
             <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-neutral-500">
-              Escolha cinco. Elas viram a régua do seu mandato e aparecem no Painel todo mês, com o
-              número atual ao lado. Nenhuma delas se cumpre sozinha.
+              Promessas viram a régua do seu mandato
             </p>
           </div>
           <Badge tone={draft.promises.length === MAX_PROMISES ? 'gov' : 'warn'}>
@@ -1331,7 +1299,6 @@ function StepPromises({
         <div className="mt-3 grid gap-1.5 sm:grid-cols-2">
           {ordered.map((promise) => {
             const selected = draft.promises.includes(promise.id);
-            const combines = matches(promise.category);
             const full = draft.promises.length >= MAX_PROMISES && !selected;
 
             return (
@@ -1346,7 +1313,6 @@ function StepPromises({
                   <p className="text-[13px] font-semibold leading-tight text-neutral-100">
                     {promise.title}
                   </p>
-                  {combines && <Badge tone="info">Combina</Badge>}
                 </div>
 
                 <p className="mt-1 text-[12px] italic leading-snug text-neutral-400">

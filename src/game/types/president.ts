@@ -2,20 +2,6 @@ import type { IdeologyVector, PolicyCategory, Region } from './common';
 
 export type Gender = 'masculino' | 'feminino' | 'nao_binario';
 
-export type Occupation =
-  | 'empresario'
-  | 'sindicalista'
-  | 'militar'
-  | 'magistrado'
-  | 'lider_religioso'
-  | 'medico'
-  | 'professor'
-  | 'produtor_rural'
-  | 'comunicador'
-  | 'politico_carreira'
-  | 'servidor_publico'
-  | 'advogado';
-
 export type Religion =
   | 'catolico'
   | 'evangelico'
@@ -73,7 +59,6 @@ export interface President {
   age: number;
   gender: Gender;
   homeState: string;
-  occupation: Occupation;
   religion: Religion;
   traits: TraitId[];
   avatar: AvatarConfig;

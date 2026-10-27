@@ -12,7 +12,6 @@ import type {
   Minister,
   MinistryId,
   NationState,
-  Occupation,
   PartyBloc,
   PartyProfile,
   President,
@@ -238,28 +237,13 @@ function resolveParty(input: NewGameInput): PartyProfile {
  * teve antes do Planalto. É a base para quem tem 35 anos, a idade mínima para
  * disputar a Presidência.
  */
-export const STARTING_WEALTH_BY_OCCUPATION: Record<Occupation, number> = {
-  politico_carreira: 120_000,
-  empresario: 95_000,
-  magistrado: 90_000,
-  advogado: 90_000,
-  medico: 40_000,
-  militar: 10_000,
-  professor: 4_000,
-  servidor_publico: 4_000,
-  sindicalista: 4_000,
-  lider_religioso: 4_000,
-  produtor_rural: 4_000,
-  comunicador: 2_000,
-};
 
 const IDADE_MINIMA_PRESIDENTE = 35;
 
 /** Dinheiro inicial: a base da carreira, com +1% por ano de idade acima de 35. */
-export function startingPersonalWealth(occupation: Occupation, age: number): number {
-  const base = STARTING_WEALTH_BY_OCCUPATION[occupation] ?? 0;
+export function startingPersonalWealth(age: number): number {
   const anosAMais = Math.max(0, Math.floor(age) - IDADE_MINIMA_PRESIDENTE);
-  return Math.round(base * (1 + anosAMais / 100));
+  return Math.round((5000 * (anosAMais + 1)));
 }
 
 function buildPresident(input: NewGameInput): President {
@@ -273,7 +257,6 @@ function buildPresident(input: NewGameInput): President {
     age: draft.age,
     gender: draft.gender,
     homeState: draft.homeState,
-    occupation: draft.occupation,
     religion: draft.religion,
     traits: draft.traits,
     avatar: draft.avatar,
@@ -282,7 +265,7 @@ function buildPresident(input: NewGameInput): President {
     mood: 74,
     stress: 18,
     personalApproval: GAME_CALIBRATION.startingApproval + 3,
-    personalWealth: startingPersonalWealth(draft.occupation, draft.age),
+    personalWealth: startingPersonalWealth(draft.age),
     monthlySalary: 46_366,
     possessions: [],
     lastSpendMonth: {},
@@ -481,27 +464,12 @@ function buildSocialGroups(president: President, party: PartyProfile): SocialGro
 }
 
 function originAffinity(president: President, groupId: string): number {
-  const map: Record<string, Partial<Record<string, number>>> = {
-    empresario: { empresariado: 12, mercado_financeiro: 8, trabalhadores: -6, servidores: -4 },
-    sindicalista: { trabalhadores: 14, servidores: 8, empresariado: -8, mercado_financeiro: -6 },
-    militar: { militares: 16, policiais: 10, universitarios: -8, artistas: -6 },
-    magistrado: { classe_media: 6, mercado_financeiro: 4 },
-    lider_religioso: { evangelicos: 15, catolicos: 6, artistas: -8, universitarios: -5 },
-    medico: { baixa_renda: 8, classe_media: 6, professores: 4 },
-    professor: { professores: 15, universitarios: 10, empresariado: -3 },
-    produtor_rural: { agronegocio: 16, ambientalistas: -10, indigenas: -7 },
-    comunicador: { classe_media: 7, artistas: 5 },
-    politico_carreira: { classe_media: -4, universitarios: -5 },
-    servidor_publico: { servidores: 14, professores: 6, empresariado: -4 },
-    advogado: { classe_media: 5, mercado_financeiro: 3 },
-  };
-  const fromOccupation = map[president.occupation]?.[groupId] ?? 0;
   const fromReligion =
     (president.religion === 'evangelico' && groupId === 'evangelicos') ||
     (president.religion === 'catolico' && groupId === 'catolicos')
       ? 7
       : 0;
-  return fromOccupation + fromReligion;
+  return fromReligion;
 }
 
 // ---------------------------------------------------------------------------
