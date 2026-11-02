@@ -1,5 +1,3 @@
-import type { PolicyCategory } from './common';
-import type { PolicyImpact } from './policy';
 import type { MinistryId } from './politics';
 
 /**
@@ -109,7 +107,6 @@ export interface RecognizedMeasure {
   confidence: number;
   entities: RecognizedEntity[];
   numbers: RecognizedNumber[];
-  category?: PolicyCategory;
   ministries: MinistryId[];
   /** Construtor a abrir quando a medida precisa ser configurada. */
   builder?: string;
@@ -161,9 +158,7 @@ export interface BuilderOption {
    *
    * A escala por R$ 10 bi é o que faz o tamanho da medida importar.
    */
-  impactsPer10bi?: PolicyImpact;
   /** Efeito que só aparece meses depois, na mesma escala. */
-  delayedPer10bi?: { monthsAhead: number; label: string; impacts: PolicyImpact };
   /**
    * A opção abre as réguas de regra de entrada do programa ao lado dela.
    *
@@ -203,7 +198,6 @@ export interface BuilderSpec {
   /** Frase de abertura do painel, na voz do sistema. */
   intro: string;
   shape: BuilderShape;
-  category: PolicyCategory;
   ministries: MinistryId[];
   options: BuilderOption[];
   amount?: BuilderAmountSpec;

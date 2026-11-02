@@ -1,6 +1,3 @@
-import type { AvatarConfig } from './president';
-import type { IdeologyVector, PolicyCategory, Region } from './common';
-
 /**
  * As pastas que existem no jogo.
  *
@@ -92,7 +89,6 @@ export interface Ministry {
   budget: number;
   /** Pasta historicamente exposta a escândalo. */
   dirty: boolean;
-  categories: PolicyCategory[];
   description: string;
 
   /** O que a pasta representa numa negociação com o Congresso. */
@@ -135,8 +131,6 @@ export interface Minister {
   monthsInOffice: number;
   scandalRisk: number;
   bio: string;
-  /** O mesmo retrato que apareceu na lista de escolha. */
-  avatar: AvatarConfig;
   /** Nomeação política traz bancada; técnica traz entrega. */
   appointmentKind: 'politico' | 'tecnico' | 'independente' | 'internet';
 }
@@ -173,8 +167,6 @@ export const CANDIDATE_ORIGIN_NOTE: Record<CandidateOrigin, string> = {
 export interface CandidateProfile {
   id: string;
   name: string;
-  /** Retrato montado com as mesmas peças do avatar do jogador. */
-  avatar: AvatarConfig;
   party: string;
   /** De onde a pessoa vem. Decide em que divisão ela aparece na chapa. */
   origin: CandidateOrigin;
@@ -260,7 +252,6 @@ export interface Committee {
   chairParty: string;
   /** Controle do governo sobre a comissão, 0-100. */
   control: number;
-  topic: PolicyCategory;
   pendingBills: number;
 }
 
@@ -289,10 +280,8 @@ export interface PoliticianSeed {
   name: string;
   party: string;
   state: string;
-  region: Region;
   chamber: ChamberId;
   caucuses: string[];
-  ideology: IdeologyVector;
   loyalty: number;
   price: number;
 }

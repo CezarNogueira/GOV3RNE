@@ -1,5 +1,3 @@
-import type { DataOrigin } from './common';
-
 /** Fotografia macroeconômica do mês corrente. Valores em % ou R$ bilhões. */
 export interface EconomyState {
   /** PIB nominal em R$ bilhões (anualizado). */
@@ -97,7 +95,6 @@ export interface BudgetLine {
   /** Fração obrigatória (não cortável por decreto). */
   mandatoryShare: number;
   execution: number;
-  origin: DataOrigin;
 }
 
 export interface TaxLine {

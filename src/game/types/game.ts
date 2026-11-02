@@ -5,8 +5,6 @@ import type {
 import type { EconomyState, EconomySnapshot, BudgetLine, TaxLine } from './economy';
 import type { CompaniesState } from './companies';
 import type { CongressState, Committee, Minister, OppositionState, SupremeCourtState } from './politics';
-import type { ActiveEvent, Consequence, NewsItem, SocialPost, TimelineEntry } from './events';
-import type { ElectionState } from './election';
 import type { DecisionEntry } from './decisions';
 
 export interface ApprovalState {
@@ -104,8 +102,6 @@ export interface GameFlags {
    * escândalo em CPI, em vez de deixar cada crise isolada.
    */
   pendingFollowUps?: { definitionId: string; dueMonth: number }[];
-  /** Vetos do presidente esperando a sessão conjunta do Congresso. */
-  pendingVetoes?: import('./events').PendingVeto[];
   /** Causa específica do fim de jogo, quando a razão genérica não basta. */
   gameOverCause?: 'risco_pais';
   /**
@@ -167,24 +163,11 @@ export interface GameState {
    * de "corporations" que existia antes — aquela não reagia a nada.
    */
   companies: CompaniesState;
-
-  /**
-   * A disputa pela reeleição. Nasce nula e é montada no quarto ano, quando a
-   * janela eleitoral abre — ou fica nula para sempre se a partida foi criada
-   * com a reeleição desabilitada.
-   */
-  election: ElectionState | null;
-
-  pendingEvents: ActiveEvent[];
-  consequences: Consequence[];
-  news: NewsItem[];
-  posts: SocialPost[];
   /**
    * O que cada decisão do presidente fez com o país, medido antes e depois.
    * É o extrato que a interface mostra na hora e o histórico guarda.
    */
   decisions: DecisionEntry[];
-  timeline: TimelineEntry[];
   history: EconomySnapshot[];
   lastResult: MonthResult | null;
 }
