@@ -1,9 +1,8 @@
 /**
- * GOV3RNE - núcleo compartilhado.
+ * GOV3RNE — núcleo do jogo.
  *
- * Tudo o que o backend e o frontend precisam saber sobre o jogo mora aqui:
- * tipos, dados iniciais, validações e os motores de simulação. Nenhum destes
- * módulos faz I/O, então o mesmo código roda no servidor e no navegador.
+ * Tipos, dados, regras e engines. Nenhum módulo daqui faz I/O: o mesmo código
+ * roda no navegador e nos testes.
  */
 export * from './types/index';
 export * from './utils/index';

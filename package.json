@@ -2,7 +2,7 @@
   "name": "gov3rne",
   "private": true,
   "version": "0.1.0",
-  "description": "GOV3RNE — simulador presidencial brasileiro. Obra de ficção.",
+  "description": "GOV3RNE — simulador presidencial por cartas de decisão mensais. Obra de ficção.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,7 @@
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "data:fetch": "node scripts/fetch-official-data.mjs"
+    "simulate": "vite-node scripts/simulate.ts"
   },
   "dependencies": {
     "framer-motion": "^11.15.0",
@@ -37,6 +37,7 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
     "vite": "^6.0.7",
+    "vite-node": "^6.0.0",
     "vitest": "^4.1.11"
   },
   "engines": {

@@ -3,83 +3,58 @@ import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { useGame } from '@/state/game-store';
 import { TopNavigation } from '@/components/layout/TopNavigation';
 import { Toaster } from '@/components/ui/overlays';
+import { ConsequenceModal } from '@/components/game/ConsequenceModal';
 import { MonthResultModal } from '@/components/game/MonthResultModal';
-import { DecisionFeedback } from '@/components/game/DecisionFeedback';
 import { MusicPlayer } from '@/components/audio/MusicPlayer';
 import { Landing } from '@/pages/Landing';
 
-/**
- * Só a tela inicial entra no bundle de entrada. As telas de jogo carregam sob
- * demanda: quem abre o site pela primeira vez não precisa baixar o motor de
- * gráficos nem o mapa para ler a chamada e clicar em "novo mandato".
- */
-const Setup = lazy(() => import('@/pages/Setup').then((m) => ({ default: m.Setup })));
-const Painel = lazy(() => import('@/pages/Painel').then((m) => ({ default: m.Painel })));
-const Governo = lazy(() => import('@/pages/Governo').then((m) => ({ default: m.Governo })));
-const Nacao = lazy(() => import('@/pages/Nacao').then((m) => ({ default: m.Nacao })));
-const Economia = lazy(() => import('@/pages/Economia').then((m) => ({ default: m.Economia })));
-const Diplomacia = lazy(() => import('@/pages/Diplomacia').then((m) => ({ default: m.Diplomacia })));
-const Programas = lazy(() => import('@/pages/Programas').then((m) => ({ default: m.Programas })));
-const VidaPessoal = lazy(() => import('@/pages/VidaPessoal').then((m) => ({ default: m.VidaPessoal })));
-const Historico = lazy(() => import('@/pages/Historico').then((m) => ({ default: m.Historico })));
-const Ajustes = lazy(() => import('@/pages/Ajustes').then((m) => ({ default: m.Ajustes })));
-const ComoJogar = lazy(() => import('@/pages/ComoJogar').then((m) => ({ default: m.ComoJogar })));
-const FimDeMandato = lazy(() => import('@/pages/FimDeMandato').then((m) => ({ default: m.FimDeMandato })));
-const Eleicao = lazy(() => import('@/pages/Eleicao').then((m) => ({ default: m.Eleicao })));
-const Poder = lazy(() => import('@/pages/Poder').then((m) => ({ default: m.Poder })));
-const FimDeJogo = lazy(() => import('@/pages/FimDeJogo').then((m) => ({ default: m.FimDeJogo })));
+/** Só a tela inicial entra no bundle de entrada; as demais carregam sob demanda. */
+const lazyPage = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })));
+
+const Setup = lazyPage(() => import('@/pages/Setup'), 'Setup');
+const Painel = lazyPage(() => import('@/pages/Painel'), 'Painel');
+const Servicos = lazyPage(() => import('@/pages/Servicos'), 'Servicos');
+const Internacional = lazyPage(() => import('@/pages/Internacional'), 'Internacional');
+const Recursos = lazyPage(() => import('@/pages/Recursos'), 'Recursos');
+const Economia = lazyPage(() => import('@/pages/Economia'), 'Economia');
+const Sociedade = lazyPage(() => import('@/pages/Sociedade'), 'Sociedade');
+const Historico = lazyPage(() => import('@/pages/Historico'), 'Historico');
+const Ajustes = lazyPage(() => import('@/pages/Ajustes'), 'Ajustes');
+const ComoJogar = lazyPage(() => import('@/pages/ComoJogar'), 'ComoJogar');
+const FimDeJogo = lazyPage(() => import('@/pages/FimDeJogo'), 'FimDeJogo');
 
 /**
- * O jogo tem dois territórios: as telas de fora (início, criação, como jogar),
- * que não exigem partida, e as telas de dentro, que só fazem sentido com um
- * mandato em curso. O `GameShell` é a fronteira: sem partida carregada, ele
- * devolve o jogador para o início em vez de renderizar meia interface.
+ * Duas áreas: as telas de fora (início, criação, regras), que não exigem partida,
+ * e as de dentro, que só fazem sentido com um mandato carregado. Sem partida, o
+ * `GameShell` devolve o jogador ao início em vez de desenhar meia interface.
  */
 function GameShell() {
   const state = useGame((store) => store.state);
-  const showResult = useGame((store) => store.showResult);
+  const showReport = useGame((store) => store.showReport);
   const location = useLocation();
 
   if (!state) return <Navigate to="/" replace state={{ from: location.pathname }} />;
-  // Save encerrado por impeachment: depois do resultado do mês, só resta a
-  // tela de fim de jogo.
-  if (state.flags.endsSave && !showResult) return <Navigate to="/fim-de-jogo" replace />;
+  // Derrota: o modal de fechamento aparece primeiro; depois, só resta o fim de jogo.
+  if (state.phase === 'derrota' && !showReport) return <Navigate to="/fim-de-jogo" replace />;
 
   return (
-    <div className="flex min-h-full select-none flex-col">
+    <div className="flex min-h-full flex-col">
       <TopNavigation state={state} />
       <main className="flex-1">
         <Outlet />
       </main>
+      <ConsequenceModal />
       <MonthResultModal />
-      {/* Nenhuma decisão do presidente termina sem resposta na tela. */}
-      <DecisionFeedback />
-      <FictionFooter />
+      <footer className="border-t border-ink-800 px-4 py-3 text-center">
+        <p className="text-[11px] leading-snug text-neutral-700">
+          GOV3RNE é uma obra de ficção. Números, países do ranking e acontecimentos são simulação inventada e não descrevem a realidade.
+        </p>
+      </footer>
     </div>
   );
 }
 
-/**
- * Aviso permanente de ficção. Fica no rodapé de toda tela de jogo, discreto mas
- * nunca ausente: o jogo parte de dados oficiais e é obrigação dele deixar claro
- * onde o dado real termina e a simulação começa.
- */
-function FictionFooter() {
-  return (
-    <footer className="border-t border-ink-800 px-4 py-3 text-center">
-      <p className="text-[11px] leading-snug text-neutral-700">
-        GOV3RNE é uma obra de ficção. Indicadores partem de dados públicos do IBGE, do Banco Central
-        e da Câmara dos Deputados e, a partir do primeiro mês jogado, passam a ser produzidos pelo
-        motor de simulação — não representam a realidade. Políticos, parlamentares, jornalistas e
-        veículos de imprensa do jogo são fictícios. Figuras públicas reais podem ser escaladas como
-        vice ou ministro: os atributos e os acontecimentos da partida são simulação inventada e não
-        descrevem essas pessoas.
-      </p>
-    </footer>
-  );
-}
-
-/** Estado de carregamento entre rotas. Discreto de propósito: a troca é rápida. */
 function RouteFallback() {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
@@ -96,7 +71,6 @@ export default function App() {
     init();
   }, [init]);
 
-  // Cada seção começa do topo, como uma página nova de verdade.
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   }, [pathname]);
@@ -104,7 +78,7 @@ export default function App() {
   return (
     <>
       <Suspense fallback={<RouteFallback />}>
-          <Routes>
+        <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/novo-mandato" element={<Setup />} />
           <Route path="/como-jogar" element={<ComoJogar />} />
@@ -112,17 +86,13 @@ export default function App() {
 
           <Route element={<GameShell />}>
             <Route path="/painel" element={<Painel />} />
-            <Route path="/governo" element={<Governo />} />
-            <Route path="/nacao" element={<Nacao />} />
+            <Route path="/servicos" element={<Servicos />} />
+            <Route path="/internacional" element={<Internacional />} />
+            <Route path="/recursos" element={<Recursos />} />
             <Route path="/economia" element={<Economia />} />
-            <Route path="/diplomacia" element={<Diplomacia />} />
-            <Route path="/programas" element={<Programas />} />
-            <Route path="/vida-pessoal" element={<VidaPessoal />} />
+            <Route path="/sociedade" element={<Sociedade />} />
             <Route path="/historico" element={<Historico />} />
             <Route path="/ajustes" element={<Ajustes />} />
-            <Route path="/poder" element={<Poder />} />
-            <Route path="/eleicao" element={<Eleicao />} />
-            <Route path="/fim" element={<FimDeMandato />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

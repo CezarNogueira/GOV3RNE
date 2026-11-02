@@ -1,160 +1,201 @@
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Eye, Newspaper, ShieldAlert } from 'lucide-react';
+import { ArrowRight, Check, Trophy, X } from 'lucide-react';
+import {
+  CRISIS,
+  GROUP_LABEL,
+  RESOURCE_LABEL,
+  SERVICE_LABEL,
+  formatDollars,
+  formatRank,
+  formatReais,
+  formatSignedReais,
+  monthLabel,
+  rivalAtRank,
+} from '@/game';
 import { useGame } from '@/state/game-store';
 import { Modal } from '../ui/overlays';
 import { Delta, cx } from '../ui/primitives';
 
+function Block({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section>
+      <p className="label-strong mb-1">{title}</p>
+      {children}
+    </section>
+  );
+}
+
+function Line({ label, children, strong }: { label: string; children: React.ReactNode; strong?: boolean }) {
+  return (
+    <div className={cx('flex items-center justify-between gap-3 px-3 py-1.5 text-[13px]', strong && 'bg-ink-800/60 font-medium')}>
+      <span className="text-neutral-300">{label}</span>
+      <span className="flex items-center gap-2 font-mono text-[12px] tabular text-neutral-200">{children}</span>
+    </div>
+  );
+}
+
+const Box = ({ children }: { children: React.ReactNode }) => (
+  <div className="divide-y divide-ink-700/60 rounded-card border border-ink-700/70">{children}</div>
+);
+
 /**
- * RESULTADO DO MÊS
+ * FECHAMENTO DO MÊS
  *
- * O momento em que o jogo devolve a conta. Aparece depois de cada avanço e é a
- * única tela do jogo que interrompe o jogador de propósito: é aqui que ele vê
- * se a decisão do mês passado funcionou.
- *
- * Os números entram escalonados, um a um, para o olho conseguir ler cada
- * variação em vez de receber oito de uma vez.
+ * Reproduz, na ordem em que aconteceram, os efeitos da passagem do mês: metas,
+ * IDH, Comércio, moeda, dívida, ranking, recursos, contas do cofre e grupos.
  */
 export function MonthResultModal() {
+  const state = useGame((s) => s.state);
+  const report = useGame((s) => s.lastReport);
+  const open = useGame((s) => s.showReport);
+  const dismiss = useGame((s) => s.dismissReport);
   const navigate = useNavigate();
-  const open = useGame((store) => store.showResult);
-  const result = useGame((store) => store.lastResult);
-  const notes = useGame((store) => store.lastNotes);
-  const briefing = useGame((store) => store.briefing);
-  const evaluation = useGame((store) => store.evaluation);
-  const dismiss = useGame((store) => store.dismissResult);
-  const state = useGame((store) => store.state);
 
-  if (!result) return null;
+  if (!state || !report) return null;
+  const defeated = report.defeat !== null;
+  const e = report.economy;
+  const chased = report.gdp.chasingRank ? rivalAtRank(report.gdp.chasingRank, report.gdp.rankAfter) : null;
 
-  const finished = Boolean(evaluation);
-  // Ganhou a eleição: o mandato não terminou, começou outro. O botão leva à
-  // posse, não à avaliação final.
-  const reelected = state?.phase === 'transicao';
+  const close = () => {
+    dismiss();
+    if (defeated) navigate('/fim-de-jogo');
+  };
 
   return (
     <Modal
       open={open}
-      onClose={dismiss}
-      title={`Resultado de ${result.monthLabel}`}
-      subtitle={
-        reelected
-          ? 'Último mês do primeiro mandato. Você foi reeleito.'
-          : finished
-            ? state?.flags.endsSave
-              ? 'O risco-país chegou a 100%. Este foi o último mês do mandato.'
-              : 'Este foi o último mês do mandato.'
-            : 'O que mudou no país por causa do que você decidiu.'
-      }
+      onClose={close}
+      title={`Fechamento de ${report.monthLabel}`}
+      subtitle={report.cardTitle ? `Medida do mês: ${report.cardTitle}` : undefined}
       size="lg"
+      locked={defeated}
       footer={
-        reelected ? (
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => {
-              dismiss();
-              navigate('/eleicao');
-            }}
-          >
-            Assumir o segundo mandato
-          </button>
-        ) : finished ? (
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => {
-              dismiss();
-              navigate(state?.flags.endsSave ? '/fim-de-jogo' : '/fim');
-            }}
-          >
-            {state?.flags.endsSave ? 'Ver por que o mandato acabou' : 'Ver avaliação do mandato'}
-          </button>
-        ) : (
-          <button type="button" className="btn-primary" onClick={dismiss}>
-            Continuar governando
-          </button>
-        )
+        <button type="button" className="btn-primary" onClick={close}>
+          {defeated ? 'Ver o resultado' : `Seguir para ${monthLabel(state.month, state.startYear)}`}
+          <ArrowRight size={14} aria-hidden />
+        </button>
       }
     >
-      {/* Painel de variações */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {result.highlights.map((highlight, index) => (
-          <motion.div
-            key={highlight.label}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.055, duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
-            className={cx(
-              'border bg-ink-900/60 p-2.5',
-              highlight.tone === 'positivo'
-                ? 'border-gov-700/50'
-                : highlight.tone === 'negativo'
-                  ? 'border-danger-700/50'
-                  : 'border-ink-700',
-            )}
-          >
-            <p className="label truncate">{highlight.label}</p>
-            <p className="mt-1 font-mono text-lg font-medium tabular text-neutral-50">
-              {highlight.value}
+      <div className="space-y-4" data-testid="month-result">
+        {defeated && report.defeat && (
+          <div className="card-danger px-4 py-3" role="alert">
+            <p className="font-display text-xl font-bold uppercase text-danger-400">Fim de governo</p>
+            <p className="text-[13px] text-neutral-300">
+              {report.defeat.label} chegou a zero. As condições mínimas para governar foram perdidas.
             </p>
-            {highlight.delta !== 0 && (
-              <Delta
-                value={highlight.delta}
-                decimals={Math.abs(highlight.delta) < 1 ? 2 : 1}
-                lowerIsBetter={
-                  highlight.label === 'Inflação' ||
-                  highlight.label === 'Desemprego' ||
-                  highlight.label === 'Risco de impeachment'
-                }
-              />
-            )}
-          </motion.div>
-        ))}
-      </div>
+          </div>
+        )}
 
-      {/* Manchetes do mês */}
-      {result.headlines.length > 0 && (
-        <div className="mt-4">
-          <p className="label mb-1.5 flex items-center gap-1.5">
-            <Newspaper size={11} aria-hidden />
-            Como o mês foi noticiado
-          </p>
-          <ul className="space-y-1.5">
-            {result.headlines.map((headline) => (
-              <li
-                key={headline}
-                className="border-l-2 border-l-ink-600 pl-2.5 text-[13px] leading-snug text-neutral-300"
-              >
-                {headline}
+        {report.notes.length > 0 && (
+          <ul className="space-y-1" data-testid="month-notes">
+            {report.notes.map((note) => (
+              <li key={note} className="rounded-card border border-ink-700/70 bg-ink-800/50 px-3 py-1.5 text-[13px] text-neutral-200">
+                {note}
               </li>
             ))}
           </ul>
-        </div>
-      )}
+        )}
 
-      {/* Avisos do fechamento */}
-      {notes.length > 0 && (
-        <div className="mt-4 space-y-1.5">
-          {notes.map((note) => (
-            <p
-              key={note}
-              className="flex items-start gap-2 border-l-2 border-l-warn-500 bg-warn-900/15 p-2 text-[12px] leading-snug text-neutral-400"
-            >
-              <ShieldAlert size={12} className="mt-0.5 shrink-0 text-warn-500" aria-hidden />
-              {note}
+        <Block title="Metas dos serviços">
+          <Box>
+            {report.services.map((service) => (
+              <Line key={service.id} label={SERVICE_LABEL[service.id]}>
+                {service.target === null ? (
+                  <span className="text-neutral-600">sem meta</span>
+                ) : service.met ? (
+                  <span className="flex items-center gap-1 text-gov-400"><Check size={12} aria-hidden /> meta {service.target}</span>
+                ) : (
+                  <span className="flex items-center gap-1 text-warn-400"><X size={12} aria-hidden /> meta {service.target}</span>
+                )}
+                <span>{service.after}/100</span>
+              </Line>
+            ))}
+          </Box>
+          <p className="mt-1 text-[12px] text-neutral-500">
+            {report.allTargetsMet ? 'Todas as metas foram cumpridas.' : 'Alguma meta ficou para trás.'}
+          </p>
+        </Block>
+
+        <Block title="Parâmetros internacionais">
+          <Box>
+            <Line label="IDH">{report.hdi.before} → {report.hdi.after} <Delta value={report.hdi.after - report.hdi.before} /></Line>
+            <Line label="Comércio">{report.commerce.before} → {report.commerce.after} <Delta value={report.commerce.after - report.commerce.before} /></Line>
+            <Line label="Valor da moeda">
+              {formatDollars(report.currency.beforeCents)} → {formatDollars(report.currency.afterCents)}
+              <Delta value={(report.currency.afterCents - report.currency.beforeCents) / 100} decimals={2} />
+            </Line>
+            <Line label="Dívida pública">
+              {report.debt.before}% → {report.debt.after}% <Delta value={report.debt.after - report.debt.before} lowerIsBetter />
+            </Line>
+            <Line label="Risco de desvalorização pela dívida">{report.debt.riskPercent}%</Line>
+          </Box>
+        </Block>
+
+        <Block title="Ranking de PIB">
+          <div className={cx('rounded-card border px-3 py-2 text-[13px]', report.gdp.reward ? 'border-warn-600/50 bg-warn-900/20' : 'border-ink-700/70')}>
+            {report.gdp.reward ? (
+              <p className="flex items-center gap-2 text-warn-400">
+                <Trophy size={16} aria-hidden />
+                <span>
+                  O país subiu do {formatRank(report.gdp.rankBefore)} para o {formatRank(report.gdp.rankAfter)} lugar.{' '}
+                  Recompensa: {report.gdp.reward.hdi > 0 && `+${report.gdp.reward.hdi} de IDH`}
+                  {report.gdp.reward.currencyCents > 0 && `+${formatDollars(report.gdp.reward.currencyCents)} no valor da moeda`}
+                  .
+                </span>
+              </p>
+            ) : report.gdp.chasingRank === null ? (
+              <p className="text-neutral-300">O país já é o 1º do ranking.</p>
+            ) : (
+              <p className="text-neutral-300">
+                {formatRank(report.gdp.rankAfter)} lugar. Para alcançar o {formatRank(report.gdp.chasingRank)}
+                {chased ? ` (${chased.name})` : ''}: {report.gdp.monthsAboveRival} de 2 meses seguidos com os cinco serviços acima.
+              </p>
+            )}
+          </div>
+        </Block>
+
+        <Block title="Recursos">
+          <Box>
+            {report.resources.map((resource) => (
+              <Line key={resource.id} label={RESOURCE_LABEL[resource.id]}>
+                {resource.before} → {resource.after}
+                <Delta value={resource.delta} decimals={1} />
+                <span className="w-28 text-right text-neutral-400">{formatReais(resource.revenue)}</span>
+              </Line>
+            ))}
+          </Box>
+        </Block>
+
+        <Block title="Contas do mês">
+          <Box>
+            <Line label="Cofre no início">{formatReais(e.treasuryBefore)}</Line>
+            <Line label="+ Impostos">{formatReais(e.taxes)}</Line>
+            <Line label="+ Receita dos recursos">{formatReais(e.resourceRevenue)}</Line>
+            <Line label={e.crisis === 'em_curso' || e.crisis === 'encerrada' ? '− Gastos públicos (zerados pela crise)' : '− Gastos públicos'}>
+              {formatReais(e.spending)}
+            </Line>
+            <Line label="− Custo da medida">{formatReais(e.extraordinaryCosts)}</Line>
+            <Line label={`Saldo do mês ${formatSignedReais(e.balance)}`} strong>
+              <span className={e.treasuryAfter >= 0 ? 'text-gov-400' : 'text-danger-400'}>{formatReais(e.treasuryAfter)}</span>
+            </Line>
+          </Box>
+          {(e.crisis === 'iniciada' || e.crisis === 'em_curso') && (
+            <p className="mt-1 text-[12px] text-danger-400">
+              Crise financeira: {e.crisisMonthsLeft} de {CRISIS.months} meses restantes.
             </p>
-          ))}
-        </div>
-      )}
+          )}
+        </Block>
 
-      {/* Relatório da inteligência: o único jeito de comprar tempo no jogo */}
-      {briefing && (
-        <p className="mt-4 flex items-start gap-2 border-l-2 border-l-info-500 bg-info-900/15 p-2.5 text-[12px] leading-snug text-info-300">
-          <Eye size={12} className="mt-0.5 shrink-0" aria-hidden />
-          {briefing}
-        </p>
-      )}
+        <Block title="Satisfação dos grupos">
+          <Box>
+            {report.society.map((group) => (
+              <Line key={group.id} label={GROUP_LABEL[group.id]}>
+                {group.before} → {group.after} <Delta value={group.after - group.before} />
+              </Line>
+            ))}
+          </Box>
+        </Block>
+      </div>
     </Modal>
   );
 }

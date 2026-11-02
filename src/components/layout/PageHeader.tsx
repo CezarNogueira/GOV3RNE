@@ -15,13 +15,11 @@ import { cx } from '../ui/primitives';
 export function PageHeader({
   place,
   title,
-  subtitle,
   badge,
   tint = 'green',
 }: {
   place: string;
   title: string;
-  subtitle: string;
   badge?: { label: string; tone?: 'gov' | 'warn' | 'danger' | 'info' };
   tint?: 'green' | 'blue' | 'amber' | 'slate' | 'violet';
 }) {
@@ -43,7 +41,7 @@ export function PageHeader({
   }[badge?.tone ?? 'gov'];
 
   return (
-    <div className={cx('relative overflow-hidden border-b border-ink-700 bg-gradient-to-br', tintClass)}>
+    <div className={cx('relative overflow-hidden border-b border-ink-700 bg-gradient-to-br select-none', tintClass)}>
       <div className="grid-lines absolute inset-0 opacity-40" aria-hidden />
       <div
         className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_0%,rgba(255,255,255,0.05),transparent_60%)]"
@@ -59,7 +57,6 @@ export function PageHeader({
           <h1 className="mt-1.5 font-display text-4xl font-bold uppercase leading-none tracking-tight text-neutral-50 sm:text-5xl">
             {title}
           </h1>
-          <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-neutral-400">{subtitle}</p>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -74,7 +71,7 @@ export function PageHeader({
   );
 }
 
-/** Abas internas de uma seção (Gabinete / Congresso / Execução…). */
+/** Abas internas de uma seção (Serviços / Ranking / Decisões…). */
 export function TabBar<T extends string>({
   tabs,
   active,

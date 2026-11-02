@@ -53,3 +53,8 @@ export function percentDelta(current: number, previous: number): number {
   if (previous === 0) return 0;
   return ((current - previous) / Math.abs(previous)) * 100;
 }
+
+/** Arredonda para 1 casa decimal. Os recursos andam em décimos de ponto. */
+export function round1(value: number): number {
+  return Math.round(value * 10) / 10;
+}

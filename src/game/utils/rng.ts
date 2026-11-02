@@ -2,7 +2,22 @@
  * RNG determinístico (mulberry32). A partida guarda seed + cursor, então
  * recarregar um save reproduz exatamente a mesma sequência de sorteios.
  */
-export class Rng {
+/**
+ * O que os engines precisam de um sorteador. `Rng` cumpre este contrato, e os
+ * testes passam um sorteador roteirizado no lugar: toda aleatoriedade do jogo
+ * entra por aqui, então nenhum engine chama `Math.random` por conta própria.
+ */
+export interface RandomSource {
+  /** Float em [0, 1). */
+  next(): number;
+  bool(probability?: number): boolean;
+  int(min: number, max: number): number;
+  pick<T>(items: readonly T[]): T;
+  weighted<T>(items: readonly T[], weightOf: (item: T) => number): T;
+  shuffle<T>(items: readonly T[]): T[];
+}
+
+export class Rng implements RandomSource {
   private state: number;
 
   constructor(seed: number, cursor = 0) {

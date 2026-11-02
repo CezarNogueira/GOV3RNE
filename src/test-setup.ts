@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest';
-import { afterEach, vi } from 'vitest';
+import { afterEach } from 'vitest';
 import { cleanup } from '@testing-library/react';
 
 /**
@@ -29,10 +29,8 @@ globalThis.matchMedia ??= ((query: string) => ({
   dispatchEvent: () => false,
 })) as never;
 
-// A checagem de disponibilidade da IA não deve fazer rede em teste.
-globalThis.fetch = vi.fn(async () =>
-  new Response(JSON.stringify({ available: false }), {
-    status: 200,
-    headers: { 'content-type': 'application/json' },
-  }),
-) as never;
+// O happy-dom implementa `Element.animate` pela metade: ao desmontar, o
+// framer-motion cancela a animação e o DOM de teste rejeita a promessa, que
+// vira "Unhandled Rejection" e derruba a suíte. Sem a API, o framer-motion usa
+// o animador em JavaScript, que é o que o teste precisa.
+delete (Element.prototype as { animate?: unknown }).animate;

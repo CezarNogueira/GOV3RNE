@@ -1,28 +1,13 @@
 import { create } from 'zustand';
-import type {
-  AgendaActionId,
-  CompanyAction,
-  DecisionEntry,
-  FinalEvaluation,
-  GameState,
-  MonthResult,
-  NegotiationOptionId,
-  NewGameInput,
-  ProposalAnalysis,
-  RegimeAction,
-  SaveSlotMeta,
-  VoteResult,
-} from '@/game';
-import { repository, type InterpretResponse } from './repository';
-import { checkAiAvailability, type AiAvailability } from '@/lib/ai-client';
+import type { CardResolution, GameState, MonthReport, NewGameInput, SaveSlotMeta } from '@/game';
+import { repository } from './repository';
 
 /**
  * ESTADO DA APLICAÇÃO
  *
- * A store guarda o GameState corrente e coordena as chamadas ao repositório.
- * Ela não contém regra de jogo nenhuma: toda decisão de simulação está em
- * `@/game`. O papel dela é apenas orquestrar — carregar, aplicar, guardar e
- * expor o que a interface precisa desenhar.
+ * A store guarda a partida corrente e coordena o repositório. Não contém regra
+ * de jogo nenhuma: toda decisão de simulação mora em `@/game`. O papel dela é
+ * carregar, aplicar, gravar e expor o que a interface precisa desenhar.
  */
 
 export interface Toast {
@@ -35,64 +20,30 @@ export interface Toast {
 interface GameStore {
   state: GameState | null;
   saves: SaveSlotMeta[];
-  loading: boolean;
   advancing: boolean;
   error: string | null;
 
-  /** Resultado do último mês, exibido no modal de fechamento. */
-  lastResult: MonthResult | null;
-  /**
-   * A última decisão tomada, com tudo o que ela mudou no país.
-   *
-   * Fica aqui para a interface poder mostrar a devolutiva imediatamente depois
-   * da ação — nenhuma decisão do jogador termina sem resposta na tela.
-   */
-  lastDecision: DecisionEntry | null;
-  lastNotes: string[];
-  briefing: string | null;
-  evaluation: FinalEvaluation | null;
-  showResult: boolean;
+  /** Resultado da carta recém-escolhida: abre o modal de consequências. */
+  lastResolution: CardResolution | null;
+  showResolution: boolean;
+  /** Relatório do último fechamento: abre o modal de resultado do mês. */
+  lastReport: MonthReport | null;
+  showReport: boolean;
 
   toasts: Toast[];
-  ai: AiAvailability;
 
-  // ------------------------------------------------------------------ ações
   init: () => void;
   refreshSaves: () => void;
   newGame: (input: NewGameInput) => GameState;
-  loadGame: (id: string) => void;
+  loadGame: (id: string) => boolean;
   deleteGame: (id: string) => void;
+  chooseCard: (cardId: string) => void;
   advanceMonth: () => void;
-  decideEvent: (eventId: string, optionId: string) => boolean;
-  runAction: (actionId: AgendaActionId, targetId?: string) => void;
-  /** Gasta o dinheiro pessoal: restaurante, lazer, carro ou imóvel. */
-  spendPersonal: (itemId: string) => void;
-  /** Vende um carro ou imóvel pelo valor de mercado. */
-  sellPossession: (possessionId: string) => void;
-  companyAction: (action: CompanyAction) => void;
-  /** Executa uma ação extraordinária de regime ou de guerra. */
-  regimeAction: (action: RegimeAction) => void;
-  /** Diz se o presidente disputa a reeleição. */
-  decideCandidacy: (running: boolean) => void;
-  /** Executa um movimento de campanha. */
-  campaignMove: (moveId: string) => void;
-  /** Assume o segundo mandato com o programa escolhido. */
-  beginSecondTerm: (promiseIds: string[]) => boolean;
-  scheduleVisit: (countryId: string, month: number) => void;
-  respondToTreatyOffer: (offerId: string, accept: boolean) => void;
-  interpret: (text: string, name?: string) => Promise<InterpretResponse>;
-  /** Assina e devolve o id da medida, para a interface abrir a tramitação na hora. */
-  signPolicy: (analysis: ProposalAnalysis, text: string) => string | null;
-  /** Revela a reação do país à medida recém-assinada. */
-  revealReaction: (policyId: string) => void;
-  negotiateMeasure: (policyId: string, partyId: string, optionId: NegotiationOptionId) => void;
-  castMeasureVote: (policyId: string) => VoteResult | null;
-  advanceMeasureToSenate: (policyId: string) => void;
-  loadEvaluation: () => void;
+  dismissResolution: () => void;
+  dismissReport: () => void;
+  finishTutorial: () => void;
   exportSave: () => string | null;
-  importSave: (raw: string) => void;
-  dismissResult: () => void;
-  dismissDecision: () => void;
+  importSave: (raw: string) => boolean;
   toast: (toast: Omit<Toast, 'id'>) => void;
   dismissToast: (id: string) => void;
   clearError: () => void;
@@ -105,291 +56,106 @@ function messageOf(error: unknown): string {
 export const useGame = create<GameStore>((set, get) => ({
   state: null,
   saves: [],
-  loading: false,
   advancing: false,
   error: null,
-  lastResult: null,
-  lastDecision: null,
-  lastNotes: [],
-  briefing: null,
-  evaluation: null,
-  showResult: false,
+  lastResolution: null,
+  showResolution: false,
+  lastReport: null,
+  showReport: false,
   toasts: [],
-  ai: 'verificando',
 
-  init: () => {
-    set({ saves: repository.list() });
-    void checkAiAvailability().then((ai) => set({ ai }));
-  },
-
+  init: () => set({ saves: repository.list() }),
   refreshSaves: () => set({ saves: repository.list() }),
 
   newGame: (input) => {
     const state = repository.create(input);
-    set({ state, saves: repository.list(), evaluation: null, lastResult: null, error: null });
+    set({
+      state,
+      saves: repository.list(),
+      lastResolution: null,
+      showResolution: false,
+      lastReport: null,
+      showReport: false,
+      error: null,
+    });
     return state;
   },
 
   loadGame: (id) => {
-    set({ loading: true, error: null });
     try {
       const state = repository.load(id);
       set({
         state,
-        loading: false,
-        evaluation: state.flags.gameOver ? repository.evaluate(id) : null,
+        error: null,
+        lastResolution: state.turn.choice,
+        showResolution: false,
+        lastReport: state.lastReport,
+        showReport: false,
       });
+      return true;
     } catch (error) {
-      set({ loading: false, error: messageOf(error) });
+      set({ error: messageOf(error) });
+      get().toast({ kind: 'erro', title: 'Não foi possível abrir o mandato', detail: messageOf(error) });
+      return false;
     }
   },
 
   deleteGame: (id) => {
     repository.remove(id);
     const current = get().state;
-    set({
-      saves: repository.list(),
-      ...(current?.id === id ? { state: null, evaluation: null } : {}),
-    });
+    set({ saves: repository.list(), ...(current?.id === id ? { state: null } : {}) });
+  },
+
+  chooseCard: (cardId) => {
+    const current = get().state;
+    if (!current) return;
+    try {
+      const outcome = repository.choose(current.id, cardId);
+      set({
+        state: outcome.state,
+        lastResolution: outcome.resolution,
+        showResolution: true,
+        saves: repository.list(),
+      });
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Carta não escolhida', detail: messageOf(error) });
+    }
   },
 
   advanceMonth: () => {
     const current = get().state;
     if (!current || get().advancing) return;
-
     set({ advancing: true, error: null });
-    // Um frame de respiro antes de rodar o tick: a UI mostra o estado de
-    // processamento em vez de congelar sem explicação.
+    // Um frame de respiro: a interface mostra o processamento em vez de congelar.
     requestAnimationFrame(() => {
       try {
         const outcome = repository.advance(current.id);
         set({
           state: outcome.state,
-          lastResult: outcome.result,
-          lastNotes: outcome.notes,
-          briefing: outcome.briefing,
-          evaluation: outcome.evaluation,
-          showResult: true,
+          lastReport: outcome.report,
+          showReport: true,
+          lastResolution: null,
+          showResolution: false,
           advancing: false,
-          // O fechamento do mês tem tela própria: a devolutiva da última ação
-          // sai da frente para não competir com ela.
-          lastDecision: null,
           saves: repository.list(),
         });
       } catch (error) {
-        set({ advancing: false, error: messageOf(error) });
+        set({ advancing: false });
+        get().toast({ kind: 'alerta', title: 'Não deu para avançar o mês', detail: messageOf(error) });
       }
     });
   },
 
-  decideEvent: (eventId, optionId) => {
-    const current = get().state;
-    if (!current) return false;
-    try {
-      const outcome = repository.decideEvent(current.id, eventId, optionId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-      return true;
-    } catch (error) {
-      get().toast({ kind: 'erro', title: 'Não deu para decidir', detail: messageOf(error) });
-      return false;
-    }
-  },
+  dismissResolution: () => set({ showResolution: false }),
+  dismissReport: () => set({ showReport: false }),
 
-  runAction: (actionId, targetId) => {
+  finishTutorial: () => {
     const current = get().state;
-    if (!current) return;
+    if (!current || current.flags.tutorialDone) return;
     try {
-      const outcome = repository.runAction(current.id, actionId, targetId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Ação não executada', detail: messageOf(error) });
-    }
-  },
-
-  spendPersonal: (itemId) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.spendPersonal(current.id, itemId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Gasto não feito', detail: messageOf(error) });
-    }
-  },
-
-  sellPossession: (possessionId) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.sellPossession(current.id, possessionId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Venda não feita', detail: messageOf(error) });
-    }
-  },
-
-  companyAction: (action) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.companyAction(current.id, action);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Não foi possível executar', detail: messageOf(error) });
-    }
-  },
-
-  regimeAction: (action) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.regimeAction(current.id, action);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Ação não executada', detail: messageOf(error) });
-    }
-  },
-
-  decideCandidacy: (running) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.decideCandidacy(current.id, running);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Decisão não registrada', detail: messageOf(error) });
-    }
-  },
-
-  campaignMove: (moveId) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.campaignMove(current.id, moveId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Movimento não executado', detail: messageOf(error) });
-    }
-  },
-
-  beginSecondTerm: (promiseIds) => {
-    const current = get().state;
-    if (!current) return false;
-    try {
-      const outcome = repository.beginSecondTerm(current.id, promiseIds);
-      set({ state: outcome.state, evaluation: null, lastDecision: outcome.decision });
-      return true;
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Posse não realizada', detail: messageOf(error) });
-      return false;
-    }
-  },
-
-  scheduleVisit: (countryId, month) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.scheduleVisit(current.id, countryId, month);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Viagem não marcada', detail: messageOf(error) });
-    }
-  },
-
-  respondToTreatyOffer: (offerId, accept) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.respondToTreatyOffer(current.id, offerId, accept);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-      get().toast({
-        kind: accept ? 'sucesso' : 'info',
-        title: accept ? 'Acordo assinado' : 'Acordo recusado',
-        detail: outcome.message,
-      });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Não foi possível decidir', detail: messageOf(error) });
-    }
-  },
-
-  interpret: async (text, name) => {
-    const current = get().state;
-    if (!current) throw new Error('Nenhuma partida carregada.');
-    return repository.interpret(current.id, text, name);
-  },
-
-  signPolicy: (analysis, text) => {
-    const current = get().state;
-    if (!current) return null;
-    try {
-      const outcome = repository.sign(current.id, analysis, text);
-      // Sem devolutiva na tela: a medida acabou de ir para o Congresso, e o
-      // que ela muda no país só pode aparecer depois da votação. A decisão
-      // continua registrada no histórico — some só o aviso, que era spoiler.
-      set({ state: outcome.state, lastDecision: null });
-      return outcome.policyId;
-    } catch (error) {
-      get().toast({ kind: 'erro', title: 'Não foi possível assinar', detail: messageOf(error) });
-      return null;
-    }
-  },
-
-  revealReaction: (policyId) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.revealReaction(current.id, policyId);
-      // A reação do país aparece no próprio modal da medida, e não num aviso.
-      set({ state: outcome.state, lastDecision: null });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Sem repercussão apurada', detail: messageOf(error) });
-    }
-  },
-
-  negotiateMeasure: (policyId, partyId, optionId) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.negotiateMeasure(current.id, policyId, partyId, optionId);
-      set({ state: outcome.state, lastDecision: outcome.decision });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Negociação não fechou', detail: messageOf(error) });
-    }
-  },
-
-  castMeasureVote: (policyId) => {
-    const current = get().state;
-    if (!current) return null;
-    try {
-      const outcome = repository.castMeasureVote(current.id, policyId);
-      // O placar é revelado pela apuração animada do modal; um aviso aqui
-      // entregaria o resultado antes da contagem terminar.
-      set({ state: outcome.state, lastDecision: null });
-      return outcome.result ?? null;
-    } catch (error) {
-      get().toast({ kind: 'erro', title: 'Não foi possível votar', detail: messageOf(error) });
-      return null;
-    }
-  },
-
-  advanceMeasureToSenate: (policyId) => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      const outcome = repository.advanceMeasureToSenate(current.id, policyId);
-      set({ state: outcome.state, lastDecision: null });
-    } catch (error) {
-      get().toast({ kind: 'alerta', title: 'Não foi possível avançar', detail: messageOf(error) });
-    }
-  },
-
-  loadEvaluation: () => {
-    const current = get().state;
-    if (!current) return;
-    try {
-      set({ evaluation: repository.evaluate(current.id) });
-    } catch (error) {
-      set({ error: messageOf(error) });
+      set({ state: repository.markTutorialDone(current.id) });
+    } catch {
+      /* o tutorial reaparece na próxima vez: não vale interromper o jogo */
     }
   },
 
@@ -406,16 +172,14 @@ export const useGame = create<GameStore>((set, get) => ({
   importSave: (raw) => {
     try {
       const state = repository.importSave(raw);
-      set({ state, saves: repository.list() });
+      set({ state, saves: repository.list(), lastResolution: state.turn.choice, lastReport: state.lastReport });
       get().toast({ kind: 'sucesso', title: 'Partida carregada', detail: state.president.politicalName });
+      return true;
     } catch (error) {
       get().toast({ kind: 'erro', title: 'Save inválido', detail: messageOf(error) });
+      return false;
     }
   },
-
-  dismissResult: () => set({ showResult: false }),
-
-  dismissDecision: () => set({ lastDecision: null }),
 
   toast: (toast) => {
     const id = `t_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
@@ -427,8 +191,3 @@ export const useGame = create<GameStore>((set, get) => ({
 
   clearError: () => set({ error: null }),
 }));
-
-/** Atalho para telas que só rodam com partida carregada. */
-export function useCurrentGame(): GameState | null {
-  return useGame((store) => store.state);
-}

@@ -1,278 +1,78 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Cpu, Download, Sparkles, Upload } from 'lucide-react';
-import { BRASIL_HOJE, DATA_SOURCES, MACRO_BASELINE, SNAPSHOT_DATE } from '@/game';
+import { Download, LogOut, Trash2, Upload } from 'lucide-react';
 import { useGame } from '@/state/game-store';
+import { storageAvailable } from '@/state/repository';
 import { PageBody, PageHeader } from '@/components/layout/PageHeader';
 import { ConfirmDialog } from '@/components/ui/overlays';
-import { Badge, Empty, Section, StatRow, cx } from '@/components/ui/primitives';
-import { TRACKS } from '@/lib/music';
-import { useMusic } from '@/state/music-store';
 
-/**
- * AJUSTES
- *
- * Preferências de sessão e, mais importante, o controle do save. Como a partida
- * vive no localStorage do navegador, exportar é a única garantia real de não
- * perder um mandato de 48 meses ao limpar os dados do site.
- */
 export function Ajustes() {
+  const state = useGame((s) => s.state);
+  const exportSave = useGame((s) => s.exportSave);
+  const importSave = useGame((s) => s.importSave);
+  const deleteGame = useGame((s) => s.deleteGame);
   const navigate = useNavigate();
-  const state = useGame((store) => store.state);
-  const exportSave = useGame((store) => store.exportSave);
-  const importSave = useGame((store) => store.importSave);
-  const deleteGame = useGame((store) => store.deleteGame);
-  const toast = useGame((store) => store.toast);
-  const ai = useGame((store) => store.ai);
-  const volume = useMusic((store) => store.volume);
-  const trackId = useMusic((store) => store.trackId);
-  const setVolume = useMusic((store) => store.setVolume);
-  const selectTrack = useMusic((store) => store.selectTrack);
-
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
+  const file = useRef<HTMLInputElement>(null);
+  const [confirm, setConfirm] = useState(false);
   if (!state) return null;
-  // Faixa escolhida que não existe mais na pasta cai na primeira, igual ao tocador.
-  const faixaAtual = TRACKS.find((track) => track.id === trackId) ?? TRACKS[0];
 
-  const handleExport = () => {
-    const payload = exportSave();
-    if (!payload) {
-      toast({ kind: 'erro', title: 'Não foi possível exportar' });
-      return;
-    }
-    const blob = new Blob([payload], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
+  const download = () => {
+    const raw = exportSave();
+    if (!raw) return;
+    const url = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
     const link = document.createElement('a');
     link.href = url;
     link.download = `gov3rne-${state.president.politicalName.toLowerCase().replace(/\s+/g, '-')}-mes-${state.month}.json`;
-    document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast({ kind: 'sucesso', title: 'Save exportado', detail: 'Guarde o arquivo em lugar seguro.' });
+  };
+
+  const onImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const chosen = event.target.files?.[0];
+    event.target.value = '';
+    if (chosen && importSave(await chosen.text())) navigate('/painel');
   };
 
   return (
     <>
-      <PageHeader
-        place="Configurações"
-        title="Ajustes"
-        subtitle="Preferências da sessão e o controle do seu save. A partida vive neste navegador."
-        tint="slate"
-      />
-
+      <PageHeader place="Configurações" title="Ajustes" subtitle="Salvamento, exportação e encerramento do mandato." tint="slate" />
       <PageBody>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Section title="Esta partida">
-            <StatRow label="Presidente" value={state.president.politicalName} />
-            <StatRow label="Partido" value={state.party.acronym} />
-            <StatRow label="Mês" value={`${state.month} de ${state.totalMonths}`} />
-            <StatRow
-              label="Ponto de partida"
-              value={`Brasil real em ${SNAPSHOT_DATE}`}
-              tip="Não existe escolha de dificuldade: toda partida começa com os números oficiais do país nesta data."
-            />
-            <StatRow label="Semente da simulação" value={String(state.seed)} tip="A mesma semente com as mesmas decisões produz exatamente a mesma história." />
-            <StatRow
-              label="Reeleição"
-              value={state.settings.reelection ? 'Habilitada' : 'Desabilitada'}
-              tip="Com a reeleição habilitada, a eleição entra no calendário no quarto ano: você decide se disputa, faz campanha e, ganhando, governa mais 48 meses."
-            />
-            <StatRow label="Mandato" value={state.term > 1 ? 'Segundo' : 'Primeiro'} />
-          </Section>
-
-          <Section title="Música">
-            {TRACKS.length === 0 ? (
-              <Empty>Nenhuma música encontrada na pasta de trilhas.</Empty>
-            ) : (
-              <>
-                <div className="flex items-baseline justify-between gap-3">
-                  <label htmlFor="volume-musica" className="text-[12px] text-neutral-400">
-                    Volume
-                  </label>
-                  <span className="font-mono text-[12px] text-neutral-200">
-                    {volume === 0 ? 'Mudo' : `${volume}%`}
-                  </span>
-                </div>
-                <input
-                  id="volume-musica"
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={5}
-                  value={volume}
-                  onChange={(event) => setVolume(Number(event.target.value))}
-                  className="mt-1.5 w-full"
-                />
-
-                <p className="label mb-1.5 mt-3">Faixa</p>
-                <div className="grid gap-1.5">
-                  {TRACKS.map((track) => {
-                    const tocando = track.id === faixaAtual?.id;
-                    return (
-                      <button
-                        key={track.id}
-                        type="button"
-                        aria-pressed={tocando}
-                        onClick={() => selectTrack(track.id)}
-                        className={cx(
-                          'option flex items-center justify-between gap-2 text-left',
-                          tocando && 'border-gov-700/60 bg-gov-900/20',
-                        )}
-                      >
-                        <span className="text-[12px] font-semibold text-neutral-100">
-                          {track.title}
-                        </span>
-                        {tocando && <Badge tone="gov">Tocando</Badge>}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <p className="mt-2 text-[11px] leading-relaxed text-neutral-600">
-                  As faixas tocam em ciclo: quando uma termina, começa a próxima, e depois da última
-                  volta para a primeira. A escolha fica guardada neste navegador e vale para todas as
-                  partidas.
-                </p>
-              </>
-            )}
-          </Section>
-
-          <Section title="Save">
-            <p className="text-[12px] leading-relaxed text-neutral-500">
-              A partida é gravada automaticamente no armazenamento deste navegador a cada ação. Ela
-              não sai daqui: não há conta, não há servidor e ninguém além de você tem acesso.
+        <div className="max-w-2xl space-y-4">
+          <section className="card space-y-3 p-4">
+            <h2 className="section-title text-xl">Salvamento</h2>
+            <p className="text-[13px] text-neutral-400">
+              O jogo grava sozinho a cada decisão e a cada mês fechado.{' '}
+              {storageAvailable() ? 'Os saves ficam neste navegador.' : 'O armazenamento do navegador está bloqueado: exporte o save para não perder o mandato.'}
             </p>
-            <p className="mt-2 text-[12px] leading-relaxed text-warn-400">
-              Isso também significa que limpar os dados do site apaga o mandato. Exportar é a única
-              forma de garantir que ele sobreviva.
-            </p>
-
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" className="btn-primary" onClick={handleExport}>
-                <Download size={13} aria-hidden />
-                Exportar save
-              </button>
-              <button type="button" className="btn-ghost" onClick={() => fileRef.current?.click()}>
-                <Upload size={13} aria-hidden />
-                Importar save
-              </button>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="application/json,.json"
-                className="hidden"
-                onChange={async (event) => {
-                  const file = event.target.files?.[0];
-                  if (file) importSave(await file.text());
-                  event.target.value = '';
-                }}
-              />
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn-ghost" onClick={download}><Download size={14} aria-hidden /> Exportar save</button>
+              <button type="button" className="btn-ghost" onClick={() => file.current?.click()}><Upload size={14} aria-hidden /> Importar save</button>
+              <input ref={file} type="file" accept="application/json,.json" className="hidden" onChange={onImport} aria-label="Importar arquivo de save" />
             </div>
+          </section>
 
-            <div className="mt-4 rule pt-3">
-              <button
-                type="button"
-                className="btn-danger w-full"
-                onClick={() => setConfirmDelete(true)}
-              >
-                Apagar esta partida
-              </button>
+          <section className="card space-y-3 p-4">
+            <h2 className="section-title text-xl">Mandato</h2>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn-ghost" onClick={() => navigate('/')}><LogOut size={14} aria-hidden /> Voltar ao início</button>
+              <button type="button" className="btn-danger" onClick={() => setConfirm(true)}><Trash2 size={14} aria-hidden /> Apagar este mandato</button>
             </div>
-          </Section>
-
-          <Section title="Interpretação de propostas">
-            <div className="flex items-center gap-2">
-              {ai === 'disponivel' ? (
-                <Badge tone="gov">
-                  <Sparkles size={9} aria-hidden /> IA ativa
-                </Badge>
-              ) : (
-                <Badge tone="neutral">
-                  <Cpu size={9} aria-hidden /> Interpretador local
-                </Badge>
-              )}
-            </div>
-            <p className="mt-2 text-[12px] leading-relaxed text-neutral-500">
-              {ai === 'disponivel'
-                ? 'As medidas que você escreve são interpretadas por um modelo de linguagem através de uma função no servidor — a chave de API nunca chega ao navegador. Se a chamada falhar por qualquer motivo, o jogo cai automaticamente no interpretador local e a partida continua.'
-                : 'As medidas que você escreve são interpretadas pelo motor local, que roda inteiramente neste navegador. Nenhuma chamada externa é feita e o jogo funciona offline. A leitura é mais grosseira que a de um modelo de linguagem, e a interface sempre indica qual dos dois produziu cada análise.'}
-            </p>
-            <p className="mt-2 text-[11px] leading-relaxed text-neutral-600">
-              Em qualquer um dos dois caminhos, a análise passa por validação antes de virar efeito
-              de jogo: todo indicador tem teto e piso, então nem uma resposta adulterada consegue
-              mover a aprovação mais do que o jogo permite.
-            </p>
-          </Section>
-
-          <Section title="Procedência dos dados">
-            <p className="text-[12px] leading-relaxed text-neutral-500">
-              O país começa a partida com números reais e passa a ser simulação a partir do primeiro
-              mês jogado.
-            </p>
-            <div className="mt-2.5 rule pt-2">
-              {[...Object.entries(MACRO_BASELINE), ...Object.entries(BRASIL_HOJE)].map(([metric, entry]) => (
-                <div key={metric} className="flex items-baseline justify-between gap-3 py-1">
-                  <span className="text-[12px] text-neutral-400">{METRIC_LABEL[metric] ?? metric}</span>
-                  <span className="shrink-0 text-right">
-                    <span className="font-mono text-[12px] text-neutral-200">{entry.value.toLocaleString('pt-BR')}</span>
-                    <span className="ml-2 text-[10px] text-neutral-600">
-                      {entry.source} · {entry.reference}
-                    </span>
-                  </span>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2 text-[11px] leading-relaxed text-neutral-600">
-              Fontes: {DATA_SOURCES.join(' · ')}. Os dados são coletados por{' '}
-              <code className="text-neutral-500">scripts/fetch-official-data.mjs</code>, que pode ser
-              executado de novo para atualizar o ponto de partida.
-            </p>
-          </Section>
+          </section>
         </div>
       </PageBody>
-
       <ConfirmDialog
-        open={confirmDelete}
+        open={confirm}
         title="Apagar este mandato?"
-        body="A partida some deste navegador e não tem como recuperar. Exporte o save antes se quiser guardá-la."
-        confirmLabel="Apagar mandato"
+        body="O save será removido deste navegador e não poderá ser recuperado, a menos que você o tenha exportado."
+        confirmLabel="Apagar"
+        destructive
+        onCancel={() => setConfirm(false)}
         onConfirm={() => {
           deleteGame(state.id);
-          setConfirmDelete(false);
+          setConfirm(false);
           navigate('/');
         }}
-        onCancel={() => setConfirmDelete(false)}
       />
     </>
   );
 }
-
-const METRIC_LABEL: Record<string, string> = {
-  selic: 'Selic',
-  inflation12m: 'IPCA 12 meses',
-  usd: 'Câmbio R$/US$',
-  debtToGdp: 'Dívida bruta (% PIB)',
-  reservesUsdBillion: 'Reservas (US$ bi)',
-  primaryBalancePctGdp: 'Primário (% PIB)',
-  unemployment: 'Desemprego',
-  gdpNominalBillion: 'PIB 12 meses (R$ bi)',
-  minimumWage: 'Salário mínimo (R$)',
-  gdpGrowth: 'Crescimento do PIB (%)',
-  averageIncome: 'Rendimento médio do trabalho (R$)',
-  povertyRate: 'Pobreza (%)',
-  extremePovertyRate: 'Extrema pobreza (%)',
-  gini: 'Índice de Gini',
-  hdi: 'IDH',
-  lifeExpectancy: 'Expectativa de vida (anos)',
-  literacy: 'Alfabetização (%)',
-  homicideRate: 'Mortes violentas por 100 mil',
-  corruptionPerception: 'Percepção de corrupção (0-100)',
-  ibovespa: 'Ibovespa (pontos)',
-  countryRisk: 'Risco-país (pontos)',
-  bolsaFamiliaFamilies: 'Bolsa Família (famílias)',
-  bolsaFamiliaAverageBenefit: 'Bolsa Família (benefício médio, R$)',
-  population: 'População',
-};

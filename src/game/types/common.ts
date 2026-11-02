@@ -1,123 +1,43 @@
 /**
- * Tipos primitivos e uniões compartilhadas por todo o simulador.
+ * Vocabulário compartilhado do simulador.
  *
- * AVISO: GOV3RNE é uma obra de ficção. Nomes, siglas e números partem de
- * referências públicas apenas como ponto de partida; tudo que acontece
- * durante uma partida é simulação.
+ * AVISO: GOV3RNE é uma obra de ficção. Os números, os países do ranking e tudo
+ * o que acontece durante a partida são simulação.
  */
 
-export type Region = 'norte' | 'nordeste' | 'centro-oeste' | 'sudeste' | 'sul';
+/** Os cinco serviços públicos. Pontuação de 0 a 100. */
+export const SERVICE_IDS = ['saude', 'educacao', 'seguranca', 'agricultura', 'infraestrutura'] as const;
+export type ServiceId = (typeof SERVICE_IDS)[number];
 
-export const REGIONS = [
-  'norte',
-  'nordeste',
-  'centro-oeste',
-  'sudeste',
-  'sul',
-] as const;
+/** Os cinco recursos nacionais. Quantidade de 0 a 1000. */
+export const RESOURCE_IDS = ['comida', 'energia', 'tecnologia', 'turismo', 'capital_humano'] as const;
+export type ResourceId = (typeof RESOURCE_IDS)[number];
 
-export const REGION_LABEL: Record<Region, string> = {
-  norte: 'Norte',
-  nordeste: 'Nordeste',
-  'centro-oeste': 'Centro-Oeste',
-  sudeste: 'Sudeste',
-  sul: 'Sul',
-};
+/** Os cinco grupos sociais. Satisfação de 0 a 100. */
+export const GROUP_IDS = ['pobres', 'ricos', 'militares', 'indigenas', 'empresarios'] as const;
+export type GroupId = (typeof GROUP_IDS)[number];
 
+/** Parâmetros internacionais que uma medida pode alterar diretamente. */
+export const INTERNATIONAL_IDS = ['hdi', 'commerce'] as const;
+export type InternationalId = (typeof INTERNATIONAL_IDS)[number];
 
-/** Eixo econômico: -100 estatizante <-> +100 liberal. */
-export type EconomicAxis = number;
-/** Eixo de costumes: -100 progressista <-> +100 conservador. */
-export type SocialAxis = number;
-/** Eixo institucional: -100 rupturista <-> +100 legalista. */
-export type InstitutionalAxis = number;
-
-export interface IdeologyVector {
-  economic: EconomicAxis;
-  social: SocialAxis;
-  institutional: InstitutionalAxis;
-}
-
-export type PolicyCategory =
-  | 'economia'
-  | 'saude'
-  | 'educacao'
-  | 'seguranca'
-  | 'infraestrutura'
-  | 'social'
-  | 'meio_ambiente'
-  | 'institucional'
-  | 'diplomacia'
-  | 'agricultura'
-  | 'trabalho'
-  | 'cultura';
-
-export const POLICY_CATEGORIES = [
-  'economia',
+export const CARD_CATEGORIES = [
   'saude',
   'educacao',
   'seguranca',
-  'infraestrutura',
-  'social',
-  'meio_ambiente',
-  'institucional',
-  'diplomacia',
   'agricultura',
-  'trabalho',
-  'cultura',
+  'infraestrutura',
+  'economia_recursos',
+  'politica_tributaria',
+  'sociedade',
 ] as const;
-
-export const CATEGORY_LABEL: Record<PolicyCategory, string> = {
-  economia: 'Economia',
-  saude: 'Saúde',
-  educacao: 'Educação',
-  seguranca: 'Segurança',
-  infraestrutura: 'Infraestrutura',
-  social: 'Social',
-  meio_ambiente: 'Meio Ambiente',
-  institucional: 'Institucional',
-  diplomacia: 'Diplomacia',
-  agricultura: 'Agricultura',
-  trabalho: 'Trabalho',
-  cultura: 'Cultura',
-};
-
-/** Instrumento jurídico usado para materializar uma decisão presidencial. */
-export type LegalInstrument =
-  | 'decreto'
-  | 'medida_provisoria'
-  | 'projeto_lei'
-  | 'projeto_lei_complementar'
-  | 'pec'
-  | 'nomeacao'
-  | 'programa'
-  | 'ato_administrativo';
-
-export const LEGAL_INSTRUMENTS = [
-  'decreto',
-  'medida_provisoria',
-  'projeto_lei',
-  'projeto_lei_complementar',
-  'pec',
-  'nomeacao',
-  'programa',
-  'ato_administrativo',
-] as const;
-
-/** Procedência de um número exibido na interface. */
-export type DataOrigin = 'inicial' | 'simulado' | 'estimado';
+export type CardCategory = (typeof CARD_CATEGORIES)[number];
 
 export type Trend = 'up' | 'down' | 'flat';
 
-/** Valor numérico acompanhado da sua procedência, para rotular a UI. */
-export interface TrackedValue {
-  value: number;
-  origin: DataOrigin;
-  previous?: number;
-}
-
-export interface Identified {
-  id: string;
-}
+/** Qualquer mapa com uma entrada por serviço / recurso / grupo. */
+export type ByService<T> = Record<ServiceId, T>;
+export type ByResource<T> = Record<ResourceId, T>;
+export type ByGroup<T> = Record<GroupId, T>;
 
 export type Timestamp = string;

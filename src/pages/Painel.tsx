@@ -1,916 +1,126 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Eye, Loader2 } from 'lucide-react';
 import {
-  ArrowRight,
-  CalendarClock,
-  Loader2,
-  PenLine,
-  Target,
-  Users,
-  Vote,
-} from 'lucide-react';
-import {
-  AGENDA_ACTIONS,
-  REGIME_LABEL,
-  REGIONS,
-  REGION_LABEL,
-  approvalLabel,
-  impeachmentLabel,
-  momentumLabel,
-  monthlyFiscalResult,
-  monthlyTreasuryInflow,
-  grossDebt,
-  countryRiskPercent,
-  promiseReading,
-  type AgendaActionId,
+  SERVICE_IDS,
+  formatDollars,
+  formatRank,
+  formatReais,
+  getCard,
+  monthLabel,
 } from '@/game';
-import { congressDissolved } from '@/game';
 import { useGame } from '@/state/game-store';
-import { BrazilMap } from '@/components/game/BrazilMap';
-import { StateProfileModal } from '@/components/game/StateDetail';
-import { EventCard } from '@/components/game/EventCard';
-import { ProposalEditor } from '@/components/game/ProposalEditor';
-import { MeasureFlowModal } from '@/components/game/MeasureFlowModal';
-import { MeasureTimelineModal } from '@/components/game/MeasureTimelineModal';
-import { Modal } from '@/components/ui/overlays';
-import {
-  Bar,
-  Badge,
-  Delta,
-  Empty,
-  MetricCard,
-  Section,
-  cx,
-  toneOf,
-} from '@/components/ui/primitives';
+import { CrisisBanner, ServiceMeter, StatTile } from '@/components/game/parts';
+import { DecisionCard } from '@/components/game/DecisionCard';
+import { RankProgress } from '@/components/game/RankProgress';
+import { Avatar } from '@/components/game/Avatar';
+import { PageBody } from '@/components/layout/PageHeader';
 
-/**
- * PAINEL
- *
- * A tela onde o mês acontece. Ordem de leitura deliberada:
- *
- *   1. os cinco números macro que definem se o governo está de pé;
- *   2. o que exige decisão AGORA (eventos pendentes);
- *   3. a agenda — o que fazer com o tempo que sobra;
- *   4. a conta de decisões antigas chegando;
- *   5. contexto: aprovação por região, oposição, promessas.
- *
- * O botão de avançar o mês fica fixo no rodapé porque é a ação que fecha tudo.
- */
 export function Painel() {
+  const state = useGame((s) => s.state);
+  const chooseCard = useGame((s) => s.chooseCard);
+  const advance = useGame((s) => s.advanceMonth);
+  const advancing = useGame((s) => s.advancing);
+  const reopen = useGame((s) => s.lastResolution);
+  const showResolution = useGame((s) => s.showResolution);
   const navigate = useNavigate();
-  const state = useGame((store) => store.state);
-  const advance = useGame((store) => store.advanceMonth);
-  const advancing = useGame((store) => store.advancing);
-  const runAction = useGame((store) => store.runAction);
-
-  const [actionTarget, setActionTarget] = useState<AgendaActionId | null>(null);
-  const [activeMeasureId, setActiveMeasureId] = useState<string | null>(null);
-  const [timelineMeasureId, setTimelineMeasureId] = useState<string | null>(null);
-  // Estado clicado no mapa pequeno. Guarda o id, e não o objeto, para o perfil
-  // continuar mostrando os números do mês corrente.
-  const [mapStateId, setMapStateId] = useState<string | null>(null);
 
   if (!state) return null;
-
-  const lucroMensal = monthlyFiscalResult(state);
-  const entradaCaixa = monthlyTreasuryInflow(state);
-
-  const pending = state.pendingEvents.filter((event) => !event.resolvedOptionId);
-  const consequences = state.consequences.filter((entry) => entry.month === state.month);
-  const inTransit = state.policies.filter((policy) => policy.status === 'tramitando');
-  const companyRequests = state.companies.requests.filter((request) => request.status === 'aberta');
-  const companyCrises = state.companies.companies.filter((company) => company.inCrisis);
-
-  // A eleição só ocupa o Painel enquanto exige alguma coisa do presidente:
-  // decidir, fazer campanha, esperar a apuração ou assumir de novo.
-  const eleicao =
-    state.election &&
-    (state.election.outcome === null || state.phase === 'transicao') &&
-    !state.flags.gameOver
-      ? state.election
-      : null;
-  const candidato = eleicao?.candidates.find((entry) => !entry.incumbent);
-  const pesquisa = eleicao?.polls[0];
-  const eleicaoTitulo =
-    state.phase === 'transicao'
-      ? 'Você foi reeleito. Falta assumir.'
-      : eleicao?.stage === 'definicao'
-        ? 'Você disputa a reeleição?'
-        : `Você × ${candidato?.name ?? 'a oposição'}`;
-  const eleicaoDetalhe =
-    state.phase === 'transicao'
-      ? 'Escolha os compromissos do segundo mandato para o relógio voltar a andar.'
-      : pesquisa
-        ? `${pesquisa.institute}: ${(pesquisa.byCandidate.incumbente ?? 0).toFixed(0)}% contra ${(
-            pesquisa.byCandidate.oposicao ?? 0
-          ).toFixed(0)}%. Primeiro turno no mês ${eleicao?.electionMonth}.`
-        : `${candidato?.name ?? 'A oposição'} (${candidato?.partyAcronym ?? '—'}) já está na rua. Primeiro turno no mês ${
-            eleicao?.electionMonth
-          }.`;
+  const { turn, international, economy } = state;
+  const choice = turn.choice;
+  const cards = turn.offeredCardIds.map(getCard);
+  const label = monthLabel(state.month, state.startYear);
 
   return (
-    <>
-      <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
-        {/* ------------------------------------------------ identificação */}
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <PageBody>
+      <div className="space-y-5 select-none">
+        {/* ---------------------------------------------------- identificação */}
+        <div className="flex items-center gap-3">
+          <Avatar config={state.president.avatar} size={52} />
           <div>
-            <h1 className="font-display text-4xl font-bold uppercase leading-none tracking-tight text-neutral-50 sm:text-5xl">
-              {state.president.politicalName}
-            </h1>
-            <p className="mt-1 text-[12px] uppercase tracking-wider text-neutral-500">
-              {state.party.acronym} · natural de{' '}
-              {state.president.homeState}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="font-display text-2xl font-semibold uppercase leading-none text-neutral-200">
-              {state.lastResult?.monthLabel ?? `Mês ${state.month}`}
-            </p>
-            <p className="label mt-0.5">{state.totalMonths - state.month} meses restantes</p>
+            <p className="label">Presidente</p>
+            <p className="font-display text-2xl font-bold uppercase leading-none text-neutral-50">{state.president.politicalName}</p>
           </div>
         </div>
 
-        {/* ------------------------------------------------------- macro */}
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
-          {/* PIB e inflação continuam no motor e na página de Economia. Aqui
-              ficam os dois números que o jogador lê mais rápido: quanto o
-              governo ganha ou perde no mês e quanto a população ganha. */}
-          <MetricCard
-            label="Lucro mensal"
-            value={lucroMensal}
-            unit="bi"
-            decimals={1}
-            tone={lucroMensal >= 0 ? 'pos' : 'neg'}
-            tip="Quanto o governo arrecada num mês menos o que gasta nesse mês: despesa obrigatória, programas e medidas em execução, antes dos juros da dívida. O déficit herdado na posse é coberto com dívida; tudo o que o mês render acima dele entra no caixa."
-            footer={
-              <span className="label">
-                {lucroMensal >= 0 ? 'Lucro' : 'Prejuízo'}
-                {entradaCaixa >= 0.05 && ` · +R$ ${entradaCaixa.toFixed(1)} bi no caixa`}
-              </span>
-            }
+        {/* ---------------------------------------------- indicadores centrais */}
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-6" data-testid="headline-stats">
+          <StatTile label="Mês e ano" value={<span className="font-display text-2xl uppercase">{label}</span>} sub={`Mês ${state.month} de governo`} />
+          <StatTile
+            label="Cofre público"
+            value={formatReais(economy.treasury)}
+            tone={economy.treasury < 0 ? 'neg' : 'pos'}
+            sub={economy.crisisMonthsLeft > 0 ? `Crise: ${economy.crisisMonthsLeft} meses` : 'Saldo disponível'}
           />
-          <MetricCard
-            label="Desemprego"
-            value={state.economy.unemployment}
-            unit="%"
-            decimals={1}
-            delta={state.lastResult?.unemploymentDelta}
-            lowerIsBetter
-            tone={toneOf(7 - state.economy.unemployment)}
-            tip="Taxa de desocupação. Responde ao juro real com seis a doze meses de atraso."
-          />
-          <MetricCard
-            label="Salário médio"
-            value={state.nation.averageIncome}
-            decimals={0}
-            format={(valor) => `R$ ${Math.round(valor).toLocaleString('pt-BR')}`}
-            unit="/mês"
-            tip="Quanto a população ganha por mês, em média, em reais. Sobe com emprego, produtividade e salário mínimo, e cai quando a economia desacelera."
-            footer={
-              <span className="label">
-                Mínimo R$ {state.economy.minimumWage.toLocaleString('pt-BR')}
-              </span>
-            }
-          />
-          <MetricCard
-            label="Resultado primário"
-            value={state.economy.primaryBalance}
-            unit="bi"
-            decimals={0}
-            tone={state.economy.primaryBalance >= 0 ? 'pos' : 'neg'}
-            tip="Receita menos despesa antes dos juros, acumulado em 12 meses. É aqui que o custo de cada medida aparece."
-            footer={
-              <span className="label">
-                {state.economy.primaryBalance >= 0 ? 'Superávit' : 'Déficit'}
-              </span>
-            }
-          />
-          <MetricCard
-            label="Dívida bruta"
-            value={grossDebt(state)}
-            format={(valor) =>
-              'R$ ' +
-              (valor / 1000).toLocaleString('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })
-            }
-            unit="tri"
-            lowerIsBetter
-            tone={toneOf(80 - state.economy.debtToGdp)}
-            tip="Dívida bruta do governo geral, em reais. Embaixo, o risco-país: quanto o mercado duvida que o Brasil pague a dívida. Em 100%, o presidente sofre impeachment."
-            footer={
-              <span
-                className={cx(
-                  'label',
-                  countryRiskPercent(state.economy.countryRisk) >= 70 && 'text-danger-400',
-                )}
-              >
-                Risco-país {Math.round(countryRiskPercent(state.economy.countryRisk))}%
-              </span>
-            }
-          />
+          <StatTile label="Valor da moeda" value={formatDollars(international.currencyCents)} tone={international.currencyCents <= 10 ? 'warn' : 'neutral'} sub="Cotação em dólares" />
+          <StatTile label="Ranking de PIB" value={`${formatRank(international.gdpRank)} lugar`} sub={international.gdpRank > 1 ? `Rumo ao ${formatRank(international.gdpRank - 1)}` : 'Topo do ranking'} />
+          <StatTile label="IDH" value={<>{international.hdi}<span className="unit">/1000</span></>} />
+          <StatTile label="Comércio" value={<>{international.commerce}<span className="unit">/1000</span></>} />
         </div>
 
-        {/* ------------------------------------------------- poder e ordem */}
-        {/* Só aparece quando há o que dizer: instituição sob pressão, exceção
-            em vigor, guerra em curso ou regime que deixou de ser democracia. */}
-        {(state.regime.ruptureRisk > 32 ||
-          state.regime.regime !== 'democracia' ||
-          state.war.status === 'guerra') && (
-          <button
-            type="button"
-            onClick={() => navigate('/poder')}
-            className={cx(
-              'mt-4 flex w-full flex-wrap items-center justify-between gap-3 border p-4 text-left transition-colors',
-              state.regime.regime === 'democracia'
-                ? 'border-warn-700/50 bg-warn-900/10 hover:border-warn-600'
-                : 'border-danger-700/50 bg-danger-900/10 hover:border-danger-600',
-            )}
-          >
-            <div className="min-w-0">
-              <p className="label text-warn-400">
-                {state.war.status === 'guerra' ? 'País em guerra' : 'Poder e ordem'}
-              </p>
-              <h2 className="mt-0.5 font-display text-xl font-semibold text-neutral-50">
-                {REGIME_LABEL[state.regime.regime]}
-                {state.war.status === 'guerra' ? ` · guerra com ${state.war.countryName}` : ''}
-              </h2>
-              <p className="mt-0.5 text-[12px] leading-snug text-neutral-400">
-                Risco de ruptura {state.regime.ruptureRisk.toFixed(0)}% · lealdade militar{' '}
-                {state.regime.militaryLoyalty.toFixed(0)}% · liberdades{' '}
-                {state.regime.civilLiberties.toFixed(0)}%
-                {state.regime.exception.active ? ' · estado de exceção em vigor' : ''}
+        <CrisisBanner state={state} />
+
+        {/* ----------------------------------------------------------- serviços */}
+        <section aria-labelledby="h-servicos">
+          <div className="mb-2 flex items-end justify-between">
+            <h2 id="h-servicos" className="section-title text-xl">Serviços e metas do mês</h2>
+            <button type="button" className="btn-ghost btn-sm" onClick={() => navigate('/servicos')}>Detalhes</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
+            {SERVICE_IDS.map((id) => (
+              <ServiceMeter key={id} id={id} value={state.services[id]} target={turn.targets[id]} delta={state.services[id] - turn.start.services[id]} />
+            ))}
+          </div>
+        </section>
+
+        {/* ------------------------------------------------------------- cartas */}
+        <section aria-labelledby="h-decisao">
+          <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 id="h-decisao" className="section-title text-xl">{choice ? 'Medida escolhida' : `Decisão de ${label}`}</h2>
+              <p className="text-[12.5px] text-neutral-500">
+                {choice ? 'A medida foi executada. Agora é fechar o mês.' : 'Escolha uma das três medidas. Só uma por mês.'}
               </p>
             </div>
-            <span className="btn-ghost shrink-0">Abrir o gabinete de crise</span>
-          </button>
-        )}
-
-        {/* ------------------------------------------------------- eleição */}
-        {eleicao && (
-          <button
-            type="button"
-            onClick={() => navigate('/eleicao')}
-            className="card-active mt-4 flex w-full flex-wrap items-center justify-between gap-3 p-4 text-left transition-colors hover:border-gov-700/60"
-          >
-            <div className="min-w-0">
-              <p className="label text-gov-400">
-                {eleicao.stage === 'definicao'
-                  ? 'O partido espera uma resposta'
-                  : eleicao.stage === 'entre_turnos'
-                    ? 'Segundo turno'
-                    : state.phase === 'transicao'
-                      ? 'Transição de mandato'
-                      : 'Corrida eleitoral'}
-              </p>
-              <h2 className="mt-0.5 font-display text-xl font-semibold text-neutral-50">
-                {eleicaoTitulo}
-              </h2>
-              <p className="mt-0.5 text-[12px] leading-snug text-neutral-400">{eleicaoDetalhe}</p>
-            </div>
-            <span className="btn-primary shrink-0 px-4 py-2 text-[13px]">
-              {state.phase === 'transicao' ? 'Assumir o segundo mandato' : 'Abrir a eleição'}
-            </span>
-          </button>
-        )}
-
-        {/* ------------------------------------------------------ conteúdo */}
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_360px]">
-          <div className="space-y-4">
-            {/* ---------------------------------------- eventos pendentes */}
-            {pending.length > 0 ? (
-              <section>
-                <div className="mb-2 flex items-center justify-between">
-                  <h2 className="label-strong text-warn-400">
-                    Exige decisão · {pending.length}
-                  </h2>
-                  <span className="label">Não decidir também é decidir</span>
-                </div>
-                <div className="space-y-2">
-                  {pending.map((event) => (
-                    <EventCard
-                      key={event.id}
-                      event={event}
-                    />
-                  ))}
-                </div>
-              </section>
-            ) : (
-              /* --------------------------------------------- agenda livre */
-              <section className="card-active p-4">
-                <p className="label text-gov-400">Agenda aberta</p>
-                <h2 className="mt-1 font-display text-2xl font-semibold text-neutral-50">
-                  Sua agenda está limpa.
-                </h2>
-                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-neutral-400">
-                  Chance rara de liderar nos seus próprios termos. Anuncie uma política, resolva um
-                  problema crônico ou tome uma ação executiva antes que apareça um problema.
-                </p>
-
-                <div className="mt-3">
-                  <ProposalEditor onSigned={(policyId) => setActiveMeasureId(policyId)} />
-                </div>
-              </section>
-            )}
-
-            {/* --------------------------------------------- agenda do mês */}
-            <Section
-              title="Agenda do mês"
-              action={
-                <span className="flex items-center gap-1.5">
-                  <span className="label">Pontos</span>
-                  <span className="font-mono text-[13px] text-neutral-100">
-                    {state.agenda.points}/{state.agenda.maxPoints}
-                  </span>
-                </span>
-              }
-            >
-              <div className="mb-2.5">
-                <Bar
-                  value={state.agenda.points}
-                  max={state.agenda.maxPoints}
-                  tone={state.agenda.points > 2 ? 'gov' : 'warn'}
-                />
-              </div>
-
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {AGENDA_ACTIONS.filter((action) => !FORA_DO_PAINEL.has(action.id)).map((action) => {
-                  const affordable = state.agenda.points >= action.cost;
-                  const needsTarget = action.id === 'visita_regional';
-
-                  return (
-                    <button
-                      key={action.id}
-                      type="button"
-                      disabled={!affordable}
-                      className={cx('option', !affordable && 'opacity-40')}
-                      onClick={() => {
-                        if (needsTarget) setActionTarget(action.id);
-                        else runAction(action.id);
-                      }}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-[12px] font-semibold text-neutral-100">
-                          {action.label}
-                        </span>
-                        <span className="shrink-0 font-mono text-[10px] text-neutral-600">
-                          {action.cost} pt
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">
-                        {action.description}
-                      </p>
-                      <p className="mt-1 text-[10px] leading-snug text-gov-500/80">
-                        {action.consequence}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {pending.length > 0 && (
-                <button
-                  type="button"
-                  className="btn-ghost mt-2 w-full"
-                  disabled={state.agenda.points < 3}
-                >
-                  <PenLine size={13} aria-hidden />
-                  Escrever uma medida · 3 pt
-                </button>
-              )}
-            </Section>
-
-            {/* ------------------------------------------- consequências */}
-            <Section
-              title="A conta de decisões antigas chegou"
-              action={
-                consequences.length > 0 ? (
-                  <Badge tone="warn">{consequences.length} neste mês</Badge>
-                ) : undefined
-              }
-            >
-              <p className="mb-2 text-[12px] text-neutral-500">
-                Nada disto é sorteio. É o desdobramento do que você mesmo decidiu meses atrás.
-              </p>
-              {consequences.length === 0 ? (
-                <Empty>Nenhuma conta venceu neste mês.</Empty>
-              ) : (
-                <ul className="space-y-2">
-                  {consequences.map((entry) => (
-                    <li key={entry.id} className="border border-ink-700 bg-ink-900/40 p-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-neutral-100">{entry.title}</p>
-                        <Badge tone={KIND_TONE[entry.kind]}>{KIND_LABEL[entry.kind]}</Badge>
-                      </div>
-                      <p className="mt-1 text-[12px] leading-relaxed text-neutral-500">
-                        {entry.body}
-                      </p>
-                      {entry.approvalDelta !== 0 && (
-                        <p className="mt-1.5">
-                          <span className="label mr-1.5">Aprovação</span>
-                          <Delta value={entry.approvalDelta} />
-                        </p>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-
-            {/* ------------------------------------------ empresas */}
-            {(companyRequests.length > 0 || companyCrises.length > 0) && (
-              <Section
-                title="As empresas querem falar com você"
-                action={
-                  <button
-                    type="button"
-                    className="btn-ghost btn-sm"
-                    onClick={() => navigate('/economia')}
-                  >
-                    Abrir painel de empresas
+            {choice && (
+              <div className="flex gap-2">
+                {reopen && !showResolution && (
+                  <button type="button" className="btn-ghost" onClick={() => useGame.setState({ showResolution: true })}>
+                    <Eye size={14} aria-hidden /> Ver consequências
                   </button>
-                }
-              >
-                <p className="mb-2 text-[12px] text-neutral-500">
-                  Empresa não espera ser chamada. Quando o resultado aperta, ela pede socorro;
-                  quando sobra, pede espaço para crescer. Ignorar também é responder.
-                </p>
-                <ul className="space-y-1.5">
-                  {companyCrises.map((company) => (
-                    <li key={`crise_${company.id}`} className="card-danger p-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-neutral-100">{company.name}</p>
-                        <Badge tone="danger">crise aberta</Badge>
-                      </div>
-                      <p className="mt-1 text-[12px] leading-snug text-neutral-500">
-                        {company.monthsInLoss} meses de prejuízo e{' '}
-                        {company.employees.toLocaleString('pt-BR')} empregos na conta da decisão.
-                      </p>
-                    </li>
-                  ))}
-                  {companyRequests.slice(0, 4).map((request) => (
-                    <li key={request.id} className="border border-ink-700 bg-ink-900/40 p-2.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-[13px] font-semibold text-neutral-100">
-                          {request.companyName}
-                        </p>
-                        <Badge tone={request.urgency === 'alta' ? 'warn' : 'neutral'}>
-                          R$ {request.fiscalCost.toFixed(1)} bi
-                        </Badge>
-                      </div>
-                      <p className="mt-1 text-[12px] leading-snug text-neutral-500">
-                        {request.title} · vence no mês {request.expiresMonth}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              </Section>
-            )}
-
-            {/* --------------------------------------------- tramitação */}
-            {inTransit.length > 0 && (
-              <Section
-                title="Medidas em andamento"
-                action={<Badge tone="info">{inTransit.length} em tramitação</Badge>}
-              >
-                <ul className="space-y-1.5">
-                  {inTransit.map((policy) => {
-                    const step = MEASURE_PHASE_STEP[policy.stage ?? 'aguardando'] ?? 0;
-                    return (
-                      <li key={policy.id}>
-                        <button
-                          type="button"
-                          className="option flex w-full items-center gap-3 text-left"
-                          onClick={() =>
-                            policy.stage === 'negociacao_camara' || policy.stage === 'negociacao_senado' || policy.stage === 'transicao_senado'
-                              ? setActiveMeasureId(policy.id)
-                              : setTimelineMeasureId(policy.id)
-                          }
-                        >
-                          <Vote size={13} className="shrink-0 text-neutral-600" aria-hidden />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[12px] text-neutral-200">{policy.title}</span>
-                            <span className="text-[10px] uppercase tracking-wider text-neutral-600">
-                              {MEASURE_PHASE_LABEL[policy.stage ?? 'aguardando']}
-                            </span>
-                            <span className="mt-1 flex gap-0.5" aria-hidden>
-                              {MEASURE_PHASES.map((phase) => (
-                                <span
-                                  key={phase}
-                                  className={cx(
-                                    'h-1 flex-1 rounded-full',
-                                    MEASURE_PHASES.indexOf(phase) <= step ? 'bg-gov-500' : 'bg-ink-700',
-                                  )}
-                                />
-                              ))}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </Section>
+                )}
+                <button type="button" className="btn-primary" onClick={advance} disabled={advancing || state.phase !== 'jogando'} data-testid="advance">
+                  {advancing ? <Loader2 size={14} className="animate-spin" aria-hidden /> : null}
+                  Avançar o mês
+                  <ArrowRight size={14} aria-hidden />
+                </button>
+              </div>
             )}
           </div>
 
-          {/* ================================================== coluna lateral */}
-          <aside className="space-y-4">
-            {/* Aprovação */}
-            <section className="card p-3 text-center">
-              <p className="label">Aprovação do governo</p>
-              <p
-                className={cx(
-                  'metric-lg mt-1',
-                  state.approval.overall >= 55
-                    ? 'text-gov-400'
-                    : state.approval.overall >= 40
-                      ? 'text-warn-400'
-                      : 'text-danger-400',
-                )}
-              >
-                {state.approval.overall.toFixed(1)}
-                <span className="text-2xl">%</span>
-              </p>
-              <p className="mt-0.5 text-[11px] text-neutral-500">
-                pessoal {state.approval.personal.toFixed(0)}%
-                {/* Sem Congresso não há impeachment: o risco de queda mudou de
-                    endereço e agora é o do quartel, que mora no painel de Poder. */}
-                {congressDissolved(state) ? (
-                  <> · sem Congresso</>
-                ) : (
-                  <> · impeachment {state.congress.impeachmentRisk.toFixed(0)}%</>
-                )}
-              </p>
-              <p className="mt-1.5 text-[11px] text-neutral-600">
-                {approvalLabel(state.approval.overall)} · {momentumLabel(state.approval.momentum)}
-              </p>
+          <div className="grid gap-3 md:grid-cols-3" data-testid="cards">
+            {cards.map((card) => (
+              <DecisionCard
+                key={card.id}
+                card={card}
+                mode={!choice ? 'open' : choice.cardId === card.id ? 'chosen' : 'dismissed'}
+                onChoose={chooseCard}
+              />
+            ))}
+          </div>
+        </section>
 
-              <div className="mt-3">
-                {/* A referência é a MESMA aprovação mostrada logo acima: o
-                    mapa é a decomposição daquele número, não uma segunda
-                    medição dele. */}
-                <BrazilMap
-                  states={state.states}
-                  metric="approval"
-                  reference={state.approval.overall}
-                  showLabels={false}
-                  onSelect={(unit) => setMapStateId(unit.id)}
-                  selectedId={mapStateId}
-                />
-              </div>
-            </section>
-
-            {/* Por região */}
-            <Section
-              title="Aprovação por região"
-              dense
-              action={
-                <span className="label">
-                  país {state.approval.overall.toFixed(1)}%
-                </span>
-              }
-            >
-              {REGIONS.map((region) => {
-                const value = state.approval.byRegion[region];
-                return (
-                  <div key={region} className="py-1.5">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-[12px] text-neutral-300">{REGION_LABEL[region]}</span>
-                      {/* A cor compara com o país, e não com uma régua fixa:
-                          46% num governo de 40% é uma região boa. */}
-                      <span
-                        className={cx(
-                          'font-mono text-[12px]',
-                          value >= state.approval.overall + 1
-                            ? 'text-gov-400'
-                            : value <= state.approval.overall - 1
-                              ? 'text-danger-400'
-                              : 'text-neutral-400',
-                        )}
-                      >
-                        {value.toFixed(1)}%
-                      </span>
-                    </div>
-                    <Bar
-                      value={value}
-                      tone={value >= 55 ? 'gov' : value >= 42 ? 'warn' : 'danger'}
-                      animate={false}
-                    />
-                  </div>
-                );
-              })}
-            </Section>
-
-            {/* Promessas */}
-            <Section
-              title="Suas promessas"
-              action={
-                <Badge tone="neutral">
-                  {state.promises.filter((p) => p.status === 'cumprida').length}/
-                  {state.promises.length}
-                </Badge>
-              }
-              dense
-            >
-              {state.promises.map((promise) => {
-                const reading = promiseReading(state, promise);
-                return (
-                  <div key={promise.id} className="border-b border-ink-800 py-2 last:border-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[12px] leading-snug text-neutral-200">
-                        {promise.title}
-                      </span>
-                      <span
-                        className={cx(
-                          'shrink-0 font-mono text-[12px]',
-                          reading.met ? 'text-gov-400' : 'text-neutral-500',
-                        )}
-                      >
-                        {reading.label}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2">
-                      <Bar
-                        value={Math.max(0, promise.progress)}
-                        tone={
-                          promise.status === 'cumprida'
-                            ? 'gov'
-                            : promise.status === 'quebrada'
-                              ? 'danger'
-                              : 'warn'
-                        }
-                        animate={false}
-                        className="flex-1"
-                      />
-                      <span className="w-16 shrink-0 text-right text-[10px] uppercase tracking-wider text-neutral-600">
-                        {STATUS_LABEL[promise.status]}
-                      </span>
-                    </div>
-                    <p className="mt-0.5 text-[10px] text-neutral-700">meta: {promise.targetLabel}</p>
-                  </div>
-                );
-              })}
-            </Section>
-
-            {/* Oposição */}
-            <Section title="A oposição">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-[13px] font-semibold text-neutral-100">
-                    {state.government.opposition.leaderName}
-                  </p>
-                  <p className="text-[11px] text-neutral-500">
-                    {state.government.opposition.leaderParty} ·{' '}
-                    {STRATEGY_LABEL[state.government.opposition.strategy]}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-mono text-2xl text-danger-400">
-                    {state.government.opposition.strength.toFixed(0)}
-                  </p>
-                  <p className="label">de força</p>
-                </div>
-              </div>
-              <p className="mt-2 text-[11px] leading-snug text-neutral-500">
-                Último movimento: {state.government.opposition.lastMove}
-              </p>
-              <ul className="mt-2 space-y-0.5">
-                {state.government.opposition.objectives.map((objective) => (
-                  <li key={objective} className="flex items-start gap-1.5 text-[11px] text-neutral-500">
-                    <Target size={9} className="mt-1 shrink-0 text-danger-500" aria-hidden />
-                    {objective}
-                  </li>
-                ))}
-              </ul>
-              {!congressDissolved(state) && state.congress.impeachmentStage !== 'nenhum' && (
-                <p className="mt-2 border-l-2 border-l-danger-500 bg-danger-900/20 p-2 text-[11px] leading-snug text-danger-400">
-                  {impeachmentLabel(state.congress.impeachmentStage)} · risco{' '}
-                  {state.congress.impeachmentRisk.toFixed(0)}/100
-                </p>
-              )}
-            </Section>
-
-            {/* Grupos sociais */}
-            <Section title="Como os grupos estão" dense>
-              {[...state.socialGroups]
-                .sort((a, b) => b.electorateShare - a.electorateShare)
-                .slice(0, 8)
-                .map((group) => (
-                  <div key={group.id} className="py-1.5">
-                    <div className="flex items-baseline justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span
-                          className="h-1.5 w-1.5 shrink-0"
-                          style={{ backgroundColor: group.color }}
-                          aria-hidden
-                        />
-                        <span className="truncate text-[12px] text-neutral-300">{group.name}</span>
-                      </span>
-                      <span className="shrink-0 font-mono text-[11px] text-neutral-400">
-                        {group.approval.toFixed(0)}%
-                      </span>
-                    </div>
-                    <Bar
-                      value={group.approval}
-                      tone={group.approval >= 55 ? 'gov' : group.approval >= 42 ? 'warn' : 'danger'}
-                      animate={false}
-                    />
-                    {group.mobilization > 45 && (
-                      <p className="mt-0.5 flex items-center gap-1 text-[10px] text-warn-500">
-                        <Users size={9} aria-hidden />
-                        mobilizado ({group.mobilization.toFixed(0)})
-                      </p>
-                    )}
-                  </div>
-                ))}
-              <button
-                type="button"
-                className="mt-2 flex w-full items-center justify-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-300"
-                onClick={() => navigate('/nacao')}
-              >
-                Ver todos os grupos
-                <ArrowRight size={10} aria-hidden />
-              </button>
-            </Section>
-          </aside>
+        <div className="grid gap-3 lg:grid-cols-2">
+          <RankProgress state={state} />
+          <div className="card p-4">
+            <p className="label-strong">Contas do mês, em recorrentes</p>
+            <dl className="mt-2 space-y-1 text-[13px]">
+              <div className="flex justify-between"><dt className="text-neutral-400">Arrecadação de impostos</dt><dd className="font-mono tabular">{formatReais(economy.taxes)}</dd></div>
+              <div className="flex justify-between"><dt className="text-neutral-400">Gastos públicos</dt><dd className="font-mono tabular">{formatReais(economy.crisisMonthsLeft > 0 ? 0 : economy.spending)}</dd></div>
+            </dl>
+            <button type="button" className="btn-ghost btn-sm mt-3" onClick={() => navigate('/economia')}>Abrir a Economia</button>
+          </div>
         </div>
       </div>
-
-      {/* ---------------------------------------------- barra de avanço */}
-      <div className="sticky bottom-0 z-30 border-t border-ink-700 bg-ink-950/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1400px] items-center gap-3 px-4 py-3 sm:px-6">
-          <CalendarClock size={15} className="shrink-0 text-neutral-600" aria-hidden />
-          <p className="min-w-0 flex-1 truncate text-[12px] text-neutral-500">
-            {state.phase === 'transicao'
-              ? 'O primeiro mandato acabou e você venceu a eleição. O relógio só volta a andar depois da posse.'
-              : pending.length > 0
-                ? `${pending.length} decisão(ões) pendente(s). O que você não decidir, o país decide por você.`
-                : state.agenda.points > 0
-                  ? `${state.agenda.points} ponto(s) de agenda ainda disponíveis neste mês.`
-                  : 'Agenda esgotada. É hora de deixar o mês correr.'}
-          </p>
-          {state.phase === 'transicao' ? (
-            <button
-              type="button"
-              className="btn-primary shrink-0"
-              onClick={() => navigate('/eleicao')}
-            >
-              Assumir o segundo mandato
-              <ArrowRight size={13} aria-hidden />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn-primary shrink-0"
-              onClick={advance}
-              disabled={advancing || state.flags.gameOver}
-            >
-              {advancing ? (
-                <>
-                  <Loader2 size={13} className="animate-spin" aria-hidden />
-                  Processando
-                </>
-              ) : (
-                <>
-                  Avançar mês
-                  <ArrowRight size={13} aria-hidden />
-                </>
-              )}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ------------------------------------------------------- modais */}
-      <TargetPicker
-        action={actionTarget}
-        onClose={() => setActionTarget(null)}
-        onPick={(target) => {
-          if (actionTarget) runAction(actionTarget, target);
-          setActionTarget(null);
-        }}
-      />
-
-      <StateProfileModal
-        unit={state.states.find((unit) => unit.id === mapStateId) ?? null}
-        onClose={() => setMapStateId(null)}
-      />
-
-      <MeasureFlowModal policyId={activeMeasureId} onClose={() => setActiveMeasureId(null)} />
-      <MeasureTimelineModal policyId={timelineMeasureId} onClose={() => setTimelineMeasureId(null)} />
-    </>
+    </PageBody>
   );
 }
-
-const MEASURE_PHASES = ['aguardando', 'negociacao_camara', 'transicao_senado', 'negociacao_senado', 'sancao'] as const;
-
-const MEASURE_PHASE_STEP: Record<string, number> = {
-  aguardando: 0,
-  negociacao_camara: 1,
-  transicao_senado: 2,
-  negociacao_senado: 3,
-  sancao: 4,
-  concluido: 4,
-};
-
-const MEASURE_PHASE_LABEL: Record<string, string> = {
-  aguardando: 'Aguardando abertura da tramitação',
-  negociacao_camara: 'Em negociação na Câmara',
-  transicao_senado: 'Aprovada na Câmara · segue para o Senado',
-  negociacao_senado: 'Em negociação no Senado',
-  sancao: 'Aprovada · aguardando sanção',
-  concluido: 'Tramitação concluída',
-};
-
-/** Escolha do estado para a visita regional, a única ação do Painel que pede alvo. */
-function TargetPicker({
-  action,
-  onClose,
-  onPick,
-}: {
-  action: AgendaActionId | null;
-  onClose: () => void;
-  onPick: (targetId: string) => void;
-}) {
-  const state = useGame((store) => store.state);
-  if (!state || !action) return null;
-
-  return (
-    <Modal open onClose={onClose} title="Qual estado você vai visitar?" size="md">
-      <div className="grid gap-1.5 sm:grid-cols-2">
-        {[...state.states]
-          .sort((a, b) => b.gdpShare - a.gdpShare)
-          .map((unit) => (
-            <button key={unit.id} type="button" className="option" onClick={() => onPick(unit.id)}>
-              <div className="flex items-start justify-between gap-2">
-                <p className="truncate text-[12px] font-semibold text-neutral-100">{unit.name}</p>
-                <span className="shrink-0 font-mono text-[11px] text-neutral-400">
-                  {unit.approval.toFixed(0)}%
-                </span>
-              </div>
-              <p className="truncate text-[11px] text-neutral-500">
-                {unit.governorName} · {unit.governorParty} · relação{' '}
-                {unit.governorRelation.toFixed(0)}
-              </p>
-            </button>
-          ))}
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * Ações do catálogo que NÃO aparecem na agenda do Painel.
- *
- * O Painel é a tela de decisão do mês e não pode virar a lista de tudo o que o
- * presidente é capaz de fazer. Cada ação daqui mora onde o contexto dela está:
- * cobrar ministro fica ao lado do ministro, na aba Gabinete de Governo; receber
- * governador fica ao lado do governador, na aba Governadores; trabalhar os votos
- * fica na aba Congresso, ao lado da conta do plenário; descansar, a noite com o
- * cônjuge e o divórcio ficam em Vida Pessoal. Escrever medida tem o campo
- * próprio no topo do Painel.
- *
- * Regra para ação nova: se ela já tem botão em outra página, entra nesta lista.
- */
-const FORA_DO_PAINEL: ReadonlySet<AgendaActionId> = new Set<AgendaActionId>([
-  'escrever_medida',
-  'viagem_internacional',
-  'reuniao_lideres',
-  'reuniao_ministro',
-  'reuniao_governador',
-  'trabalhar_os_votos',
-  'descansar',
-  'noite_com_conjuge',
-  'divorciar',
-]);
-
-const STATUS_LABEL: Record<string, string> = {
-  pendente: 'Parada',
-  em_andamento: 'Andando',
-  cumprida: 'Cumprida',
-  quebrada: 'Quebrada',
-};
-
-const KIND_LABEL: Record<string, string> = {
-  efeito_direto: 'Efeito direto',
-  efeito_colateral: 'Efeito colateral',
-  cobranca: 'Cobrança',
-  colheita: 'Colheita',
-};
-
-const KIND_TONE: Record<string, 'gov' | 'warn' | 'danger' | 'info' | 'neutral'> = {
-  efeito_direto: 'info',
-  efeito_colateral: 'danger',
-  cobranca: 'warn',
-  colheita: 'gov',
-};
-
-const STRATEGY_LABEL: Record<string, string> = {
-  desgaste: 'Desgaste permanente',
-  obstrucao: 'Obstrução regimental',
-  institucional: 'Ataque institucional',
-  ruptura: 'Ruptura',
-};

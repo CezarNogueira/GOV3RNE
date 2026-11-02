@@ -1,449 +1,63 @@
-import { useState } from 'react';
-import { countryRiskPercent } from '@/game';
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import {
-  MINISTRY_BY_ID,
-  formatBRL,
-  realInterestRate,
-  taxBurden,
-  type MinistryId,
-} from '@/game';
+import { CRISIS, INITIAL_SPENDING, INITIAL_TAXES, formatReais, formatSignedReais, getCard, taxPressure, totalRevenue } from '@/game';
 import { useGame } from '@/state/game-store';
-import { PageBody, PageHeader, TabBar } from '@/components/layout/PageHeader';
-import { Bar, MetricCard, OriginTag, Section, StatRow, cx, toneOf } from '@/components/ui/primitives';
-import { CompaniesPanel } from '@/components/economy/CompaniesPanel';
+import { PageBody, PageHeader } from '@/components/layout/PageHeader';
+import { CrisisBanner, Sparkline, StatTile } from '@/components/game/parts';
 
-/**
- * ECONOMIA
- *
- * Os números que decidem a eleição e as pessoas que decidem onde a fábrica vai
- * ser construída.
- *
- * A seção "O laço que decide tudo" existe porque a mecânica central do jogo é
- * uma cadeia causal com defasagem, e um jogador que não entende essa cadeia
- * acha que os indicadores se movem por sorteio.
- */
-type Tab = 'contas' | 'graficos' | 'orcamento' | 'impostos' | 'empresas';
+const LEVEL = { alta: 'Alta: pesa no Comércio, no Capital Humano e no Turismo', normal: 'Normal: sem efeito', baixa: 'Baixa: ajuda o Comércio, mas reduz a arrecadação' } as const;
 
 export function Economia() {
-  const state = useGame((store) => store.state);
-  const [tab, setTab] = useState<Tab>('contas');
-
+  const state = useGame((s) => s.state);
   if (!state) return null;
-  const { economy } = state;
+  const { economy, turn } = state;
+  const revenue = totalRevenue(state.resources).total;
+  const spending = economy.crisisMonthsLeft > 0 ? 0 : economy.spending;
+  const cost = turn.choice?.cost ?? 0;
+  const projected = economy.treasury + economy.taxes + revenue - spending - cost;
+  const pressure = taxPressure(economy.taxes);
+  const series = [...state.history.map((h) => h.treasury), economy.treasury];
+  const chosen = turn.choice ? getCard(turn.choice.cardId) : null;
 
   return (
     <>
-      <PageHeader
-        place="Ministério da Fazenda · Porto de Santos"
-        title="Economia e empresas"
-        subtitle="Os números que decidem a eleição e as empresas que decidem onde a fábrica vai ser construída."
-        badge={{
-          label: `Credibilidade ${economy.fiscalCredibility.toFixed(0)}`,
-          tone: economy.fiscalCredibility > 55 ? 'gov' : economy.fiscalCredibility > 35 ? 'warn' : 'danger',
-        }}
-        tint="amber"
-      />
-
+      <PageHeader place="Ministério da Fazenda" title="Economia" tint="amber" badge={economy.crisisMonthsLeft > 0 ? { label: 'Crise financeira', tone: 'danger' } : undefined} />
       <PageBody>
-        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-7">
-          <MetricCard label="PIB" value={economy.gdpGrowth} unit="%" decimals={1} tone={toneOf(economy.gdpGrowth - 2)} size="sm" />
-          <MetricCard label="IPCA" value={economy.inflation} unit="%" decimals={1} lowerIsBetter tone={toneOf(economy.inflationTarget + 1.5 - economy.inflation)} size="sm" />
-          <MetricCard label="Selic" value={economy.selic} unit="%" decimals={2} size="sm" footer={<span className="label">real {realInterestRate(state).toFixed(1)}%</span>} />
-          <MetricCard label="Desemprego" value={economy.unemployment} unit="%" decimals={1} lowerIsBetter tone={toneOf(7 - economy.unemployment)} size="sm" />
-          <MetricCard label="Dólar" value={economy.usd} unit="R$" decimals={2} size="sm" />
-          <MetricCard label="Dívida/PIB" value={economy.debtToGdp} unit="%" decimals={0} lowerIsBetter tone={toneOf(80 - economy.debtToGdp)} size="sm" />
-          <MetricCard label="Risco-país" value={countryRiskPercent(economy.countryRisk)} unit="%" decimals={0} lowerIsBetter tone={toneOf(25 - countryRiskPercent(economy.countryRisk))} size="sm" tip="Quanto o mercado duvida que o Brasil pague a dívida. Em 100%, o presidente sofre impeachment." />
-        </div>
+        <div className="space-y-4 select-none">
+          <CrisisBanner state={state} />
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <StatTile label="Cofre público" value={formatReais(economy.treasury)} tone={economy.treasury < 0 ? 'neg' : 'pos'} />
+            <StatTile label="Impostos" value={formatReais(economy.taxes)} sub={`Inicial ${formatReais(INITIAL_TAXES)}`} />
+            <StatTile label="Gastos públicos" value={formatReais(economy.spending)} sub={economy.crisisMonthsLeft > 0 ? 'Zerados pela crise' : `Inicial ${formatReais(INITIAL_SPENDING)}`} />
+            <StatTile label="Receita dos recursos" value={formatReais(revenue)} tone="pos" />
+          </div>
 
-        <div className="mt-4">
-          <TabBar<Tab>
-            active={tab}
-            onChange={setTab}
-            tabs={[
-              { id: 'contas', label: 'Contas do país' },
-              { id: 'graficos', label: 'Séries' },
-              { id: 'orcamento', label: 'Orçamento' },
-              { id: 'impostos', label: 'Impostos' },
-              { id: 'empresas', label: 'Empresas' },
-            ]}
-          />
-        </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <section className="card p-4" aria-labelledby="h-proj">
+              <h2 id="h-proj" className="section-title mb-2 text-xl">Fechamento projetado do mês</h2>
+              <dl className="space-y-1 text-[13px]">
+                <div className="flex justify-between"><dt className="text-neutral-400">Cofre atual</dt><dd className="font-mono tabular">{formatReais(economy.treasury)}</dd></div>
+                <div className="flex justify-between"><dt className="text-neutral-400">+ Impostos</dt><dd className="font-mono tabular">{formatReais(economy.taxes)}</dd></div>
+                <div className="flex justify-between"><dt className="text-neutral-400">+ Receita dos recursos</dt><dd className="font-mono tabular">{formatReais(revenue)}</dd></div>
+                <div className="flex justify-between"><dt className="text-neutral-400">− Gastos públicos</dt><dd className="font-mono tabular">{formatReais(spending)}</dd></div>
+                <div className="flex justify-between"><dt className="text-neutral-400">− Custo da medida{chosen ? ` (${chosen.title})` : ' (ainda não escolhida)'}</dt><dd className="font-mono tabular">{formatReais(cost)}</dd></div>
+                <div className="flex justify-between border-t border-ink-700 pt-1 font-medium"><dt>= Cofre final</dt><dd className={`font-mono tabular ${projected < 0 ? 'text-danger-400' : 'text-gov-400'}`}>{formatReais(projected)}</dd></div>
+              </dl>
+              <p className="mt-2 text-[11.5px] text-neutral-500">Último saldo fechado: {formatSignedReais(economy.lastBalance)}. A dívida pública acompanha esse saldo.</p>
+            </section>
 
-        <div className="mt-4">
-          {tab === 'contas' && <Contas state={state} />}
-          {tab === 'graficos' && <Series state={state} />}
-          {tab === 'orcamento' && <Orcamento state={state} />}
-          {tab === 'impostos' && <Impostos state={state} />}
-          {tab === 'empresas' && <CompaniesPanel state={state} />}
+            <section className="card space-y-2 p-4" aria-labelledby="h-tax">
+              <h2 id="h-tax" className="section-title text-xl">Pressão tributária</h2>
+              <p className="text-[13px] text-neutral-300">{LEVEL[pressure.level]}</p>
+              {pressure.level === 'alta' && <p className="text-[12.5px] text-warn-400">Por mês: Comércio {pressure.commerceDelta}, Capital Humano e Turismo −{pressure.resourcePenalty}.</p>}
+              {pressure.level === 'baixa' && <p className="text-[12.5px] text-gov-400">Por mês: Comércio +{pressure.commerceDelta}.</p>}
+              <h3 className="label-strong pt-2">Crise financeira</h3>
+              <p className="text-[12.5px] leading-relaxed text-neutral-400">
+                Se o cofre fechar negativo, os gastos públicos ficam zerados por {CRISIS.months} meses, cada serviço perde {CRISIS.servicePenalty} pontos por mês, os recursos caem e todos os grupos perdem {CRISIS.groupPenalty} pontos de satisfação por mês. Crises até hoje: {economy.crisisCount}.
+              </p>
+              <div className="pt-1 text-gov-400"><Sparkline values={series} width={260} label="Evolução do cofre" /></div>
+            </section>
+          </div>
         </div>
       </PageBody>
     </>
-  );
-}
-
-type State = NonNullable<ReturnType<typeof useGame.getState>['state']>;
-
-function Contas({ state }: { state: State }) {
-  const { economy } = state;
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Section title="O laço que decide tudo">
-        <p className="text-[13px] leading-relaxed text-neutral-400">
-          Gastar sem lastro derruba a credibilidade fiscal. Credibilidade baixa sobe o risco-país.
-          Risco alto desvaloriza o real. Real fraco encarece o importado e sobe a inflação. Inflação
-          alta força o Copom a subir a Selic — e você não manda no Copom. Juro alto derruba o
-          crescimento e sobe o desemprego.
-        </p>
-        <p className="mt-2 text-[13px] leading-relaxed text-neutral-400">
-          É esse laço que separa um governo popular de um governo quebrado. Ele leva de seis a doze
-          meses para se fechar, então o estrago costuma aparecer bem depois da decisão que o causou.
-        </p>
-
-        <div className="mt-3 space-y-2.5 rule pt-3">
-          {[
-            {
-              label: 'Credibilidade fiscal',
-              value: economy.fiscalCredibility,
-              hint: 'Cai ao furar o resultado primário, subir gasto obrigatório ou atacar o Banco Central. Sobe devagar.',
-            },
-            {
-              label: 'Confiança empresarial',
-              value: economy.businessConfidence,
-              hint: 'Move o investimento privado com dois a três meses de atraso.',
-            },
-            {
-              label: 'Preço das commodities',
-              value: economy.commodityIndex,
-              hint: 'Choque externo que você não controla. Boa safra salva governo ruim.',
-            },
-          ].map((row) => (
-            <div key={row.label}>
-              <div className="flex items-baseline justify-between">
-                <span className="text-[12px] text-neutral-300">{row.label}</span>
-                <span className="font-mono text-[13px] text-neutral-100">
-                  {row.value.toFixed(0)}
-                </span>
-              </div>
-              <Bar
-                value={row.value}
-                tone={row.value > 60 ? 'gov' : row.value > 40 ? 'warn' : 'danger'}
-                animate={false}
-              />
-              <p className="mt-0.5 text-[11px] leading-snug text-neutral-600">{row.hint}</p>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      <div className="space-y-4">
-        <Section title="Contas públicas" action={<OriginTag origin="simulado" />}>
-          <StatRow
-            label="Resultado primário (12m)"
-            value={formatBRL(economy.primaryBalance)}
-            tone={economy.primaryBalance >= 0 ? 'pos' : 'neg'}
-          />
-          <StatRow label="PIB nominal" value={formatBRL(economy.gdpNominal)} />
-          <StatRow label="Arrecadação (12m)" value={formatBRL(economy.revenue)} />
-          <StatRow label="Despesa obrigatória (12m)" value={formatBRL(economy.spending)} />
-          <StatRow
-            label="Carga tributária efetiva"
-            value={`${taxBurden(state).toFixed(1)}% do PIB`}
-          />
-          <StatRow label="Reservas internacionais" value={`US$ ${economy.reserves.toFixed(0)} bi`} />
-          <StatRow label="Ibovespa" value={`${(economy.ibovespa / 1000).toFixed(0)}k pontos`} />
-          <StatRow label="Salário mínimo" value={`R$ ${economy.minimumWage.toLocaleString('pt-BR')}`} />
-          <StatRow
-            label="Caixa discricionário"
-            value={formatBRL(economy.treasuryCash, 1)}
-            tone={economy.treasuryCash > 20 ? 'pos' : economy.treasuryCash > 5 ? 'flat' : 'neg'}
-            tip="O que sobra para gastar sem furar o arcabouço. Medidas e emendas saem daqui. Todo mês recebe o que o resultado render acima do déficit herdado na posse: imposto novo, corte de gasto, programa encerrado."
-          />
-        </Section>
-
-        <Section title="Banco Central">
-          <p className="text-[12px] leading-relaxed text-neutral-400">
-            O BC é autônomo. Você indica o presidente, mas não define a Selic: ela sai de uma regra
-            que persegue a meta de {economy.inflationTarget.toFixed(1)}% e cobra prêmio de quem
-            perdeu credibilidade fiscal. Atacar o BC em público rende aplauso da base e sobe o
-            risco-país no mesmo dia, sem mexer no juro.
-          </p>
-          <div className="mt-2.5 rule pt-2">
-            <StatRow label="Meta de inflação" value={`${economy.inflationTarget.toFixed(1)}%`} />
-            <StatRow label="Selic" value={`${economy.selic.toFixed(2)}%`} />
-            <StatRow
-              label="Juro real"
-              value={`${realInterestRate(state).toFixed(2)}%`}
-              tone={realInterestRate(state) > 7 ? 'neg' : 'flat'}
-              tip="Selic menos inflação. Acima de ~4,5% a política monetária está freando a economia."
-            />
-          </div>
-        </Section>
-      </div>
-    </div>
-  );
-}
-
-// ------------------------------------------------------------------ Séries
-const CHART_TOOLTIP = {
-  contentStyle: {
-    backgroundColor: '#101216',
-    border: '1px solid #2a2f38',
-    borderRadius: 3,
-    fontSize: 11,
-    fontFamily: 'JetBrains Mono, monospace',
-  },
-  labelStyle: { color: '#a3a3a3', fontSize: 10, textTransform: 'uppercase' as const },
-};
-
-function Series({ state }: { state: State }) {
-  if (state.history.length < 2) {
-    return (
-      <Section title="Séries históricas">
-        <p className="py-8 text-center text-[13px] text-neutral-600">
-          Avance alguns meses para as séries terem o que mostrar.
-        </p>
-      </Section>
-    );
-  }
-
-  const data = state.history;
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <ChartCard title="Inflação e Selic" hint="A Selic persegue a inflação com atraso.">
-        <LineChart data={data}>
-          <CartesianGrid stroke="#1f232a" strokeDasharray="2 4" />
-          <XAxis dataKey="label" stroke="#4a4a4a" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-          <YAxis stroke="#4a4a4a" tick={{ fontSize: 10 }} width={32} />
-          <Tooltip {...CHART_TOOLTIP} />
-          <Line type="monotone" dataKey="inflation" name="IPCA" stroke="#eab308" strokeWidth={1.6} dot={false} />
-          <Line type="monotone" dataKey="selic" name="Selic" stroke="#3b82f6" strokeWidth={1.6} dot={false} />
-        </LineChart>
-      </ChartCard>
-
-      <ChartCard title="PIB e desemprego" hint="Okun: crescimento acima do potencial derruba desemprego.">
-        <LineChart data={data}>
-          <CartesianGrid stroke="#1f232a" strokeDasharray="2 4" />
-          <XAxis dataKey="label" stroke="#4a4a4a" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-          <YAxis stroke="#4a4a4a" tick={{ fontSize: 10 }} width={32} />
-          <Tooltip {...CHART_TOOLTIP} />
-          <Line type="monotone" dataKey="gdpGrowth" name="PIB" stroke="#22c55e" strokeWidth={1.6} dot={false} />
-          <Line type="monotone" dataKey="unemployment" name="Desemprego" stroke="#ef4444" strokeWidth={1.6} dot={false} />
-        </LineChart>
-      </ChartCard>
-
-      <ChartCard title="Dívida bruta (% do PIB)" hint="Juro nominal menos crescimento nominal, mais o primário.">
-        <AreaChart data={data}>
-          <CartesianGrid stroke="#1f232a" strokeDasharray="2 4" />
-          <XAxis dataKey="label" stroke="#4a4a4a" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-          <YAxis stroke="#4a4a4a" tick={{ fontSize: 10 }} width={32} domain={['dataMin - 3', 'dataMax + 3']} />
-          <Tooltip {...CHART_TOOLTIP} />
-          <Area type="monotone" dataKey="debtToGdp" name="Dívida/PIB" stroke="#f97316" fill="#f9731622" strokeWidth={1.6} />
-        </AreaChart>
-      </ChartCard>
-
-      <ChartCard title="Risco-país e câmbio" hint="Risco alto desvaloriza o real, e real fraco vira inflação.">
-        <LineChart data={data}>
-          <CartesianGrid stroke="#1f232a" strokeDasharray="2 4" />
-          <XAxis dataKey="label" stroke="#4a4a4a" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-          <YAxis yAxisId="left" stroke="#4a4a4a" tick={{ fontSize: 10 }} width={38} />
-          <YAxis yAxisId="right" orientation="right" stroke="#4a4a4a" tick={{ fontSize: 10 }} width={30} />
-          <Tooltip {...CHART_TOOLTIP} />
-          <Line yAxisId="left" type="monotone" dataKey={(entry: { countryRisk: number }) => Math.round(countryRiskPercent(entry.countryRisk))} name="Risco-país (%)" stroke="#a855f7" strokeWidth={1.6} dot={false} />
-          <Line yAxisId="right" type="monotone" dataKey="usd" name="R$/US$" stroke="#22d3ee" strokeWidth={1.6} dot={false} />
-        </LineChart>
-      </ChartCard>
-
-      <ChartCard title="Aprovação do governo" hint="A régua final de tudo o que você decide." wide>
-        <AreaChart data={data}>
-          <CartesianGrid stroke="#1f232a" strokeDasharray="2 4" />
-          <XAxis dataKey="label" stroke="#4a4a4a" tick={{ fontSize: 10 }} interval="preserveStartEnd" />
-          <YAxis stroke="#4a4a4a" tick={{ fontSize: 10 }} width={32} domain={[0, 100]} />
-          <Tooltip {...CHART_TOOLTIP} />
-          <Area type="monotone" dataKey="approval" name="Aprovação" stroke="#22c55e" fill="#22c55e22" strokeWidth={1.8} />
-        </AreaChart>
-      </ChartCard>
-    </div>
-  );
-}
-
-function ChartCard({
-  title,
-  hint,
-  children,
-  wide = false,
-}: {
-  title: string;
-  hint: string;
-  children: React.ReactElement;
-  wide?: boolean;
-}) {
-  return (
-    <section className={cx('card p-3', wide && 'lg:col-span-2')}>
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h3 className="label-strong">{title}</h3>
-        <span className="truncate text-[10px] text-neutral-600">{hint}</span>
-      </div>
-      <div className="h-52">
-        <ResponsiveContainer width="100%" height="100%">
-          {children}
-        </ResponsiveContainer>
-      </div>
-    </section>
-  );
-}
-
-// --------------------------------------------------------------- Orçamento
-function Orcamento({ state }: { state: State }) {
-  const total = state.budget.reduce((sum, line) => sum + line.allocated, 0);
-  const programCost = state.programs
-    .filter((program) => program.active)
-    .reduce((sum, program) => sum + program.monthlyCost, 0);
-
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Section title="Orçamento por pasta" action={<OriginTag origin="estimado" />}>
-        <p className="mb-3 text-[12px] leading-relaxed text-neutral-500">
-          A fração obrigatória não é cortável por decreto: é folha, previdência e piso
-          constitucional. O que sobra é o espaço real de decisão do presidente.
-        </p>
-        {[...state.budget]
-          .sort((a, b) => b.allocated - a.allocated)
-          .map((line) => {
-            const ministry = MINISTRY_BY_ID[line.ministryId as MinistryId];
-            const discretionary = line.allocated * (1 - line.mandatoryShare);
-            return (
-              <div key={line.id} className="border-b border-ink-800 py-2 last:border-0">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="truncate text-[12px] text-neutral-200">
-                    {ministry?.shortName ?? line.label}
-                  </span>
-                  <span className="font-mono text-[12px] text-neutral-300">
-                    {formatBRL(line.allocated)}
-                  </span>
-                </div>
-                {/* A barra mostra a fatia obrigatória contra a discricionária. */}
-                <div className="mt-1 flex h-1.5 overflow-hidden bg-ink-750">
-                  <div
-                    className="bg-neutral-600"
-                    style={{ width: `${line.mandatoryShare * 100}%` }}
-                    title="Obrigatório"
-                  />
-                  <div
-                    className="bg-gov-500"
-                    style={{ width: `${(1 - line.mandatoryShare) * 100}%` }}
-                    title="Discricionário"
-                  />
-                </div>
-                <p className="mt-0.5 font-mono text-[10px] text-neutral-600">
-                  {(line.mandatoryShare * 100).toFixed(0)}% obrigatório · livre{' '}
-                  {formatBRL(discretionary, 1)}
-                </p>
-              </div>
-            );
-          })}
-        <p className="mt-2 border-t border-ink-800 pt-2 text-[11px] text-neutral-500">
-          Total alocado: <span className="font-mono text-neutral-300">{formatBRL(total)}</span>
-        </p>
-      </Section>
-
-      <Section title="Compromissos mensais">
-        <StatRow
-          label="Programas ativos"
-          value={`${formatBRL(programCost, 1)}/mês`}
-          tone="neg"
-          tip="Custo dos programas herdados e criados. Sai do primário todo mês."
-        />
-        <StatRow
-          label="Medidas em execução"
-          value={`${formatBRL(
-            state.policies
-              .filter((p) => p.status === 'vigente' && p.monthsRemaining > 0)
-              .reduce((sum, p) => sum + p.monthlyCost, 0),
-            1,
-          )}/mês`}
-          tone="neg"
-        />
-        <StatRow
-          label="Emendas liberadas no mandato"
-          value={formatBRL(state.congress.amendmentsReleased, 1)}
-          tone={state.congress.amendmentsReleased > 40 ? 'neg' : 'flat'}
-          tip="Cada real aqui compra voto e custa percepção de integridade."
-        />
-        <StatRow label="Caixa disponível" value={formatBRL(state.economy.treasuryCash, 1)} />
-
-        <p className="mt-3 border-t border-ink-800 pt-2 text-[12px] leading-relaxed text-neutral-500">
-          Cortar um programa devolve caixa imediatamente e cobra aprovação por meses. Manter todos
-          consome o primário antes de você assinar a primeira medida do mandato.
-        </p>
-      </Section>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------- Impostos
-function Impostos({ state }: { state: State }) {
-  const total = state.taxes.reduce((sum, tax) => sum + tax.revenue, 0);
-
-  return (
-    <Section title="De onde vem a arrecadação">
-      <p className="mb-3 text-[12px] leading-relaxed text-neutral-500">
-        A elasticidade diz o quanto a arrecadação foge quando a alíquota sobe. Tributo sobre
-        operação financeira foge fácil; tributo sobre consumo não foge, e é o que pesa mais no
-        bolso de quem ganha menos.
-      </p>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-left">
-          <thead>
-            <tr className="border-b border-ink-700">
-              <th className="label pb-1.5">Tributo</th>
-              <th className="label pb-1.5 text-right">Alíquota</th>
-              <th className="label pb-1.5 text-right">Arrecadação</th>
-              <th className="label pb-1.5">Participação</th>
-              <th className="label pb-1.5 text-right">Elasticidade</th>
-              <th className="label pb-1.5">Quem paga</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...state.taxes]
-              .sort((a, b) => b.revenue - a.revenue)
-              .map((tax) => (
-                <tr key={tax.id} className="border-b border-ink-800/70">
-                  <td className="py-2 text-[12px] text-neutral-200">{tax.label}</td>
-                  <td className="py-2 text-right font-mono text-[12px] text-neutral-300">
-                    {tax.rate.toFixed(1)}%
-                  </td>
-                  <td className="py-2 text-right font-mono text-[12px] text-neutral-300">
-                    {formatBRL(tax.revenue)}
-                  </td>
-                  <td className="w-28 py-2">
-                    <Bar value={(tax.revenue / total) * 100} tone="info" animate={false} />
-                  </td>
-                  <td className="py-2 text-right font-mono text-[12px] text-neutral-400">
-                    {tax.elasticity.toFixed(2)}
-                  </td>
-                  <td className="py-2 text-[11px] text-neutral-500">
-                    {tax.incidence
-                      .map((id) => state.socialGroups.find((g) => g.id === id)?.name ?? id)
-                      .join(', ')}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      </div>
-    </Section>
   );
 }
