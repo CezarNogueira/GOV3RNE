@@ -1,36 +1,19 @@
-import type { PolicyCategory, Region } from './common';
 import type {
   AvatarConfig,
-  CampaignPromise,
-  FamilyMember,
-  PartyProfile,
   President,
 } from './president';
 import type { EconomyState, EconomySnapshot, BudgetLine, TaxLine } from './economy';
 import type { CompaniesState } from './companies';
-import type {
-  NationState,
-  FederalUnit,
-  SocialGroup,
-  CountryRelation,
-  DiplomaticBloc,
-  StateVisit,
-  ActiveTreaty,
-  TreatyOffer,
-} from './world';
 import type { CongressState, Committee, Minister, OppositionState, SupremeCourtState } from './politics';
-import type { Policy, GovernmentProgram, ScheduledAction } from './policy';
 import type { ActiveEvent, Consequence, NewsItem, SocialPost, TimelineEntry } from './events';
 import type { ElectionState } from './election';
 import type { DecisionEntry } from './decisions';
-import type { RegimeState, WarState } from './regime';
 
 export interface ApprovalState {
   /** Aprovação do governo, 0-100. */
   overall: number;
   /** Aprovação pessoal do presidente (costuma ser maior que a do governo). */
   personal: number;
-  byRegion: Record<Region, number>;
   byGroup: Record<string, number>;
   /** Aprovação entre parlamentares, 0-100. */
   congress: number;
@@ -45,7 +28,6 @@ export interface AgendaState {
   /** Pontos de agenda disponíveis no mês. */
   points: number;
   maxPoints: number;
-  scheduled: ScheduledAction[];
   /** Se houver viagem marcada, o mês doméstico é substituído. */
   travelBooked: boolean;
 }
@@ -73,13 +55,6 @@ export interface DiplomacyState {
   /** -100 (China) a +100 (EUA). */
   alignment: number;
   isolation: number;
-  countries: CountryRelation[];
-  blocs: DiplomaticBloc[];
-  visits: StateVisit[];
-  /** Acordos bilaterais assinados e em vigor. */
-  treaties: ActiveTreaty[];
-  /** Acordos colocados na mesa numa visita, aguardando aceite ou recusa. */
-  pendingOffers: TreatyOffer[];
 }
 
 export interface MonthResult {
@@ -170,12 +145,8 @@ export interface GameState {
   flags: GameFlags;
 
   president: President;
-  party: PartyProfile;
-  family: FamilyMember[];
-  promises: CampaignPromise[];
 
   economy: EconomyState;
-  nation: NationState;
   approval: ApprovalState;
   agenda: AgendaState;
   government: GovernmentState;
@@ -186,12 +157,8 @@ export interface GameState {
    * permite governar por decreto, por exceção ou por ruptura — e a que permite
    * que rompam com o presidente.
    */
-  regime: RegimeState;
   /** O conflito internacional em curso, quando existe. */
-  war: WarState;
 
-  states: FederalUnit[];
-  socialGroups: SocialGroup[];
   budget: BudgetLine[];
   taxes: TaxLine[];
   /**
@@ -207,9 +174,6 @@ export interface GameState {
    * com a reeleição desabilitada.
    */
   election: ElectionState | null;
-
-  policies: Policy[];
-  programs: GovernmentProgram[];
 
   pendingEvents: ActiveEvent[];
   consequences: Consequence[];
@@ -243,7 +207,6 @@ export interface FinalEvaluation {
   promisesTotal: number;
   grade: string;
   highlights: string[];
-  categoryScores: Partial<Record<PolicyCategory, number>>;
 }
 
 export interface SaveSlotMeta {
