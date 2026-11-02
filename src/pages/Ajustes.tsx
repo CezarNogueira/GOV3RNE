@@ -35,7 +35,7 @@ export function Ajustes() {
 
   return (
     <>
-      <PageHeader place="Configurações" title="Ajustes" subtitle="Salvamento, exportação e encerramento do mandato." tint="slate" />
+      <PageHeader place="Configurações" title="Ajustes" tint="slate" />
       <PageBody>
         <div className="max-w-2xl space-y-4">
           <section className="card space-y-3 p-4">

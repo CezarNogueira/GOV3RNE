@@ -56,7 +56,7 @@ export function Historico() {
 
   return (
     <>
-      <PageHeader place="Arquivo nacional" title="Histórico" subtitle="A evolução do país mês a mês e todas as medidas que você decidiu." tint="slate" />
+      <PageHeader place="Arquivo nacional" title="Histórico" tint="slate" />
       <PageBody>
         <div className="space-y-4">
           <TabBar
