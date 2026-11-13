@@ -54,6 +54,12 @@ export function ComoJogar() {
         <p>Cofre negativo inicia uma <strong>crise financeira</strong> de {CRISIS.months} meses: gastos zerados, serviços e recursos em queda e grupos insatisfeitos.</p>
       </Rule>
 
+      <Rule title="Política e eleições">
+        <p>Você começa disputando uma eleição: <strong>deputado</strong> (9 vagas), <strong>senador</strong> (3) ou <strong>presidente</strong> (1). Os 40 políticos do país votam conforme a popularidade de cada candidato. Presidente e deputados têm mandato de 4 anos; senadores, de 8; ministros do STF, de 16.</p>
+        <p>Só o presidente escolhe a medida do mês. Se for outra pessoa, ela decide ao fechar o mês. O presidente também envia a Lei Orçamentária (como os gastos públicos se dividem entre as pastas), nomeia os cinco ministros, indica o STF, sanciona ou veta leis e faz reuniões diplomáticas.</p>
+        <p>Todo fechamento de mês o Congresso (deputados e senadores juntos) vota leis em duelos de duas: a mais votada segue para o STF e depois para a sanção do presidente. Orçamento, investigações e indicações ao STF passam por votação de sim ou não. Ministros gastam a verba da própria pasta em obras e manutenção. O STF cassa presidente, deputados e senadores com produtividade abaixo de 35. Quem perde uma eleição pode ser convidado pelo presidente para um ministério ou para o STF.</p>
+      </Rule>
+
       <Rule title="Sociedade e derrota">
         <p>Pobres, Ricos, Militares, Indígenas e Empresários começam em 50. Cada medida agrada uns e desagrada outros: obras, por exemplo, desagradam os indígenas.</p>
         <p><strong>Você perde</strong> se qualquer serviço, recurso ou grupo chegar a 0, ou se a moeda chegar a US$ 0. Não há limite de meses: o jogo segue até a derrota.</p>

@@ -5,6 +5,7 @@ import { TopNavigation } from '@/components/layout/TopNavigation';
 import { Toaster } from '@/components/ui/overlays';
 import { ConsequenceModal } from '@/components/game/ConsequenceModal';
 import { MonthResultModal } from '@/components/game/MonthResultModal';
+import { CongressModal } from '@/components/game/CongressModal';
 import { MusicPlayer } from '@/components/audio/MusicPlayer';
 import { Landing } from '@/pages/Landing';
 
@@ -19,6 +20,8 @@ const Internacional = lazyPage(() => import('@/pages/Internacional'), 'Internaci
 const Recursos = lazyPage(() => import('@/pages/Recursos'), 'Recursos');
 const Economia = lazyPage(() => import('@/pages/Economia'), 'Economia');
 const Sociedade = lazyPage(() => import('@/pages/Sociedade'), 'Sociedade');
+const Politica = lazyPage(() => import('@/pages/Politica'), 'Politica');
+const Eleicao = lazyPage(() => import('@/pages/Eleicao'), 'Eleicao');
 const Historico = lazyPage(() => import('@/pages/Historico'), 'Historico');
 const Ajustes = lazyPage(() => import('@/pages/Ajustes'), 'Ajustes');
 const ComoJogar = lazyPage(() => import('@/pages/ComoJogar'), 'ComoJogar');
@@ -37,6 +40,8 @@ function GameShell() {
   if (!state) return <Navigate to="/" replace state={{ from: location.pathname }} />;
   // Derrota: o modal de fechamento aparece primeiro; depois, só resta o fim de jogo.
   if (state.phase === 'derrota' && !showReport) return <Navigate to="/fim-de-jogo" replace />;
+  // Eleição de abertura esperando o voto do jogador: sem governo eleito, não há o que jogar.
+  if (state.politics.pendingElection) return <Navigate to="/eleicao" replace />;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -46,6 +51,7 @@ function GameShell() {
       </main>
       <ConsequenceModal />
       <MonthResultModal />
+      <CongressModal />
       <footer className="border-t border-ink-800 px-4 py-3 text-center">
         <p className="text-[11px] leading-snug text-neutral-700">
           GOV3RNE é uma obra de ficção. Números, países do ranking e acontecimentos são simulação inventada e não descrevem a realidade.
@@ -83,6 +89,8 @@ export default function App() {
           <Route path="/novo-mandato" element={<Setup />} />
           <Route path="/como-jogar" element={<ComoJogar />} />
           <Route path="/fim-de-jogo" element={<FimDeJogo />} />
+          {/* Tela cheia, sem a barra do jogo: a apuração é um momento à parte. */}
+          <Route path="/eleicao" element={<Eleicao />} />
 
           <Route element={<GameShell />}>
             <Route path="/painel" element={<Painel />} />
@@ -91,6 +99,7 @@ export default function App() {
             <Route path="/recursos" element={<Recursos />} />
             <Route path="/economia" element={<Economia />} />
             <Route path="/sociedade" element={<Sociedade />} />
+            <Route path="/politica" element={<Politica />} />
             <Route path="/historico" element={<Historico />} />
             <Route path="/ajustes" element={<Ajustes />} />
           </Route>

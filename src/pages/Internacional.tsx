@@ -1,11 +1,22 @@
+import { useState } from 'react';
 import {
+  COMPANIES,
   DEBT,
+  DIPLOMACY,
   RIVALS,
   SERVICE_IDS,
+  SERVICE_LABEL,
   debtRiskPercent,
   formatDollars,
   formatRank,
+  formatReais,
+  holdMeeting,
+  isPlayerPresident,
+  meetingValue,
+  type GameState,
+  type MeetingObjective,
   type Rival,
+  type ServiceId,
 } from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader } from '@/components/layout/PageHeader';
@@ -21,6 +32,56 @@ const BANDS = [
   { label: '201% a 250%', from: 201, to: 250 },
   { label: '251% a 300%', from: 251, to: 300 },
 ];
+
+const OBJECTIVES: { id: MeetingObjective; label: string }[] = [
+  { id: 'intercambio', label: 'Intercâmbio' },
+  { id: 'venda', label: 'Venda de empresa' },
+  { id: 'compra', label: 'Compra de empresa' },
+];
+
+/** Reunião com um dos países do ranking dos 10 maiores PIBs. Uma por mês, só o presidente. */
+function Diplomacia({ state }: { state: GameState }) {
+  const act = useGame((s) => s.act);
+  const [rivalId, setRivalId] = useState(RIVALS[0]!.id);
+  const [objective, setObjective] = useState<MeetingObjective>('intercambio');
+  const [service, setService] = useState<ServiceId>('saude');
+  const president = isPlayerPresident(state);
+  const used = state.politics.lastMeetingMonth === state.month;
+  const rival = RIVALS.find((r) => r.id === rivalId)!;
+  const effect =
+    objective === 'intercambio'
+      ? `−${formatReais(DIPLOMACY.exchangeCost)} · Educação +${DIPLOMACY.exchangeGain + (rival.services.educacao >= DIPLOMACY.exchangeBonusFrom ? 1 : 0)}`
+      : objective === 'venda'
+        ? `Vende ${COMPANIES[service]}: +${formatReais(meetingValue(rivalId, DIPLOMACY.saleValue))} · ${SERVICE_LABEL[service]} −${DIPLOMACY.serviceDelta}`
+        : `Compra uma empresa para a ${SERVICE_LABEL[service]}: −${formatReais(meetingValue(rivalId, DIPLOMACY.purchaseCost))} · ${SERVICE_LABEL[service]} +${DIPLOMACY.serviceDelta}`;
+
+  return (
+    <section className="card space-y-3 p-4" aria-labelledby="h-diplomacia">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <h2 id="h-diplomacia" className="section-title text-xl">Reuniões diplomáticas</h2>
+        {!president && <span className="badge-neutral">Só o presidente se reúne</span>}
+        {president && used && <span className="badge-neutral">Reunião do mês já feita</span>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <select className="field w-auto py-1.5 text-[12.5px]" value={rivalId} onChange={(e) => setRivalId(e.target.value)} aria-label="País">
+          {RIVALS.map((r) => <option key={r.id} value={r.id}>{formatRank(r.rank)} · {r.name}</option>)}
+        </select>
+        {OBJECTIVES.map((o) => (
+          <button key={o.id} type="button" aria-pressed={objective === o.id} className={cx('option w-auto px-3 py-1.5 text-[12.5px]', objective === o.id && 'option-selected')} onClick={() => setObjective(o.id)}>{o.label}</button>
+        ))}
+        {objective !== 'intercambio' && (
+          <select className="field w-auto py-1.5 text-[12.5px]" value={service} onChange={(e) => setService(e.target.value as ServiceId)} aria-label="Serviço da empresa">
+            {SERVICE_IDS.map((id) => <option key={id} value={id}>{SERVICE_LABEL[id]}</option>)}
+          </select>
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-[12.5px] text-neutral-300">{effect}</p>
+        <button type="button" className="btn-primary btn-sm" disabled={!president || used} onClick={() => act((s) => holdMeeting(s, rivalId, objective, service), `Reunião com ${rival.name}`)}>Reunir</button>
+      </div>
+    </section>
+  );
+}
 
 const avg = (r: Rival) => Math.round((SERVICE_IDS.reduce((s, id) => s + r.services[id], 0) / 5) * 10) / 10;
 
@@ -72,6 +133,8 @@ export function Internacional() {
             </section>
               <RankProgress state={state} />
           </div>
+
+          <Diplomacia state={state} />
 
           <section className="card p-4" aria-labelledby="h-debt">
             <h2 id="h-debt" className="section-title mb-1 text-xl">Dívida e risco para a moeda</h2>

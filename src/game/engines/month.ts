@@ -36,7 +36,8 @@ import {
 import { clampResource, evolveResources, totalRevenue } from './resources';
 import { clampService, evaluateTargets } from './services';
 import { applySocialDeltas, crisisSocialPenalty, macroReactions } from './society';
-import { applyResolution, buildTurn, TurnError } from './turn';
+import { isPlayerPresident, npcPickCard, politicalSession, politicsAfterClose, politicsRng } from './politics';
+import { applyResolution, buildTurn, chooseCard, TurnError } from './turn';
 
 export class NoCardChosenError extends TurnError {
   constructor() {
@@ -77,12 +78,19 @@ function historyPoint(s: GameState, month: number): MonthSnapshot {
  */
 export function advanceMonth(state: GameState, rng?: RandomSource): AdvanceResult {
   if (state.phase !== 'jogando') throw new TurnError('A partida já terminou.');
-  if (!state.turn.choice) throw new NoCardChosenError();
+  // Presidente NPC: ele escolhe a medida do mês na hora de fechar.
+  const decided = state.turn.choice || isPlayerPresident(state) ? state : chooseCard(state, npcPickCard(state), rng).state;
+  if (!decided.turn.choice) throw new NoCardChosenError();
 
-  const s = deepClone(state);
+  const s = deepClone(decided);
   const source = rng ?? new Rng(s.seed, s.rngCursor);
   const closingMonth = s.month;
   const notes: string[] = [];
+
+  // Sessão política antes da fotografia de abertura: obras dos ministros e leis
+  // aprovadas entram no mês como a carta, e contam para as metas.
+  const politicsSource = politicsRng(s);
+  politicalSession(s, politicsSource, notes);
 
   // Valores no instante em que o jogador manda avançar: já têm a carta aplicada.
   // Os "antes" do relatório e as variações do mês partem daqui.
@@ -230,7 +238,11 @@ export function advanceMonth(state: GameState, rng?: RandomSource): AdvanceResul
   if (defeat) {
     s.defeat = defeat;
     s.phase = 'derrota';
+  } else {
+    // Repasses do orçamento, produtividade, popularidade, STF e eleições.
+    politicsAfterClose(s, politicsSource, { spending, hasTargets: evaluation.hasTargets, allTargetsMet: evaluation.allMet }, notes);
   }
+  s.politics.rngCursor = politicsSource.cursor;
 
   // Relatório e histórico do mês que fechou.
   const report: MonthReport = {

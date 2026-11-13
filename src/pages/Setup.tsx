@@ -13,6 +13,7 @@ import {
   SKIN_TONES,
   presidentSchema,
   type AvatarConfig,
+  type ElectiveOffice,
 } from '@/game';
 import { useGame } from '@/state/game-store';
 import { Avatar } from '@/components/game/Avatar';
@@ -71,6 +72,7 @@ export function Setup() {
   const [politicalName, setPoliticalName] = useState('');
   const [avatar, setAvatar] = useState<AvatarConfig>({ ...DEFAULT_AVATAR });
   const [touched, setTouched] = useState(false);
+  const [candidacy, setCandidacy] = useState<ElectiveOffice>('presidente');
 
   const result = useMemo(
     () => presidentSchema.safeParse({ firstName, lastName, politicalName: politicalName || `${firstName} ${lastName}`.trim(), avatar }),
@@ -95,8 +97,8 @@ export function Setup() {
   const start = () => {
     setTouched(true);
     if (!result.success) return;
-    newGame({ president: result.data });
-    navigate('/painel');
+    newGame({ president: result.data, candidacy });
+    navigate('/eleicao');
   };
 
   return (
@@ -105,7 +107,7 @@ export function Setup() {
         <ArrowLeft size={12} aria-hidden /> Início
       </button>
       <h1 className="font-display text-4xl font-bold uppercase tracking-tight text-neutral-50">Novo mandato</h1>
-      <p className="mt-1 text-[13px] text-neutral-400">Quem vai governar? Nome e retrato: o resto é decidido carta a carta.</p>
+      <p className="mt-1 text-[13px] text-neutral-400">Quem vai entrar na política? Nome, retrato e o cargo que vai disputar.</p>
 
       <div className="mt-6 grid gap-6 md:grid-cols-[220px_1fr]">
         <div className="flex flex-col items-center gap-3">
@@ -148,8 +150,20 @@ export function Setup() {
             </ul>
           )}
 
+          <ChipRow
+            label="Candidatura na eleição de abertura"
+            options={[
+              { id: 'deputado', label: 'Deputado · 9 vagas' },
+              { id: 'senador', label: 'Senador · 3 vagas' },
+              { id: 'presidente', label: 'Presidente · 1 vaga' },
+            ]}
+            selected={candidacy}
+            onSelect={(v) => setCandidacy(v as ElectiveOffice)}
+          />
+          <p className="-mt-2 text-[11.5px] text-neutral-500">Os 40 políticos do país votam pela popularidade. Quanto menos vagas, mais difícil. Se perder, o presidente eleito pode convidar você para um ministério ou para o STF.</p>
+
           <button type="button" className="btn-primary" onClick={start}>
-            <Play size={14} aria-hidden /> Assumir o governo
+            <Play size={14} aria-hidden /> Disputar a eleição
           </button>
         </div>
       </div>

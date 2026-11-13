@@ -56,9 +56,13 @@ export function MonthResultModal() {
   const e = report.economy;
   const chased = report.gdp.chasingRank ? rivalAtRank(report.gdp.chasingRank, report.gdp.rankAfter) : null;
 
+  // A eleição fechou neste mês: os eleitos tomam posse agora e a apuração vem em seguida.
+  const election = !defeated && state.politics.elections.at(-1)?.month === report.month + 1;
+
   const close = () => {
     dismiss();
     if (defeated) navigate('/fim-de-jogo');
+    else if (election) navigate('/eleicao');
   };
 
   return (
@@ -71,7 +75,7 @@ export function MonthResultModal() {
       locked={defeated}
       footer={
         <button type="button" className="btn-primary" onClick={close}>
-          {defeated ? 'Ver o resultado' : `Seguir para ${monthLabel(state.month, state.startYear)}`}
+          {defeated ? 'Ver o resultado' : election ? 'Acompanhar a apuração' : `Seguir para ${monthLabel(state.month, state.startYear)}`}
           <ArrowRight size={14} aria-hidden />
         </button>
       }

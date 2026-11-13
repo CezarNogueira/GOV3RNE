@@ -5,12 +5,15 @@ import {
   SERVICE_BLURB,
   SERVICE_IDS,
   SERVICE_LABEL,
+  WEAR_PENALTY_AT,
+  type GameState,
   type GroupId,
   type ServiceId,
 } from '@/game';
 import { useGame } from '@/state/game-store';
 import { PageBody, PageHeader } from '@/components/layout/PageHeader';
 import { ServiceMeter, Sparkline } from '@/components/game/parts';
+import { MinistryCard } from '@/components/game/politics';
 
 /** Quem fica satisfeito quando o serviço sobe (lista de gostos de cada grupo). */
 const PLEASES: Record<ServiceId, GroupId[]> = {
@@ -46,7 +49,23 @@ export function Servicos() {
             );
           })}
         </div>
+        <Ministerios state={state} />
       </PageBody>
     </>
+  );
+}
+
+/** Verba, obras e manutenção de cada pasta. Só o ministro da área mexe na verba dela. */
+function Ministerios({ state }: { state: GameState }) {
+  return (
+    <section className="mt-6 space-y-2" aria-labelledby="h-ministerios">
+      <h2 id="h-ministerios" className="section-title text-xl">Administração dos ministérios</h2>
+      <p className="text-[12.5px] text-neutral-500">
+        Cada pasta recebe o repasse da Lei Orçamentária e só pode gastar com a própria área. Uma estrutura se desgasta por mês; com {WEAR_PENALTY_AT} ou mais sem manutenção, o serviço perde 1 ponto por mês.
+      </p>
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-5">
+        {SERVICE_IDS.map((id) => <MinistryCard key={id} state={state} service={id} />)}
+      </div>
+    </section>
   );
 }

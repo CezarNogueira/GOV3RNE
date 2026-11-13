@@ -26,7 +26,7 @@ export function Economia() {
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             <StatTile label="Cofre público" value={formatReais(economy.treasury)} tone={economy.treasury < 0 ? 'neg' : 'pos'} />
             <StatTile label="Impostos" value={formatReais(economy.taxes)} sub={`Inicial ${formatReais(INITIAL_TAXES)}`} />
-            <StatTile label="Gastos públicos" value={formatReais(economy.spending)} sub={economy.crisisMonthsLeft > 0 ? 'Zerados pela crise' : `Inicial ${formatReais(INITIAL_SPENDING)}`} />
+            <StatTile label="Gastos públicos" value={formatReais(economy.spending)} sub={economy.crisisMonthsLeft > 0 ? 'Zerados pela crise' : `Inicial ${formatReais(INITIAL_SPENDING)} · inclui a Lei Orçamentária`} />
             <StatTile label="Receita dos recursos" value={formatReais(revenue)} tone="pos" />
           </div>
 

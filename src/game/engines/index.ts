@@ -10,3 +10,4 @@ export * from './setup';
 export * from './month';
 export * from './save';
 export * from './evaluation';
+export * from './politics';

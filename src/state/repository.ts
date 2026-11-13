@@ -135,6 +135,13 @@ export const repository = {
     return outcome;
   },
 
+  /** Aplica uma ação do motor (as da política) e grava na hora. */
+  update(id: string, run: (state: GameState) => GameState): GameState {
+    const state = run(repository.load(id));
+    persist(state);
+    return state;
+  },
+
   /** Registra no save que o jogador já viu o tutorial. */
   markTutorialDone(id: string): GameState {
     const state = repository.load(id);

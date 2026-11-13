@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { CardResolution, GameState, MonthReport, NewGameInput, SaveSlotMeta } from '@/game';
+import { openCongress, pendingDuels, type CardResolution, type GameState, type MonthReport, type NewGameInput, type SaveSlotMeta } from '@/game';
 import { repository } from './repository';
 
 /**
@@ -29,6 +29,8 @@ interface GameStore {
   /** Relatório do último fechamento: abre o modal de resultado do mês. */
   lastReport: MonthReport | null;
   showReport: boolean;
+  /** Votação de leis no Congresso, aberta no fechamento do mês. */
+  showCongress: boolean;
 
   toasts: Toast[];
 
@@ -39,6 +41,8 @@ interface GameStore {
   deleteGame: (id: string) => void;
   chooseCard: (cardId: string) => void;
   advanceMonth: () => void;
+  /** Ação política (votar, nomear, construir…): o motor valida quem pode. */
+  act: (run: (state: GameState) => GameState, success?: string) => boolean;
   dismissResolution: () => void;
   dismissReport: () => void;
   finishTutorial: () => void;
@@ -62,6 +66,7 @@ export const useGame = create<GameStore>((set, get) => ({
   showResolution: false,
   lastReport: null,
   showReport: false,
+  showCongress: false,
   toasts: [],
 
   init: () => set({ saves: repository.list() }),
@@ -125,7 +130,21 @@ export const useGame = create<GameStore>((set, get) => ({
   advanceMonth: () => {
     const current = get().state;
     if (!current || get().advancing) return;
-    set({ advancing: true, error: null });
+    // 1. Leis do mês: o Congresso vota os duelos antes de o mês fechar. A
+    //    votação abre por cima da tela e chama advanceMonth de novo ao terminar.
+    try {
+      const prepared = repository.update(current.id, openCongress);
+      set({ state: prepared });
+      if (pendingDuels(prepared).length > 0) {
+        set({ showCongress: true });
+        return;
+      }
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Não deu para avançar o mês', detail: messageOf(error) });
+      return;
+    }
+    // 2. Fechamento do mês.
+    set({ advancing: true, error: null, showCongress: false });
     // Um frame de respiro: a interface mostra o processamento em vez de congelar.
     requestAnimationFrame(() => {
       try {
@@ -144,6 +163,20 @@ export const useGame = create<GameStore>((set, get) => ({
         get().toast({ kind: 'alerta', title: 'Não deu para avançar o mês', detail: messageOf(error) });
       }
     });
+  },
+
+  act: (run, success) => {
+    const current = get().state;
+    if (!current) return false;
+    try {
+      const state = repository.update(current.id, run);
+      set({ state, saves: repository.list() });
+      if (success) get().toast({ kind: 'sucesso', title: success });
+      return true;
+    } catch (error) {
+      get().toast({ kind: 'alerta', title: 'Ação não realizada', detail: messageOf(error) });
+      return false;
+    }
   },
 
   dismissResolution: () => set({ showResolution: false }),

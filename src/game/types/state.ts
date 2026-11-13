@@ -188,6 +188,147 @@ export interface DecisionRecord {
   probability: number;
 }
 
+// ------------------------------------------------------------------- política
+
+export type ElectiveOffice = 'presidente' | 'senador' | 'deputado';
+/** Quem ocupa um cargo: o id de um NPC (`npc-01`…) ou `PLAYER_ID`. */
+export type PersonId = string;
+
+/** Um dos 40 políticos do jogo. Copiado da tabela fixa na criação e salvo no save. */
+export interface PoliticalNpc {
+  id: string;
+  name: string;
+  /** 0-100: aumenta o resultado das obras e o ganho das atividades. */
+  efficiency: number;
+  /** 0-100: puxa votos e muda com o desempenho no cargo. */
+  popularity: number;
+  /** 0-100: chance de decidir a favor do país. */
+  honesty: number;
+  /** 0-100: desempenho no cargo. Abaixo do piso, entra no painel de improdutivos. */
+  productivity: number;
+  /** Verbas desviadas como ministro. É o que uma investigação encontra. */
+  diversions: number;
+  /** Cassado: inelegível e fora de nomeações até este mês. */
+  bannedUntil: number;
+}
+
+export interface PlayerPolitics {
+  popularity: number;
+  productivity: number;
+  /** Cargo que o jogador disputa na próxima eleição. `null` = não concorre. */
+  candidacy: ElectiveOffice | null;
+  bannedUntil: number;
+}
+
+export interface Offices {
+  president: PersonId | null;
+  deputies: PersonId[];
+  senators: PersonId[];
+  ministers: ByService<PersonId | null>;
+  /** `since`: mês da posse. O mandato no STF dura 16 anos. */
+  stf: { id: PersonId; since: number }[];
+}
+
+export interface ElectionRace {
+  office: ElectiveOffice;
+  seats: number;
+  results: { id: PersonId; votes: number; elected: boolean }[];
+  /** Voto de cada eleitor, na ordem dos NPCs: `ballots[i]` é o voto de `npcs[i]`. Alimenta a apuração. */
+  ballots?: PersonId[];
+  /** Voto do jogador, quando ele votou nesta disputa. */
+  playerVote?: PersonId;
+}
+
+/** Eleição com candidatos registrados, esperando o voto do jogador para ser apurada. */
+export interface PendingElection {
+  month: number;
+  races: { office: ElectiveOffice; candidates: PersonId[] }[];
+}
+
+/** Duelo de leis no Congresso: as duas disputam o voto dos parlamentares; a mais votada segue ao STF. */
+export interface LawDuel {
+  id: string;
+  month: number;
+  /** Ids das duas proposições. */
+  a: string;
+  b: string;
+  /** Voto de cada parlamentar (deputados, depois senadores). `null` = não votou. */
+  ballots?: { voterId: PersonId; pick: 'a' | 'b' | null }[];
+  winner?: 'a' | 'b';
+}
+
+export interface ElectionRecord {
+  /** Mês em que os eleitos tomam posse. */
+  month: number;
+  races: ElectionRace[];
+}
+
+export type ProposalKind = 'lei' | 'orcamento' | 'investigacao' | 'stf';
+/** `congresso`: leis, votadas em duelo pelas duas casas juntas no fechamento do mês. */
+export type ProposalStage = 'congresso' | 'camara' | 'senado' | 'stf' | 'presidente';
+export type ProposalStatus = 'em_tramitacao' | 'aprovada' | 'rejeitada' | 'vetada';
+
+/** Projeto de lei, Lei Orçamentária, pedido de investigação ou indicação ao STF. */
+export interface Proposal {
+  id: string;
+  kind: ProposalKind;
+  title: string;
+  authorId: PersonId;
+  month: number;
+  stage: ProposalStage;
+  status: ProposalStatus;
+  /** Lei: a carta do catálogo cujo efeito ela aplica. */
+  cardId?: string;
+  /** Orçamento: repasse mensal proposto para cada ministério. */
+  budget?: ByService<number>;
+  /** Investigação: o ministro investigado. Indicação: o indicado ao STF. */
+  targetId?: PersonId;
+  service?: ServiceId;
+  /** Voto do jogador na etapa em curso (ausente = não votou). */
+  playerVote?: boolean;
+  tallies: { stage: ProposalStage; yes: number; no: number; month: number }[];
+  closedMonth?: number;
+}
+
+export interface ServiceAdmin {
+  /** Verba do ministério, em reais. Só o ministro da área gasta. */
+  fund: number;
+  structures: number;
+  /** Estruturas que precisam de manutenção. */
+  worn: number;
+}
+
+export interface Invitation {
+  id: string;
+  kind: 'ministro' | 'stf';
+  service?: ServiceId;
+  fromId: PersonId;
+  month: number;
+}
+
+export interface PoliticsState {
+  /** Cursor do sorteador próprio da política: não mexe nos sorteios das cartas. */
+  rngCursor: number;
+  nextId: number;
+  npcs: PoliticalNpc[];
+  player: PlayerPolitics;
+  offices: Offices;
+  /** Lei Orçamentária em vigor: repasse mensal a cada ministério, parte dos gastos públicos. */
+  budget: ByService<number>;
+  admin: ByService<ServiceAdmin>;
+  proposals: Proposal[];
+  elections: ElectionRecord[];
+  pendingElection?: PendingElection;
+  /** Duelos de leis dos últimos meses. */
+  duels: LawDuel[];
+  invitations: Invitation[];
+  /** Uma reunião diplomática por mês. */
+  lastMeetingMonth: number;
+  /** Uma iniciativa (projeto ou pedido de investigação) por mês. */
+  lastInitiativeMonth: number;
+  log: { month: number; text: string }[];
+}
+
 // -------------------------------------------------------------------- partida
 
 export type GamePhase = 'jogando' | 'derrota';
@@ -226,6 +367,8 @@ export interface GameState {
   society: ByGroup<number>;
 
   turn: TurnState;
+  /** Cargos, eleições, Congresso, ministérios e STF. */
+  politics: PoliticsState;
 
   flags: GameFlags;
   defeat: DefeatInfo | null;
@@ -235,9 +378,15 @@ export interface GameState {
 }
 
 export interface NewGameInput {
+  /** Identidade do jogador (nome e retrato). */
   president: President;
   seed?: number;
   startYear?: number;
+  /**
+   * Cargo disputado na eleição de abertura. Ausente = o jogador já começa
+   * presidente, como no jogo antes das eleições (testes, simulador, saves antigos).
+   */
+  candidacy?: ElectiveOffice | null;
 }
 
 export interface SaveSlotMeta {

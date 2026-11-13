@@ -1,6 +1,7 @@
 import { GAME_STATE_VERSION } from '../data/config';
 import type { GameState, SaveSlotMeta } from '../types/state';
 import { monthLabel } from '../utils/format';
+import { installPolitics } from './politics';
 
 /**
  * O estado é JSON puro, sem classes nem referências circulares, para servir ao
@@ -54,6 +55,8 @@ export function deserialize(raw: string): LoadResult {
       error: `Este save é de outra versão do jogo (formato ${String(parsed.version)}; esta versão lê o formato ${GAME_STATE_VERSION}).`,
     };
   }
+  // Save de antes das eleições: o jogador segue presidente e a política é montada uma vez.
+  if (!parsed.politics) installPolitics(parsed);
   return { ok: true, state: parsed };
 }
 

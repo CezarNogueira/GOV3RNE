@@ -28,6 +28,7 @@ npm run simulate   # simula partidas com robôs e imprime estatísticas de equil
 | Economia | Cofre = cofre + impostos + receita dos recursos − gastos − custo da medida. Cofre negativo: crise de 6 meses. |
 | Sociedade | Pobres, Ricos, Militares, Indígenas, Empresários. Começam em 50. |
 | Derrota | Qualquer serviço, recurso ou grupo em 0, ou moeda em US$ 0. Não há limite de meses. |
+| Política | 40 NPCs votam. Deputado (9 vagas, 4 anos), Senador (3, 8 anos), Presidente (1, 4 anos), STF (3, 16 anos, indicado e aprovado pelo Senado), 5 ministros nomeados. Leis: duelo de duas no Congresso a cada fechamento de mês → STF → Presidência. Só o presidente escolhe a carta do mês. |
 
 ## Arquitetura
 
@@ -36,6 +37,7 @@ src/game/            núcleo puro (sem DOM, sem I/O) — roda igual no navegador
   data/config.ts       TODOS os números ajustáveis do equilíbrio
   data/cards.ts        catálogo das 60 cartas, como dados
   data/rivals.ts       escada do ranking de PIB
+  data/politics.ts     os 40 NPCs, vagas, mandatos, obras e valores da diplomacia
   data/meta.ts         rótulos, receita por ponto, pesos dos serviços, gostos dos grupos
   engines/
     services.ts          metas mensais
@@ -47,6 +49,7 @@ src/game/            núcleo puro (sem DOM, sem I/O) — roda igual no navegador
     turn.ts              escolha da carta (única porta de entrada dos efeitos)
     month.ts             passagem do mês: os 17 passos do enunciado, em ordem
     defeat.ts            condições de derrota
+    politics.ts          eleições, pauta e votações, ministérios, STF e ações de cada cargo (sorteador próprio)
 src/state/           repositório de saves (localStorage) e store (zustand), sem regra de jogo
 src/pages, src/components   interface
 scripts/simulate.ts  simulador de equilíbrio

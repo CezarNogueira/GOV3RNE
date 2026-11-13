@@ -15,6 +15,7 @@ import { RESOURCE_IDS } from '../types/common';
 import type { GameState, NewGameInput } from '../types/state';
 import { makeId } from '../utils/id';
 import { createSeed, Rng } from '../utils/rng';
+import { installPolitics } from './politics';
 import { buildTurn } from './turn';
 
 /**
@@ -65,6 +66,8 @@ export function createGame(input: NewGameInput): GameState {
 
     // Substituído logo abaixo: o turno precisa do estado já montado para sortear.
     turn: undefined as never,
+    // Montada logo abaixo, com a eleição de abertura.
+    politics: undefined as never,
 
     flags: { reachedFirst: false, tutorialDone: false },
     defeat: null,
@@ -75,5 +78,6 @@ export function createGame(input: NewGameInput): GameState {
 
   state.turn = buildTurn(state, rng);
   state.rngCursor = rng.cursor;
+  installPolitics(state, input.candidacy);
   return state;
 }

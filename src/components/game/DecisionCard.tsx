@@ -46,7 +46,7 @@ export function DecisionCard({
       aria-label={card.title}
       data-testid={`card-${card.id}`}
       data-mode={mode}
-      role={mode === 'open' ? 'button' : undefined}
+      role={mode === 'open' && onChoose ? 'button' : undefined}
       tabIndex={mode === 'open' && onChoose ? 0 : undefined}
       onClick={() => {
         if (mode === 'open' && onChoose) {
@@ -62,7 +62,7 @@ export function DecisionCard({
       className={cx(
         'card flex flex-col overflow-hidden border-2 transition-all duration-snap',
         style.border,
-        mode === 'open' && 'cursor-pointer hover:-translate-y-1 hover:brightness-110',
+        mode === 'open' && onChoose && 'cursor-pointer hover:-translate-y-1 hover:brightness-110',
         mode === 'chosen' && 'ring-2 ring-gov-500',
         mode === 'dismissed' && 'opacity-40 grayscale',
       )}

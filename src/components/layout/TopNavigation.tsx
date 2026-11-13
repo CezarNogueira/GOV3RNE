@@ -7,6 +7,7 @@ import {
   Gauge,
   Globe2,
   HeartPulse,
+  Landmark,
   Menu as MenuIcon,
   Settings,
   Star,
@@ -30,6 +31,7 @@ const TABS = [
   { to: '/recursos', label: 'Recursos', icon: Boxes },
   { to: '/economia', label: 'Economia', icon: Banknote },
   { to: '/sociedade', label: 'Sociedade', icon: Users },
+  { to: '/politica', label: 'Política', icon: Landmark },
 ] as const;
 
 export function TopNavigation({ state }: { state: GameState }) {
